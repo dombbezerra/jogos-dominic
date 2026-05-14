@@ -186,42 +186,6 @@
       font-size: 13px;
       z-index: 1;
     }
-    /* Iframe overlay para abrir os jogos */
-    #game-overlay {
-      position: fixed;
-      inset: 0;
-      background: #000;
-      z-index: 100;
-      display: none;
-    }
-    #game-overlay.open { display: block; }
-    #game-overlay iframe {
-      width: 100%;
-      height: 100%;
-      border: 0;
-      display: block;
-    }
-    #close-game {
-      position: fixed;
-      top: calc(env(safe-area-inset-top) + 10px);
-      right: calc(env(safe-area-inset-right) + 10px);
-      z-index: 101;
-      background: rgba(0, 0, 0, 0.75);
-      color: white;
-      border: 2px solid white;
-      width: 44px;
-      height: 44px;
-      font-size: 22px;
-      font-weight: bold;
-      border-radius: 50%;
-      cursor: pointer;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      backdrop-filter: blur(6px);
-      -webkit-tap-highlight-color: transparent;
-    }
-    #game-overlay.open + #close-game { display: flex; }
   </style>
 </head>
 <body>
@@ -233,7 +197,7 @@
   </header>
 
   <div class="games">
-    <a href="luta-elemental/index.html" data-game="luta-elemental/index.html" class="game-card luta">
+    <a href="luta-elemental/index.html" class="game-card luta">
       <div class="game-icon">⚔️</div>
       <div class="game-title">LUTA ELEMENTAL</div>
       <div class="game-desc">
@@ -243,7 +207,7 @@
       <div class="play-btn">JOGAR ▶</div>
     </a>
 
-    <a href="pixel-futebol/index.html" data-game="pixel-futebol/index.html" class="game-card futebol">
+    <a href="pixel-futebol/index.html" class="game-card futebol">
       <div class="game-icon">⚽</div>
       <div class="game-title">PIXEL FUTEBOL</div>
       <div class="game-desc">
@@ -253,7 +217,7 @@
       <div class="play-btn">JOGAR ▶</div>
     </a>
 
-    <a href="space-shooter/index.html" data-game="space-shooter/index.html" class="game-card space">
+    <a href="space-shooter/index.html" class="game-card space">
       <div class="game-icon">🚀</div>
       <div class="game-title">SPACE SHOOTER</div>
       <div class="game-desc">
@@ -268,9 +232,6 @@
     feito com ❤️ por Dominic
   </footer>
 
-  <div id="game-overlay"></div>
-  <button id="close-game" aria-label="Fechar jogo">×</button>
-
   <script>
     // Gera estrelas aleatórias no fundo
     const starsContainer = document.getElementById('stars');
@@ -282,62 +243,6 @@
       star.style.animationDelay = Math.random() * 3 + 's';
       star.style.opacity = Math.random() * 0.8 + 0.2;
       starsContainer.appendChild(star);
-    }
-
-    // Abre cada jogo num iframe overlay (funciona em qualquer ambiente,
-    // sem depender de navegação cross-page)
-    const overlay = document.getElementById('game-overlay');
-    const closeBtn = document.getElementById('close-game');
-
-    function openGame(url) {
-      overlay.innerHTML = '';
-      const iframe = document.createElement('iframe');
-      iframe.src = url;
-      iframe.allow = 'fullscreen; gamepad; accelerometer; gyroscope';
-      iframe.setAttribute('allowfullscreen', '');
-      overlay.appendChild(iframe);
-      overlay.classList.add('open');
-      document.body.style.overflow = 'hidden';
-      // hash pra suportar voltar pelo botão do navegador
-      history.pushState({ game: url }, '', '#' + url.replace(/\/index\.html$/, ''));
-    }
-
-    function closeGame() {
-      overlay.classList.remove('open');
-      overlay.innerHTML = '';
-      document.body.style.overflow = '';
-      if (location.hash) history.pushState({}, '', location.pathname);
-    }
-
-    document.querySelectorAll('.game-card[data-game]').forEach(card => {
-      card.addEventListener('click', e => {
-        e.preventDefault();
-        openGame(card.dataset.game);
-      });
-    });
-
-    closeBtn.addEventListener('click', closeGame);
-
-    // Botão "voltar" do navegador fecha o jogo se estiver aberto
-    window.addEventListener('popstate', () => {
-      if (overlay.classList.contains('open')) closeGame();
-    });
-
-    // Jogo dentro do iframe pediu pra fechar (via botão "← Menu")
-    window.addEventListener('message', e => {
-      if (e.data && e.data.type === 'closeGame') closeGame();
-    });
-
-    // ESC também fecha
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && overlay.classList.contains('open')) closeGame();
-    });
-
-    // Abre direto se a URL já tem #game-name
-    if (location.hash) {
-      const slug = location.hash.slice(1);
-      const url = slug.endsWith('/') ? slug + 'index.html' : slug + '/index.html';
-      if (document.querySelector(`[data-game="${url}"]`)) openGame(url);
     }
   </script>
 </body>
