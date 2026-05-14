@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Pixel Futebol</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a1a08;
+    color: white;
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    user-select: none;
+    overflow: hidden;
+  }
+  h1 {
+    color: #fcd000;
+    text-shadow: 4px 4px 0 #008800, 8px 8px 0 #000;
+    margin-bottom: 10px;
+    letter-spacing: 4px;
+    font-size: 26px;
+  }
+  #scoreboard {
+    display: flex;
+    gap: 32px;
+    align-items: center;
+    color: white;
+    font-size: 22px;
+    margin-bottom: 8px;
+    font-weight: bold;
+    text-shadow: 2px 2px 0 #000;
+    letter-spacing: 2px;
+  }
+  .team-blue { color: #4080ff; }
+  .team-red { color: #ff4040; }
+  #timer { color: #fcd000; font-size: 18px; }
+  canvas {
+    background: #2d8a2d;
+    border: 4px solid #000;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    width: 800px;
+    height: 500px;
+    max-width: 100%;
+    height: auto;
+  }
+  #controls {
+    margin-top: 12px;
+    color: #888;
+    font-size: 12px;
+    text-align: center;
+    letter-spacing: 1px;
+  }
+  #message {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #000;
+    color: #fcd000;
+    padding: 30px 50px;
+    border: 6px solid #fcd000;
+    font-size: 28px;
+    font-weight: bold;
+    text-align: center;
+    display: none;
+    z-index: 10;
+    letter-spacing: 3px;
+    white-space: pre-line;
+    box-shadow: 0 0 60px rgba(252,208,0,0.5);
+  }
+  #message button {
+    display: block;
+    margin: 14px auto 0;
+    padding: 10px 24px;
+    background: #fcd000;
+    color: #000;
+    border: none;
+    font-family: inherit;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 16px;
+    letter-spacing: 2px;
+  }
+  #message button.secondary {
+    background: #333;
+    color: #fcd000;
+    border: 2px solid #fcd000;
+  }
+  #message button:hover { background: #fff; color: #000; }
+  #pause-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: #000;
+    color: #fcd000;
+    border: 3px solid #fcd000;
+    font-family: inherit;
+    font-weight: bold;
+    font-size: 14px;
+    padding: 6px 12px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    z-index: 5;
+  }
+  #pause-btn:hover { background: #fcd000; color: #000; }
+  /* ── BRAWL-STARS-STYLE MENU ── */
+  #title-screen {
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at top, #ff7eb9 0%, transparent 60%),
+      radial-gradient(ellipse at bottom right, #00d4ff 0%, transparent 50%),
+      linear-gradient(135deg, #4a0e6d 0%, #1a0a4a 50%, #0a1a4a 100%);
+    display: flex;
+    flex-direction: column;
+    z-index: 20;
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+  }
+  /* glow accents */
+  #title-screen::before {
+    content: '';
+    position: absolute;
+    top: 20%; left: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(255,200,0,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  #title-screen::after {
+    content: '';
+    position: absolute;
+    bottom: -100px; right: -100px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(0,200,255,0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* ── Top bar ── */
+  .bs-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    gap: 16px;
+    z-index: 2;
+  }
+  .bs-player {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(180deg, #2a1858 0%, #150a30 100%);
+    border: 3px solid #5a3a90;
+    border-radius: 30px;
+    padding: 6px 18px 6px 6px;
+    box-shadow: 0 4px 0 #000, inset 0 2px 0 rgba(255,255,255,0.15);
+  }
+  .bs-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff4080 0%, #ffaa00 100%);
+    border: 3px solid #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  }
+  .bs-player-info { line-height: 1.2; }
+  .bs-name { color: #fff; font-weight: bold; font-size: 14px; letter-spacing: 1px; }
+  .bs-level { color: #ffcc00; font-size: 11px; letter-spacing: 1px; }
+
+  .bs-currencies {
+    display: flex;
+    gap: 8px;
+  }
+  .bs-currency {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(180deg, #2a1858 0%, #150a30 100%);
+    border: 3px solid #5a3a90;
+    border-radius: 20px;
+    padding: 4px 14px 4px 4px;
+    box-shadow: 0 4px 0 #000, inset 0 2px 0 rgba(255,255,255,0.15);
+  }
+  .bs-currency .icon {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    border: 2px solid #fff;
+  }
+  .bs-currency.trophy .icon { background: linear-gradient(180deg, #ffd700 0%, #b8860b 100%); }
+  .bs-currency.gem    .icon { background: linear-gradient(180deg, #00ff80 0%, #008040 100%); }
+  .bs-currency.coin   .icon { background: linear-gradient(180deg, #ffd700 0%, #ff8c00 100%); }
+  .bs-currency .val {
+    color: #fff;
+    font-weight: bold;
+    font-size: 14px;
+    letter-spacing: 1px;
+  }
+
+  /* ── Center mode card ── */
+  .bs-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 24px;
+    z-index: 2;
+    gap: 14px;
+  }
+  .bs-mode-card {
+    width: min(520px, 92vw);
+    background: linear-gradient(180deg, #1a8a4a 0%, #0a5a2a 100%);
+    border: 4px solid #fcd000;
+    border-radius: 18px;
+    padding: 18px 20px;
+    box-shadow:
+      0 8px 0 #000,
+      0 0 30px rgba(252,208,0,0.4),
+      inset 0 3px 0 rgba(255,255,255,0.25);
+    position: relative;
+    overflow: hidden;
+  }
+  .bs-mode-card::before {
+    content: '';
+  }
+  .bs-mode-tag {
+    display: inline-block;
+    background: #fcd000;
+    color: #000;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+  .bs-mode-name {
+    color: #fff;
+    font-size: 32px;
+    font-weight: bold;
+    letter-spacing: 3px;
+    text-shadow: 3px 3px 0 #000, 0 0 12px rgba(255,255,255,0.3);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .bs-mode-desc {
+    color: rgba(255,255,255,0.85);
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-shadow: 2px 2px 0 #000;
+    margin-bottom: 14px;
+  }
+  .bs-mode-stats {
+    display: flex;
+    gap: 14px;
+    color: #fff;
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+  .bs-mode-stats span { background: rgba(0,0,0,0.4); padding: 4px 10px; border-radius: 10px; }
+
+  /* ── Difficulty pills ── */
+  #difficulty {
+    color: #fff;
+    font-size: 12px;
+    letter-spacing: 2px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  #difficulty .label-text { opacity: 0.7; margin-right: 4px; }
+  #difficulty button {
+    padding: 8px 16px;
+    background: linear-gradient(180deg, #4a3a70 0%, #2a1a50 100%);
+    color: #fff;
+    border: 3px solid #6a5a90;
+    border-radius: 20px;
+    font-family: inherit;
+    cursor: pointer;
+    font-size: 12px;
+    letter-spacing: 2px;
+    font-weight: bold;
+    box-shadow: 0 3px 0 #000;
+    transition: transform 0.05s;
+  }
+  #difficulty button:hover { transform: translateY(-1px); }
+  #difficulty button.active {
+    background: linear-gradient(180deg, #fcd000 0%, #ff8c00 100%);
+    color: #000;
+    border-color: #fff;
+    box-shadow: 0 3px 0 #000, 0 0 12px rgba(252,208,0,0.6);
+  }
+
+  /* ── Big PLAY button ── */
+  .bs-play-btn {
+    background: linear-gradient(180deg, #ffcc00 0%, #ff8c00 100%) !important;
+    color: #000 !important;
+    border: 4px solid #fff !important;
+    border-radius: 16px !important;
+    padding: 16px 80px !important;
+    font-family: inherit !important;
+    font-weight: bold !important;
+    font-size: 28px !important;
+    letter-spacing: 6px !important;
+    cursor: pointer;
+    box-shadow:
+      0 8px 0 #b8500c,
+      0 12px 20px rgba(0,0,0,0.5),
+      inset 0 3px 0 rgba(255,255,255,0.4) !important;
+    text-shadow: 2px 2px 0 rgba(255,255,255,0.4);
+    transition: transform 0.05s;
+    margin-top: 6px;
+  }
+  .bs-play-btn:hover {
+    background: linear-gradient(180deg, #ffe040 0%, #ffaa20 100%) !important;
+    transform: translateY(-2px);
+  }
+  .bs-play-btn:active {
+    transform: translateY(6px);
+    box-shadow: 0 2px 0 #b8500c, 0 4px 8px rgba(0,0,0,0.4) !important;
+  }
+
+  .bs-secondary-btn {
+    background: rgba(0,0,0,0.4) !important;
+    color: #fff !important;
+    border: 2px solid rgba(255,255,255,0.3) !important;
+    border-radius: 12px !important;
+    padding: 8px 24px !important;
+    font-size: 13px !important;
+    letter-spacing: 2px !important;
+    font-family: inherit !important;
+    cursor: pointer;
+    box-shadow: none !important;
+  }
+  .bs-secondary-btn:hover { background: rgba(255,255,255,0.15) !important; }
+
+  /* ── Bottom nav ── */
+  .bs-bottombar {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px;
+    z-index: 2;
+  }
+  .bs-tab {
+    width: 64px; height: 64px;
+    background: linear-gradient(180deg, #2a1858 0%, #150a30 100%);
+    border: 3px solid #5a3a90;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.6);
+    font-size: 10px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #000;
+  }
+  .bs-tab .tab-icon { font-size: 24px; line-height: 1; margin-bottom: 2px; }
+  .bs-tab.active {
+    background: linear-gradient(180deg, #ff4080 0%, #aa1050 100%);
+    border-color: #fff;
+    color: #fff;
+    box-shadow: 0 4px 0 #000, 0 0 16px rgba(255,64,128,0.5);
+  }
+  .bs-tab:hover:not(.active) { background: linear-gradient(180deg, #3a2070 0%, #200a40 100%); color: #fff; }
+
+  /* ── Brawler screen ── */
+  .brawler-screen { display: none; flex: 1; flex-direction: column; padding: 0 24px; z-index: 2; overflow-y: auto; }
+  .brawler-screen.active { display: flex; }
+  .brawler-screen h3 {
+    color: #fff;
+    font-size: 24px;
+    letter-spacing: 4px;
+    text-shadow: 3px 3px 0 #000;
+    margin: 8px 0 14px;
+    text-align: center;
+  }
+  .brawler-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .brawler-card {
+    background: linear-gradient(180deg, #2a1858 0%, #150a30 100%);
+    border: 4px solid #5a3a90;
+    border-radius: 14px;
+    padding: 12px 8px 8px;
+    cursor: pointer;
+    text-align: center;
+    box-shadow: 0 5px 0 #000;
+    position: relative;
+    transition: transform 0.05s;
+  }
+  .brawler-card:hover { transform: translateY(-2px); }
+  .brawler-card.selected {
+    border-color: #fcd000;
+    box-shadow: 0 5px 0 #000, 0 0 20px rgba(252,208,0,0.6);
+  }
+  .brawler-card.locked { opacity: 0.5; cursor: not-allowed; }
+  .brawler-card .portrait {
+    width: 70px; height: 70px;
+    border-radius: 50%;
+    margin: 0 auto 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 38px;
+    border: 4px solid #fff;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.5);
+  }
+  .brawler-card .b-name {
+    color: #fff;
+    font-weight: bold;
+    font-size: 13px;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+  .brawler-card .b-rarity {
+    display: inline-block;
+    font-size: 9px;
+    padding: 2px 8px;
+    border-radius: 8px;
+    letter-spacing: 1px;
+    font-weight: bold;
+    margin-bottom: 8px;
+  }
+  .rarity-common { background: #888; color: #fff; }
+  .rarity-rare   { background: #00ccff; color: #003344; }
+  .rarity-epic   { background: #aa00ff; color: #fff; }
+  .rarity-legend { background: linear-gradient(90deg, #ffcc00, #ff8c00); color: #000; }
+  .brawler-card .b-stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #fff;
+    font-size: 10px;
+    letter-spacing: 1px;
+    margin: 3px 0;
+  }
+  .brawler-card .stat-bar {
+    flex: 1;
+    height: 6px;
+    background: #1a0a30;
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid #000;
+  }
+  .brawler-card .stat-fill { height: 100%; background: linear-gradient(90deg, #00ff80, #fcd000); }
+  .brawler-card .lock-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+  }
+  .selected-badge {
+    position: absolute;
+    top: -8px; right: -8px;
+    background: #fcd000;
+    color: #000;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    width: 28px; height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 8px 0 #b8500c, 0 12px 20px rgba(0,0,0,0.5), inset 0 3px 0 rgba(255,255,255,0.4), 0 0 20px rgba(252,208,0,0.4); }
+    50% { box-shadow: 0 8px 0 #b8500c, 0 12px 20px rgba(0,0,0,0.5), inset 0 3px 0 rgba(255,255,255,0.4), 0 0 40px rgba(252,208,0,0.8); }
+  }
+  .bs-play-btn { animation: pulse-glow 2s infinite; }
+</style>
+</head>
+<body>
+<div id="title-screen">
+  <div class="bs-topbar">
+    <div class="bs-player">
+      <div class="bs-avatar">😎</div>
+      <div class="bs-player-info">
+        <div class="bs-name">JOGADOR</div>
+        <div class="bs-level">NIVEL 9</div>
+      </div>
+    </div>
+    <div class="bs-currencies">
+      <div class="bs-currency trophy">
+        <div class="icon">🏆</div>
+        <div class="val">1247</div>
+      </div>
+      <div class="bs-currency gem">
+        <div class="icon">💎</div>
+        <div class="val">85</div>
+      </div>
+      <div class="bs-currency coin">
+        <div class="icon">🪙</div>
+        <div class="val">3420</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bs-main" id="play-screen">
+    <div class="bs-mode-card">
+      <div class="bs-mode-tag">MODO EVENTO</div>
+      <div class="bs-mode-name">⚽ FUTEBOL</div>
+      <div class="bs-mode-desc">VOCE vs CPU — FACA MAIS GOLS!</div>
+      <div class="bs-mode-stats">
+        <span>1 v 1</span>
+        <span>🏆 +30</span>
+        <span>⏱ 2 MIN</span>
+        <span id="selected-brawler-tag">⚔ RMA</span>
+      </div>
+    </div>
+
+    <div id="difficulty">
+      <span class="label-text">DIFICULDADE:</span>
+      <button data-diff="easy">FACIL</button>
+      <button data-diff="normal" class="active">NORMAL</button>
+      <button data-diff="hard">DIFICIL</button>
+    </div>
+
+    <button id="btn-start" class="bs-play-btn">PLAY!</button>
+    <button id="btn-how" class="bs-secondary-btn">COMO JOGAR</button>
+  </div>
+
+  <div class="brawler-screen" id="brawler-screen">
+    <h3>ESCOLHA SEU BRAWLER</h3>
+    <div class="brawler-grid" id="brawler-grid"></div>
+  </div>
+
+  <div class="bs-bottombar">
+    <div class="bs-tab" data-screen="brawler"><div class="tab-icon">⚔</div>BRAWLER</div>
+    <div class="bs-tab active" data-screen="play"><div class="tab-icon">🏠</div>JOGAR</div>
+  </div>
+</div>
+
+<button id="pause-btn" style="display:none">II PAUSAR</button>
+
+<h1>⚽ PIXEL FUTEBOL ⚽</h1>
+<div id="scoreboard">
+  <span class="team-blue">VOCE <span id="score-p1">0</span></span>
+  <span id="timer">02:00</span>
+  <span class="team-red"><span id="score-p2">0</span> CPU</span>
+</div>
+<canvas id="game" width="400" height="250"></canvas>
+<div id="message">
+  <div id="msg-text"></div>
+  <button id="msg-btn-restart" onclick="reset(); resume();">JOGAR DE NOVO</button>
+  <button id="msg-btn-resume" class="secondary" onclick="resume()" style="display:none">CONTINUAR</button>
+  <button id="msg-btn-menu" class="secondary" onclick="goToMenu()">MENU</button>
+</div>
+<div id="controls">
+  WASD ou ← ↑ → ↓ MOVER  ·  ESPACO CHUTAR  ·  P PAUSAR
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+ctx.imageSmoothingEnabled = false;
+const W = canvas.width, H = canvas.height;
+
+let gameState = 'menu';
+let difficulty = 'normal';
+
+const BRAWLERS = [
+  { id: 'neymar',  name: 'RMA',  emoji: '', bg: '#3050d8', rarity: 'common', speed: 7, kick: 6, defense: 5, locked: false,
+    desc: 'EQUILIBRADO' },
+  { id: 'cr7',     name: 'BAR',     emoji: '', bg: '#cc0000', rarity: 'rare',   speed: 8, kick: 8, defense: 5, locked: false,
+    desc: 'CHUTE FORTE E RAPIDO' },
+  { id: 'messi',   name: 'MESSI',   emoji: '', bg: '#75aadb', rarity: 'epic',   speed: 9, kick: 7, defense: 5, locked: false,
+    desc: 'AGIL E PRECISO' },
+  { id: 'tank',    name: 'TANK',    emoji: '', bg: '#666',    rarity: 'rare',   speed: 4, kick: 9, defense: 9, locked: false,
+    desc: 'CHUTE BRUTAL, LENTO' },
+  { id: 'flash',   name: 'COR',   emoji: '', bg: '#000000', rarity: 'epic',   speed:10, kick: 5, defense: 4, locked: false,
+    desc: 'VELOCIDADE INSANA' },
+  { id: 'lenda',   name: 'PELE',    emoji: '', bg: '#ffaa00', rarity: 'legend', speed: 9, kick: 9, defense: 8, locked: true,
+    desc: 'O REI — DESBLOQUEIE COM 5000 TROFEUS' },
+];
+
+let selectedBrawlerId = 'neymar';
+function getBrawler() { return BRAWLERS.find(b => b.id === selectedBrawlerId); }
+
+const DIFFICULTY = {
+  easy:   { aiSpeed: 0.30, aiKickRange: 6,  aiHesitate: 0.08, kickPower: 7,  predictBall: 0.3, defendThreshold: 200, matchTime: 90 },
+  normal: { aiSpeed: 0.45, aiKickRange: 8,  aiHesitate: 0.02, kickPower: 9,  predictBall: 0.6, defendThreshold: 250, matchTime: 120 },
+  hard:   { aiSpeed: 0.65, aiKickRange: 10, aiHesitate: 0.00, kickPower: 12, predictBall: 1.0, defendThreshold: 300, matchTime: 150 },
+};
+
+const FIELD = { left: 20, right: W - 20, top: 20, bottom: H - 20 };
+const GOAL = { width: 6, height: 70, yTop: H/2 - 35, yBottom: H/2 + 35 };
+
+const ball = { x: W/2, y: H/2, vx: 0, vy: 0, r: 4, trail: [] };
+const p1 = { x: 100, y: H/2, vx: 0, vy: 0, r: 7, facing: 1, kickCooldown: 0, color: 'blue', team: 'p1' };
+const p2 = { x: W - 100, y: H/2, vx: 0, vy: 0, r: 7, facing: -1, kickCooldown: 0, color: 'red', team: 'p2' };
+
+let score = { p1: 0, p2: 0 };
+let timeLeft = 120 * 60;
+let goalCelebration = 0;
+let gameOver = false;
+let particles = [];
+
+const keys = {};
+document.addEventListener("keydown", e => {
+  keys[e.key.toLowerCase()] = true;
+  if ([" ", "ArrowUp", "ArrowLeft", "ArrowRight", "ArrowDown"].includes(e.key)) e.preventDefault();
+  if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+    if (gameState === 'playing') pause();
+    else if (gameState === 'paused') resume();
+  }
+});
+document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+
+function dist(a, b) {
+  const dx = a.x - b.x, dy = a.y - b.y;
+  return Math.sqrt(dx*dx + dy*dy);
+}
+
+function spawnParticles(x, y, color, n = 10) {
+  for (let i = 0; i < n; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 4,
+      vy: (Math.random() - 0.5) * 4,
+      life: 30,
+      color,
+      size: 1 + Math.floor(Math.random() * 2)
+    });
+  }
+}
+
+function updatePlayer(p, controls, accel = 0.3) {
+  let ax = 0, ay = 0;
+  if (controls.left) ax -= 1;
+  if (controls.right) ax += 1;
+  if (controls.up) ay -= 1;
+  if (controls.down) ay += 1;
+  if (ax !== 0 || ay !== 0) {
+    const m = Math.sqrt(ax*ax + ay*ay);
+    ax /= m; ay /= m;
+    p.vx += ax * accel;
+    p.vy += ay * accel;
+    if (ax !== 0) p.facing = ax > 0 ? 1 : -1;
+  }
+  p.vx *= 0.85;
+  p.vy *= 0.85;
+  const sp = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
+  if (sp > 2.5) { p.vx = p.vx/sp * 2.5; p.vy = p.vy/sp * 2.5; }
+  p.x += p.vx;
+  p.y += p.vy;
+  if (p.x < FIELD.left + p.r) p.x = FIELD.left + p.r;
+  if (p.x > FIELD.right - p.r) p.x = FIELD.right - p.r;
+  if (p.y < FIELD.top + p.r) p.y = FIELD.top + p.r;
+  if (p.y > FIELD.bottom - p.r) p.y = FIELD.bottom - p.r;
+  if (p.kickCooldown > 0) p.kickCooldown--;
+}
+
+function tryKick(p, kickPressed, power = 8) {
+  if (!kickPressed || p.kickCooldown > 0) return;
+  const d = dist(p, ball);
+  if (d > p.r + ball.r + 8) return;
+  let dx = ball.x - p.x;
+  let dy = ball.y - p.y;
+  const m = Math.sqrt(dx*dx + dy*dy) || 1;
+  dx /= m; dy /= m;
+  const targetX = p.team === 'p1' ? FIELD.right : FIELD.left;
+  const targetY = H/2;
+  let tx = targetX - p.x, ty = targetY - p.y;
+  const tm = Math.sqrt(tx*tx + ty*ty) || 1;
+  tx /= tm; ty /= tm;
+  const bx = (dx + tx * 0.6);
+  const by = (dy + ty * 0.6);
+  const bm = Math.sqrt(bx*bx + by*by) || 1;
+  ball.vx = (bx/bm) * power;
+  ball.vy = (by/bm) * power;
+  p.kickCooldown = 20;
+  spawnParticles(ball.x, ball.y, '#fff', 6);
+}
+
+function updateBall() {
+  ball.vx *= 0.985;
+  ball.vy *= 0.985;
+  if (Math.abs(ball.vx) < 0.05) ball.vx = 0;
+  if (Math.abs(ball.vy) < 0.05) ball.vy = 0;
+  ball.trail.push({ x: ball.x, y: ball.y });
+  if (ball.trail.length > 5) ball.trail.shift();
+
+  // Sub-step movement to prevent tunneling at high speeds
+  const speed = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
+  const maxStep = Math.min(p1.r, ball.r) * 0.8;
+  const steps = Math.max(1, Math.ceil(speed / maxStep));
+  const stepX = ball.vx / steps;
+  const stepY = ball.vy / steps;
+
+  for (let i = 0; i < steps; i++) {
+    ball.x += stepX;
+    ball.y += stepY;
+
+    if (ball.x - ball.r < FIELD.left) {
+      if (ball.y > GOAL.yTop && ball.y < GOAL.yBottom) { goal('p2'); return; }
+      ball.x = FIELD.left + ball.r;
+      ball.vx *= -0.6;
+    }
+    if (ball.x + ball.r > FIELD.right) {
+      if (ball.y > GOAL.yTop && ball.y < GOAL.yBottom) { goal('p1'); return; }
+      ball.x = FIELD.right - ball.r;
+      ball.vx *= -0.6;
+    }
+    if (ball.y - ball.r < FIELD.top) { ball.y = FIELD.top + ball.r; ball.vy *= -0.6; }
+    if (ball.y + ball.r > FIELD.bottom) { ball.y = FIELD.bottom - ball.r; ball.vy *= -0.6; }
+
+    for (const pl of [p1, p2]) {
+      const d = dist(pl, ball);
+      if (d < pl.r + ball.r) {
+        const dx = (ball.x - pl.x) / (d || 1);
+        const dy = (ball.y - pl.y) / (d || 1);
+        ball.x = pl.x + dx * (pl.r + ball.r);
+        ball.y = pl.y + dy * (pl.r + ball.r);
+        // Reflect ball plus add player velocity
+        const incomingSpeed = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
+        const bounceSpeed = Math.max(2, incomingSpeed * 0.6);
+        ball.vx = dx * bounceSpeed + (pl.vx || 0) * 0.7;
+        ball.vy = dy * bounceSpeed + (pl.vy || 0) * 0.7;
+        break;
+      }
+    }
+  }
+}
+
+function goal(scorer) {
+  score[scorer]++;
+  document.getElementById(scorer === 'p1' ? 'score-p1' : 'score-p2').textContent = score[scorer];
+  goalCelebration = 90;
+  spawnParticles(ball.x, ball.y, '#fcd000', 30);
+  setTimeout(() => {
+    ball.x = W/2; ball.y = H/2; ball.vx = 0; ball.vy = 0; ball.trail = [];
+    p1.x = 100; p1.y = H/2; p1.vx = 0; p1.vy = 0;
+    p2.x = W - 100; p2.y = H/2; p2.vx = 0; p2.vy = 0;
+  }, 800);
+}
+
+function aiUpdate() {
+  const cfg = DIFFICULTY[difficulty];
+
+  // Predict where ball will be
+  const predict = cfg.predictBall * 8;
+  const predX = ball.x + ball.vx * predict;
+  const predY = ball.y + ball.vy * predict;
+
+  // Decide: attack ball, or defend our goal (right side)?
+  const playerHasBall = dist(p1, ball) < 30;
+  const ballInOurHalf = ball.x > W * 0.55;
+  const defending = playerHasBall && ballInOurHalf;
+
+  let tx, ty;
+  if (defending) {
+    // Position between ball and our goal
+    const goalCenterX = FIELD.right + 5;
+    const goalCenterY = H/2;
+    tx = (ball.x + goalCenterX) / 2 - 8;
+    ty = (ball.y + goalCenterY) / 2;
+  } else {
+    // Approach the predicted ball position from the side facing the enemy goal
+    tx = predX + (ball.x > FIELD.left + 60 ? 8 : 0);
+    ty = predY;
+  }
+
+  const ctrl = {
+    left: p2.x > tx + 3,
+    right: p2.x < tx - 3,
+    up: p2.y > ty + 3,
+    down: p2.y < ty - 3,
+  };
+  if (Math.random() < cfg.aiHesitate) ctrl.left = ctrl.right = false;
+  updatePlayer(p2, ctrl, cfg.aiSpeed);
+
+  const d = dist(p2, ball);
+  if (d < p2.r + ball.r + cfg.aiKickRange && p2.kickCooldown === 0) {
+    tryKick(p2, true, cfg.kickPower);
+  }
+}
+
+function update() {
+  if (gameState !== 'playing') return;
+  if (gameOver) return;
+  if (goalCelebration > 0) {
+    goalCelebration--;
+    updateParticles();
+    return;
+  }
+  const ctrl = {
+    left: keys['arrowleft'] || keys['a'],
+    right: keys['arrowright'] || keys['d'],
+    up: keys['arrowup'] || keys['w'],
+    down: keys['arrowdown'] || keys['s'],
+  };
+  const b = getBrawler();
+  updatePlayer(p1, ctrl, 0.18 + b.speed * 0.025);
+  tryKick(p1, !!keys[' '], 5 + b.kick * 0.6);
+  aiUpdate();
+  updateBall();
+  timeLeft--;
+  if (timeLeft <= 0) { timeLeft = 0; endGame(); }
+  updateTimer();
+  updateParticles();
+}
+
+function updateParticles() {
+  particles = particles.filter(p => p.life > 0);
+  for (const p of particles) {
+    p.x += p.vx; p.y += p.vy;
+    p.vx *= 0.95; p.vy *= 0.95;
+    p.life--;
+  }
+}
+
+function updateTimer() {
+  const sec = Math.ceil(timeLeft / 60);
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  document.getElementById('timer').textContent =
+    String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+function endGame() {
+  gameOver = true;
+  gameState = 'gameover';
+  let msg;
+  if (score.p1 > score.p2) msg = 'VOCE VENCEU!\n' + score.p1 + ' x ' + score.p2;
+  else if (score.p2 > score.p1) msg = 'CPU VENCEU\n' + score.p1 + ' x ' + score.p2;
+  else msg = 'EMPATE!\n' + score.p1 + ' x ' + score.p2;
+  document.getElementById('msg-text').innerText = msg;
+  document.getElementById('msg-btn-restart').textContent = 'JOGAR DE NOVO';
+  document.getElementById('msg-btn-resume').style.display = 'none';
+  document.getElementById('message').style.display = 'block';
+  document.getElementById('pause-btn').style.display = 'none';
+}
+
+function pause() {
+  if (gameState !== 'playing') return;
+  gameState = 'paused';
+  document.getElementById('msg-text').innerText = 'PAUSADO';
+  document.getElementById('msg-btn-restart').textContent = 'REINICIAR';
+  document.getElementById('msg-btn-resume').style.display = 'block';
+  document.getElementById('message').style.display = 'block';
+}
+
+function resume() {
+  if (gameOver) {
+    reset();
+    gameState = 'playing';
+    document.getElementById('message').style.display = 'none';
+    document.getElementById('pause-btn').style.display = 'block';
+    return;
+  }
+  gameState = 'playing';
+  document.getElementById('message').style.display = 'none';
+  document.getElementById('pause-btn').style.display = 'block';
+}
+
+function startGame() {
+  reset();
+  gameState = 'playing';
+  gameOver = false;
+  document.getElementById('title-screen').style.display = 'none';
+  document.getElementById('message').style.display = 'none';
+  document.getElementById('pause-btn').style.display = 'block';
+}
+
+function goToMenu() {
+  gameState = 'menu';
+  gameOver = false;
+  document.getElementById('title-screen').style.display = 'flex';
+  document.getElementById('message').style.display = 'none';
+  document.getElementById('pause-btn').style.display = 'none';
+}
+
+function reset() {
+  score = { p1: 0, p2: 0 };
+  timeLeft = DIFFICULTY[difficulty].matchTime * 60;
+  gameOver = false;
+  goalCelebration = 0;
+  particles = [];
+  ball.x = W/2; ball.y = H/2; ball.vx = 0; ball.vy = 0; ball.trail = [];
+  p1.x = 100; p1.y = H/2; p1.vx = 0; p1.vy = 0;
+  p2.x = W - 100; p2.y = H/2; p2.vx = 0; p2.vy = 0;
+  document.getElementById('score-p1').textContent = 0;
+  document.getElementById('score-p2').textContent = 0;
+  document.getElementById('message').style.display = 'none';
+  updateTimer();
+}
+
+// ── Brawler grid + tab switching ──
+function renderBrawlers() {
+  const grid = document.getElementById('brawler-grid');
+  grid.innerHTML = '';
+  for (const b of BRAWLERS) {
+    const card = document.createElement('div');
+    card.className = 'brawler-card' + (selectedBrawlerId === b.id ? ' selected' : '') + (b.locked ? ' locked' : '');
+    const stat = (label, val) => `
+      <div class="b-stat">
+        <span style="width:32px">${label}</span>
+        <div class="stat-bar"><div class="stat-fill" style="width:${val * 10}%"></div></div>
+      </div>`;
+    card.innerHTML = `
+      ${selectedBrawlerId === b.id ? '<div class="selected-badge">✓</div>' : ''}
+      <div class="portrait" style="background:${b.bg}"></div>
+      <div class="b-name">${b.name}${b.emoji ? ' <span style="color:#fcd000;font-size:10px;letter-spacing:1px">' + b.emoji + '</span>' : ''}</div>
+      <div class="b-rarity rarity-${b.rarity}">${b.rarity.toUpperCase()}</div>
+      ${stat('VEL', b.speed)}
+      ${stat('CHU', b.kick)}
+      ${stat('DEF', b.defense)}
+      ${b.locked ? '<div class="lock-overlay">🔒</div>' : ''}
+    `;
+    if (!b.locked) {
+      card.addEventListener('click', () => {
+        selectedBrawlerId = b.id;
+        renderBrawlers();
+        document.getElementById('selected-brawler-tag').textContent = '⚔ ' + b.name;
+      });
+    }
+    grid.appendChild(card);
+  }
+}
+
+function switchScreen(screen) {
+  document.querySelectorAll('.bs-tab').forEach(t => t.classList.toggle('active', t.dataset.screen === screen));
+  document.getElementById('play-screen').style.display = screen === 'play' ? 'flex' : 'none';
+  document.getElementById('brawler-screen').classList.toggle('active', screen === 'brawler');
+}
+document.querySelectorAll('.bs-tab').forEach(tab => {
+  tab.addEventListener('click', () => switchScreen(tab.dataset.screen));
+});
+renderBrawlers();
+
+document.getElementById('btn-start').addEventListener('click', startGame);
+document.getElementById('btn-how').addEventListener('click', () => {
+  alert('COMO JOGAR\n\n• WASD ou setas para mover\n• ESPACO para chutar\n• P para pausar\n\nFaca mais gols que a CPU antes do tempo acabar!');
+});
+document.getElementById('pause-btn').addEventListener('click', pause);
+document.querySelectorAll('#difficulty button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    difficulty = btn.dataset.diff;
+    document.querySelectorAll('#difficulty button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// ── DRAW ──
+function drawField() {
+  for (let i = 0; i < W; i += 20) {
+    ctx.fillStyle = (i / 20) % 2 === 0 ? '#2d8a2d' : '#369936';
+    ctx.fillRect(i, 0, 20, H);
+  }
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(FIELD.left, FIELD.top - 1, FIELD.right - FIELD.left, 2);
+  ctx.fillRect(FIELD.left, FIELD.bottom - 1, FIELD.right - FIELD.left, 2);
+  ctx.fillRect(FIELD.left - 1, FIELD.top, 2, FIELD.bottom - FIELD.top);
+  ctx.fillRect(FIELD.right - 1, FIELD.top, 2, FIELD.bottom - FIELD.top);
+  for (let y = FIELD.top; y < FIELD.bottom; y += 4) {
+    ctx.fillRect(W/2 - 1, y, 2, 2);
+  }
+  drawCircleOutline(W/2, H/2, 25, '#fff');
+  ctx.fillRect(W/2 - 1, H/2 - 1, 2, 2);
+  drawRectOutline(FIELD.left, H/2 - 50, 40, 100, '#fff');
+  drawRectOutline(FIELD.right - 40, H/2 - 50, 40, 100, '#fff');
+  drawRectOutline(FIELD.left, H/2 - 25, 18, 50, '#fff');
+  drawRectOutline(FIELD.right - 18, H/2 - 25, 18, 50, '#fff');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(FIELD.left - GOAL.width, GOAL.yTop, GOAL.width, 2);
+  ctx.fillRect(FIELD.left - GOAL.width, GOAL.yBottom - 2, GOAL.width, 2);
+  ctx.fillRect(FIELD.left - GOAL.width, GOAL.yTop, 2, GOAL.yBottom - GOAL.yTop);
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  for (let y = GOAL.yTop + 2; y < GOAL.yBottom - 2; y += 3) ctx.fillRect(FIELD.left - GOAL.width + 2, y, GOAL.width - 2, 1);
+  for (let x = FIELD.left - GOAL.width + 2; x < FIELD.left; x += 3) ctx.fillRect(x, GOAL.yTop + 2, 1, GOAL.yBottom - GOAL.yTop - 4);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(FIELD.right, GOAL.yTop, GOAL.width, 2);
+  ctx.fillRect(FIELD.right, GOAL.yBottom - 2, GOAL.width, 2);
+  ctx.fillRect(FIELD.right + GOAL.width - 2, GOAL.yTop, 2, GOAL.yBottom - GOAL.yTop);
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  for (let y = GOAL.yTop + 2; y < GOAL.yBottom - 2; y += 3) ctx.fillRect(FIELD.right, y, GOAL.width - 2, 1);
+  for (let x = FIELD.right + 2; x < FIELD.right + GOAL.width; x += 3) ctx.fillRect(x, GOAL.yTop + 2, 1, GOAL.yBottom - GOAL.yTop - 4);
+}
+
+function drawRectOutline(x, y, w, h, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w, 1);
+  ctx.fillRect(x, y + h - 1, w, 1);
+  ctx.fillRect(x, y, 1, h);
+  ctx.fillRect(x + w - 1, y, 1, h);
+}
+
+function drawCircleOutline(cx, cy, r, color) {
+  ctx.fillStyle = color;
+  let x = r, y = 0, err = 0;
+  while (x >= y) {
+    ctx.fillRect(cx + x, cy + y, 1, 1);
+    ctx.fillRect(cx + y, cy + x, 1, 1);
+    ctx.fillRect(cx - y, cy + x, 1, 1);
+    ctx.fillRect(cx - x, cy + y, 1, 1);
+    ctx.fillRect(cx - x, cy - y, 1, 1);
+    ctx.fillRect(cx - y, cy - x, 1, 1);
+    ctx.fillRect(cx + y, cy - x, 1, 1);
+    ctx.fillRect(cx + x, cy - y, 1, 1);
+    y++;
+    if (err <= 0) err += 2*y + 1;
+    if (err > 0) { x--; err -= 2*x + 1; }
+  }
+}
+
+function hexToRgb(hex) {
+  const c = hex.replace('#', '');
+  return {
+    r: parseInt(c.substr(0, 2), 16),
+    g: parseInt(c.substr(2, 2), 16),
+    b: parseInt(c.substr(4, 2), 16),
+  };
+}
+
+function colorsTooSimilar(a, b, threshold = 150) {
+  const A = hexToRgb(a), B = hexToRgb(b);
+  const d = Math.sqrt((A.r-B.r)**2 + (A.g-B.g)**2 + (A.b-B.b)**2);
+  return d < threshold;
+}
+
+function shadeHex(hex, amt) {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.substr(0, 2), 16);
+  const g = parseInt(c.substr(2, 2), 16);
+  const b = parseInt(c.substr(4, 2), 16);
+  const f = v => Math.max(0, Math.min(255, Math.round(v + 255 * amt)));
+  const toHex = v => f(v).toString(16).padStart(2, '0');
+  return '#' + toHex(r) + toHex(g) + toHex(b);
+}
+
+function drawPlayer(p) {
+  const x = Math.floor(p.x), y = Math.floor(p.y);
+  let teamColor, teamDark;
+  if (p.team === 'p1') {
+    teamColor = getBrawler().bg;
+    teamDark = shadeHex(teamColor, -0.3);
+  } else {
+    // Pick enemy color that contrasts with player's brawler color
+    const pc = getBrawler().bg;
+    teamColor = colorsTooSimilar(pc, '#ff4040') ? '#3050d8' : '#ff4040';
+    teamDark = shadeHex(teamColor, -0.3);
+  }
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillRect(x - 5, y + 5, 10, 2);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x - 4, y + 1, 8, 4);
+  ctx.fillStyle = teamColor;
+  ctx.fillRect(x - 5, y - 5, 10, 6);
+  ctx.fillStyle = teamDark;
+  ctx.fillRect(x - 5, y - 5, 10, 1);
+  ctx.fillStyle = teamDark;
+  ctx.fillRect(x - 6, y - 3, 1, 3);
+  ctx.fillRect(x + 5, y - 3, 1, 3);
+  ctx.fillStyle = '#fcb088';
+  ctx.fillRect(x - 3, y - 9, 6, 4);
+  ctx.fillStyle = '#481800';
+  ctx.fillRect(x - 3, y - 10, 6, 2);
+  ctx.fillStyle = '#000';
+  if (p.facing > 0) {
+    ctx.fillRect(x + 1, y - 7, 1, 1);
+    ctx.fillRect(x + 3, y - 7, 1, 1);
+  } else {
+    ctx.fillRect(x - 4, y - 7, 1, 1);
+    ctx.fillRect(x - 2, y - 7, 1, 1);
+  }
+  ctx.fillStyle = '#fcb088';
+  ctx.fillRect(x - 3, y + 5, 2, 3);
+  ctx.fillRect(x + 1, y + 5, 2, 3);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x - 4, y + 7, 3, 2);
+  ctx.fillRect(x + 1, y + 7, 3, 2);
+}
+
+function drawGoalie(g) {
+  const x = Math.floor(g.x), y = Math.floor(g.y);
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillRect(x - 5, y + 5, 10, 2);
+  ctx.fillStyle = '#fcd000';
+  ctx.fillRect(x - 5, y - 5, 10, 6);
+  ctx.fillStyle = '#a87800';
+  ctx.fillRect(x - 5, y - 5, 10, 1);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x - 4, y + 1, 8, 4);
+  ctx.fillStyle = '#fcd000';
+  ctx.fillRect(x - 7, y - 3, 2, 3);
+  ctx.fillRect(x + 5, y - 3, 2, 3);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(x - 7, y, 2, 2);
+  ctx.fillRect(x + 5, y, 2, 2);
+  ctx.fillStyle = '#fcb088';
+  ctx.fillRect(x - 3, y - 9, 6, 4);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x - 3, y - 10, 6, 2);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x - 2, y - 7, 1, 1);
+  ctx.fillRect(x + 1, y - 7, 1, 1);
+  ctx.fillStyle = '#fcb088';
+  ctx.fillRect(x - 3, y + 5, 2, 3);
+  ctx.fillRect(x + 1, y + 5, 2, 3);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x - 4, y + 7, 3, 2);
+  ctx.fillRect(x + 1, y + 7, 3, 2);
+}
+
+function drawBall() {
+  for (let i = 0; i < ball.trail.length; i++) {
+    const t = ball.trail[i];
+    ctx.fillStyle = `rgba(255,255,255,${(i / ball.trail.length) * 0.4})`;
+    ctx.fillRect(Math.floor(t.x) - 2, Math.floor(t.y) - 2, 4, 4);
+  }
+  const x = Math.floor(ball.x), y = Math.floor(ball.y);
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillRect(x - 3, y + 3, 7, 1);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(x - 3, y - 3, 7, 7);
+  ctx.fillRect(x - 4, y - 1, 1, 3);
+  ctx.fillRect(x + 4, y - 1, 1, 3);
+  ctx.fillRect(x - 1, y - 4, 3, 1);
+  ctx.fillRect(x - 1, y + 4, 3, 1);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x - 1, y - 2, 2, 2);
+  ctx.fillRect(x + 1, y, 1, 1);
+  ctx.fillRect(x - 2, y, 1, 1);
+  ctx.fillRect(x, y + 1, 1, 1);
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = Math.min(1, p.life / 30);
+    ctx.fillRect(Math.floor(p.x), Math.floor(p.y), p.size, p.size);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawCelebration() {
+  if (goalCelebration <= 0) return;
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#fcd000';
+  ctx.font = 'bold 32px monospace';
+  ctx.textAlign = 'center';
+  const wobble = Math.sin(goalCelebration / 4) * 2;
+  ctx.fillText('GOOOL!', W/2, H/2 + wobble);
+  ctx.textAlign = 'left';
+}
+
+function draw() {
+  drawField();
+  drawBall();
+  drawPlayer(p1);
+  drawPlayer(p2);
+  drawParticles();
+  drawCelebration();
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+reset();
+draw();
+loop();
+</script>
+</body>
+</html>

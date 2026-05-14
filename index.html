@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jogos do Dominic 🎮</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #0a0a1a;
+      color: white;
+      overflow-x: hidden;
+    }
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse at top, #1a1a3e 0%, #0a0a1a 60%),
+        radial-gradient(ellipse at bottom, #2a0a3e 0%, transparent 60%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+    /* Estrelas de fundo */
+    .stars {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: white;
+      border-radius: 50%;
+      animation: twinkle 3s infinite;
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; }
+      50% { opacity: 1; }
+    }
+    header {
+      text-align: center;
+      margin-bottom: 50px;
+      z-index: 1;
+    }
+    h1 {
+      font-size: clamp(36px, 6vw, 64px);
+      font-weight: 900;
+      letter-spacing: 3px;
+      background: linear-gradient(90deg, #ffcc00, #ff6b6b, #4ecdc4, #ffcc00);
+      background-size: 300% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: shimmer 4s linear infinite;
+      text-shadow: 0 0 40px rgba(255, 204, 0, 0.3);
+    }
+    @keyframes shimmer {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 300% 50%; }
+    }
+    .subtitle {
+      margin-top: 12px;
+      font-size: clamp(14px, 1.8vw, 18px);
+      opacity: 0.7;
+      letter-spacing: 2px;
+    }
+    .games {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 30px;
+      max-width: 1100px;
+      width: 100%;
+      z-index: 1;
+    }
+    .game-card {
+      position: relative;
+      background: rgba(20, 20, 40, 0.8);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 30px;
+      cursor: pointer;
+      text-decoration: none;
+      color: white;
+      transition: all 0.3s ease;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      backdrop-filter: blur(10px);
+    }
+    .game-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--card-bg);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 0;
+    }
+    .game-card:hover {
+      transform: translateY(-8px) scale(1.02);
+      border-color: var(--card-color);
+      box-shadow: 0 20px 60px var(--card-shadow);
+    }
+    .game-card:hover::before {
+      opacity: 0.15;
+    }
+    .game-card > * {
+      position: relative;
+      z-index: 1;
+    }
+    .game-icon {
+      font-size: 80px;
+      margin-bottom: 16px;
+      filter: drop-shadow(0 4px 12px var(--card-shadow));
+      transition: transform 0.3s ease;
+    }
+    .game-card:hover .game-icon {
+      transform: scale(1.15) rotate(-5deg);
+    }
+    .game-title {
+      font-size: 26px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: var(--card-color);
+      letter-spacing: 1px;
+    }
+    .game-desc {
+      font-size: 14px;
+      opacity: 0.8;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+    .play-btn {
+      background: var(--card-color);
+      color: #0a0a1a;
+      padding: 12px 32px;
+      border-radius: 30px;
+      font-weight: bold;
+      font-size: 15px;
+      letter-spacing: 2px;
+      transition: all 0.2s ease;
+    }
+    .game-card:hover .play-btn {
+      transform: scale(1.05);
+      box-shadow: 0 4px 20px var(--card-shadow);
+    }
+    /* Cores específicas para cada jogo */
+    .luta {
+      --card-color: #ffcc00;
+      --card-shadow: rgba(255, 204, 0, 0.4);
+      --card-bg: linear-gradient(135deg, #ff6b6b, #ffcc00);
+    }
+    .futebol {
+      --card-color: #4ade80;
+      --card-shadow: rgba(74, 222, 128, 0.4);
+      --card-bg: linear-gradient(135deg, #2d8a2d, #4ade80);
+    }
+    .space {
+      --card-color: #8fb6ff;
+      --card-shadow: rgba(143, 182, 255, 0.4);
+      --card-bg: linear-gradient(135deg, #1a2050, #4050a0);
+    }
+    footer {
+      margin-top: 50px;
+      opacity: 0.5;
+      font-size: 13px;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="stars" id="stars"></div>
+
+  <header>
+    <h1>JOGOS DO DOMINIC</h1>
+    <div class="subtitle">Escolha um jogo para começar</div>
+  </header>
+
+  <div class="games">
+    <a href="luta-elemental/index.html" class="game-card luta">
+      <div class="game-icon">⚔️</div>
+      <div class="game-title">LUTA ELEMENTAL</div>
+      <div class="game-desc">
+        Combate top-down com poderes elementais.
+        Mire, atire e use seu super!
+      </div>
+      <div class="play-btn">JOGAR ▶</div>
+    </a>
+
+    <a href="pixel-futebol/index.html" class="game-card futebol">
+      <div class="game-icon">⚽</div>
+      <div class="game-title">PIXEL FUTEBOL</div>
+      <div class="game-desc">
+        Futebol em pixel art.
+        Marque gols e vença a partida!
+      </div>
+      <div class="play-btn">JOGAR ▶</div>
+    </a>
+
+    <a href="space-shooter/index.html" class="game-card space">
+      <div class="game-icon">🚀</div>
+      <div class="game-title">SPACE SHOOTER</div>
+      <div class="game-desc">
+        Pilote sua nave pelo espaço,
+        destrua inimigos e suba de nível!
+      </div>
+      <div class="play-btn">JOGAR ▶</div>
+    </a>
+  </div>
+
+  <footer>
+    feito com ❤️ por Dominic
+  </footer>
+
+  <script>
+    // Gera estrelas aleatórias no fundo
+    const starsContainer = document.getElementById('stars');
+    for (let i = 0; i < 80; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      star.style.left = Math.random() * 100 + '%';
+      star.style.top = Math.random() * 100 + '%';
+      star.style.animationDelay = Math.random() * 3 + 's';
+      star.style.opacity = Math.random() * 0.8 + 0.2;
+      starsContainer.appendChild(star);
+    }
+  </script>
+</body>
+</html>
