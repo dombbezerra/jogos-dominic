@@ -661,7 +661,7 @@
   </div>
 </div>
 
-<a href="../index.html" id="back-link">← Menu</a>
+<a href="../index.html" id="back-link" onclick="if(window!==window.top){event.preventDefault();window.parent.postMessage({type:'closeGame'},'*');}">← Menu</a>
 
 <button id="pause-btn" style="display:none">II PAUSAR</button>
 

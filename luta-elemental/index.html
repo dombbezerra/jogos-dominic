@@ -110,7 +110,7 @@
   </style>
 </head>
 <body>
-  <a href="../index.html" id="back-link">← Menu</a>
+  <a href="../index.html" id="back-link" onclick="if(window!==window.top){event.preventDefault();window.parent.postMessage({type:'closeGame'},'*');}">← Menu</a>
   <h1>LUTA ELEMENTAL</h1>
   <div id="instrucoes">
     Mover: <b>W A S D</b> &nbsp;|&nbsp; Mirar: <b>mouse</b> &nbsp;|&nbsp; Atirar: <b>segurar clique</b> &nbsp;|&nbsp; Super: <b>Q</b> &nbsp;|&nbsp; Pausar: <b>P</b>

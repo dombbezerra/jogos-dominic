@@ -187,7 +187,7 @@
 </style>
 </head>
 <body>
-  <a href="../index.html" id="back-link">← Menu</a>
+  <a href="../index.html" id="back-link" onclick="if(window!==window.top){event.preventDefault();window.parent.postMessage({type:'closeGame'},'*');}">← Menu</a>
   <div id="game-wrap">
     <canvas id="game" width="800" height="600" tabindex="0"></canvas>
     <div id="overlay">
