@@ -2,11 +2,18 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a1a2e">
   <title>Luta Elemental</title>
   <style>
     * { box-sizing: border-box; }
-    html, body { height: 100%; }
+    html, body {
+      height: 100%;
+      overscroll-behavior: none;
+      -webkit-tap-highlight-color: transparent;
+    }
     body {
       margin: 0;
       background: #1a1a2e;
@@ -16,9 +23,33 @@
       flex-direction: column;
       align-items: center;
       padding: 8px;
+      padding-top: max(8px, env(safe-area-inset-top));
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
       gap: 6px;
       min-height: 100vh;
       overflow: hidden;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    #back-link {
+      position: fixed;
+      top: calc(env(safe-area-inset-top) + 8px);
+      left: calc(env(safe-area-inset-left) + 8px);
+      background: rgba(255, 204, 0, 0.9);
+      color: #1a1a2e;
+      border: none;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: bold;
+      text-decoration: none;
+      border-radius: 6px;
+      z-index: 20;
+    }
+    /* esconde linha de instruções desktop em telas touch */
+    @media (hover: none) and (pointer: coarse) {
+      #instrucoes { display: none; }
+      h1 { font-size: clamp(15px, 4vw, 22px); }
     }
     h1 {
       margin: 0;
@@ -79,6 +110,7 @@
   </style>
 </head>
 <body>
+  <a href="../index.html" id="back-link">← Menu</a>
   <h1>LUTA ELEMENTAL</h1>
   <div id="instrucoes">
     Mover: <b>W A S D</b> &nbsp;|&nbsp; Mirar: <b>mouse</b> &nbsp;|&nbsp; Atirar: <b>segurar clique</b> &nbsp;|&nbsp; Super: <b>Q</b> &nbsp;|&nbsp; Pausar: <b>P</b>
