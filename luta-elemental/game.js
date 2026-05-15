@@ -74,7 +74,7 @@ function carregarSalvo() {
     return {
       moedas: dados.moedas || 0,
       personagemAtual: dados.personagemAtual || 'azul',
-      desbloqueados: dados.desbloqueados || ['azul'],
+      desbloqueados: dados.desbloqueados || ['azul', 'gelo'],
       melhorias: dados.melhorias || { vidaExtra: 0, municaoExtra: 0, recargaRapida: 0 },
       melhorPontuacao: dados.melhorPontuacao || 0,
       modoAtual: dados.modoAtual || 'sobrevivencia',
@@ -84,7 +84,7 @@ function carregarSalvo() {
       recordeChefao: dados.recordeChefao || 0,
     };
   } catch (e) {
-    return { moedas: 0, personagemAtual: 'azul', desbloqueados: ['azul'], melhorias: { vidaExtra: 0, municaoExtra: 0, recargaRapida: 0 }, melhorPontuacao: 0, modoAtual: 'sobrevivencia', recordeTempo: 0, mutado: false, gemas: 0, recordeChefao: 0 };
+    return { moedas: 0, personagemAtual: 'azul', desbloqueados: ['azul', 'gelo'], melhorias: { vidaExtra: 0, municaoExtra: 0, recargaRapida: 0 }, melhorPontuacao: 0, modoAtual: 'sobrevivencia', recordeTempo: 0, mutado: false, gemas: 0, recordeChefao: 0 };
   }
 }
 function salvar() {
@@ -97,9 +97,11 @@ if (!localStorage.getItem('moedasReset_v1')) {
   localStorage.setItem('moedasReset_v1', '1');
   localStorage.setItem('jogoDominic', JSON.stringify(salvo));
 }
-// LUZ sempre desbloqueado (presente!)
-if (!salvo.desbloqueados.includes('luz')) {
-  salvo.desbloqueados.push('luz');
+// Reset único: deixa só ÁGUA + GELO desbloqueados
+if (!localStorage.getItem('desbloqueadosReset_v1')) {
+  salvo.desbloqueados = ['azul', 'gelo'];
+  if (!['azul', 'gelo'].includes(salvo.personagemAtual)) salvo.personagemAtual = 'azul';
+  localStorage.setItem('desbloqueadosReset_v1', '1');
   localStorage.setItem('jogoDominic', JSON.stringify(salvo));
 }
 
