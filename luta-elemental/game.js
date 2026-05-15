@@ -174,7 +174,7 @@ window.addEventListener('keydown', (e) => {
   teclas[k] = true;
   if (k === 'p') alternarPausa();
   if (k === 'q' && estado === 'jogando') tentarSuper();
-  if (k === 'escape' && (estado === 'personagens' || estado === 'loja' || estado === 'eventos' || estado === 'adm')) estado = 'menu';
+  if (k === 'escape' && (estado === 'personagens' || estado === 'loja' || estado === 'eventos')) estado = 'menu';
 });
 window.addEventListener('keyup', (e) => { teclas[e.key.toLowerCase()] = false; });
 
@@ -537,7 +537,6 @@ function desenhar() {
   else if (estado === 'personagens') desenharPersonagens();
   else if (estado === 'eventos') desenharEventos();
   else if (estado === 'loja') desenharLoja();
-  else if (estado === 'adm') desenharADM();
   else if (estado === 'jogando' || estado === 'countdown' || estado === 'gameOver') desenharPartida();
 
   ctx.restore();
@@ -619,15 +618,6 @@ function desenharMenu() {
   btn(305, tela.height - 80, 175, 65, modo.icone + ' EVENTOS',     () => { estado = 'eventos'; },     { fonte: 'bold 15px Arial', cor: '#cc66ff', corHover: '#dd99ff', corBorda: '#552288' });
   btn(495, tela.height - 80, 195, 80, 'JOGAR',       () => { iniciarPartida(); },     { fonte: 'bold 28px Arial', cor: '#22cc55', corHover: '#33dd66', corBorda: '#117733', corTexto: 'white' });
   btn(680, tela.height - 80, 175, 65, 'LOJA',        () => { estado = 'loja'; },      { fonte: 'bold 18px Arial', cor: '#ff9933', corHover: '#ffaa55', corBorda: '#883300' });
-
-  // botão ADM pequeno no canto inferior esquerdo
-  btn(50, tela.height - 22, 80, 28, '⚙ ADM', () => { estado = 'adm'; }, {
-    fonte: 'bold 11px Arial',
-    cor: 'rgba(255,100,200,0.35)',
-    corHover: 'rgba(255,100,200,0.7)',
-    corBorda: '#aa3388',
-    corTexto: 'white',
-  });
 
   for (const b of botoes) desenharBotao(b);
 }
@@ -875,67 +865,6 @@ function desenharTextoMultilinha(texto, x, y, larguraMax, alturaLinha) {
 }
 
 // ----- TELA: LOJA -----
-// ----- TELA: ADM (atalhos / trapaças) -----
-function desenharADM() {
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#ff66cc';
-  ctx.font = 'bold 32px Arial';
-  ctx.fillText('⚙ MODO ADM', tela.width/2, 40);
-  ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  ctx.font = '13px Arial';
-  ctx.fillText('Atalhos pra brincar sem precisar grindar', tela.width/2, 65);
-
-  // contadores
-  desenharMoedas(tela.width - 250, 30);
-  desenharGemasContador(tela.width - 100, 30);
-
-  // ===== MOEDAS =====
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffcc00';
-  ctx.font = 'bold 16px Arial';
-  ctx.fillText('💰 MOEDAS', 200, 110);
-  btn(120, 145, 130, 38, '+100',  () => { salvo.moedas += 100;  salvar(); mostrarMensagem('+100 moedas'); },  { cor: '#ffcc00', corHover: '#ffe066', fonte: 'bold 14px Arial' });
-  btn(280, 145, 130, 38, '+1000', () => { salvo.moedas += 1000; salvar(); mostrarMensagem('+1000 moedas'); }, { cor: '#ffcc00', corHover: '#ffe066', fonte: 'bold 14px Arial' });
-
-  // ===== GEMAS =====
-  ctx.fillStyle = '#22cc55';
-  ctx.fillText('💎 GEMAS', 600, 110);
-  btn(520, 145, 130, 38, '+10',  () => { salvo.gemas += 10;  salvar(); mostrarMensagem('+10 gemas'); },  { cor: '#22cc55', corHover: '#33dd66', corTexto: 'white', fonte: 'bold 14px Arial' });
-  btn(680, 145, 130, 38, '+100', () => { salvo.gemas += 100; salvar(); mostrarMensagem('+100 gemas'); }, { cor: '#22cc55', corHover: '#33dd66', corTexto: 'white', fonte: 'bold 14px Arial' });
-
-  // ===== PERSONAGENS =====
-  ctx.fillStyle = '#66ccff';
-  ctx.fillText('🦸 PERSONAGENS', tela.width/2, 215);
-  btn(tela.width/2, 250, 320, 40, 'DESBLOQUEAR TODOS', () => {
-    salvo.desbloqueados = PERSONAGENS.map(p => p.id);
-    salvar();
-    mostrarMensagem('Todos os personagens desbloqueados!');
-  }, { cor: '#66ccff', corHover: '#99ddff', corBorda: '#225577', fonte: 'bold 14px Arial' });
-
-  // ===== MELHORIAS =====
-  ctx.fillStyle = '#ff9933';
-  ctx.fillText('⚙ MELHORIAS', tela.width/2, 305);
-  btn(tela.width/2, 340, 320, 40, 'MELHORIAS NO MÁXIMO', () => {
-    for (const item of ITENS_LOJA) salvo.melhorias[item.id] = item.max;
-    salvar();
-    mostrarMensagem('Melhorias no máximo!');
-  }, { cor: '#ff9933', corHover: '#ffaa55', corBorda: '#883300', fonte: 'bold 14px Arial' });
-
-  // ===== ZERAR =====
-  ctx.fillStyle = '#ff3344';
-  ctx.fillText('☠ APAGAR PROGRESSO', tela.width/2, 395);
-  btn(tela.width/2, 430, 320, 40, 'RESETAR TUDO', () => {
-    if (window.confirm('Apagar TODO o progresso? Não dá pra desfazer.')) {
-      localStorage.removeItem('jogoDominic');
-      salvo = carregarSalvo();
-      mostrarMensagem('Progresso zerado!');
-    }
-  }, { cor: '#ff3344', corHover: '#ff5566', corBorda: '#882211', corTexto: 'white', fonte: 'bold 14px Arial' });
-
-  btn(80, tela.height - 35, 120, 50, '◀ VOLTAR', () => { estado = 'menu'; }, { fonte: 'bold 16px Arial' });
-  for (const b of botoes) desenharBotao(b);
-}
-
 function desenharLoja() {
   ctx.textAlign = 'center';
   ctx.fillStyle = '#ff9933';
@@ -3125,7 +3054,6 @@ function atualizarPlacar() {
   else if (estado === 'personagens') placar.textContent = 'Escolha seu personagem (ESC pra voltar)';
   else if (estado === 'eventos') placar.textContent = 'Escolha o modo de jogo (ESC pra voltar)';
   else if (estado === 'loja') placar.textContent = 'Compre melhorias com suas moedas (ESC pra voltar)';
-  else if (estado === 'adm') placar.textContent = '⚙ Modo ADM — atalhos e trapaças (ESC pra voltar)';
   else if (estado === 'jogando' || estado === 'countdown') placar.textContent = 'Pontos: ' + pontos + ' | Vidas: ' + jogador.vidas + ' / ' + jogador.vidasMax;
   else if (estado === 'gameOver') placar.textContent = 'Game Over — clique pra continuar';
 }
