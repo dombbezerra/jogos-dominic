@@ -91,6 +91,12 @@ function salvar() {
   localStorage.setItem('jogoDominic', JSON.stringify(salvo));
 }
 let salvo = carregarSalvo();
+// Reset único de moedas para todos os jogadores (uma vez só)
+if (!localStorage.getItem('moedasReset_v1')) {
+  salvo.moedas = 0;
+  localStorage.setItem('moedasReset_v1', '1');
+  localStorage.setItem('jogoDominic', JSON.stringify(salvo));
+}
 // LUZ sempre desbloqueado (presente!)
 if (!salvo.desbloqueados.includes('luz')) {
   salvo.desbloqueados.push('luz');
