@@ -61,10 +61,10 @@
     .mv { width: 58px; height: 58px; font-size: 22px; bottom: calc(env(safe-area-inset-bottom) + 18px); }
     #t-left  { left: calc(env(safe-area-inset-left) + 14px); }
     #t-right { left: calc(env(safe-area-inset-left) + 82px); }
-    #t-jab   { right: calc(env(safe-area-inset-right) + 96px); bottom: calc(env(safe-area-inset-bottom) + 84px); width: 60px; height: 60px; background:#e8b53a; }
-    #t-cross { right: calc(env(safe-area-inset-right) + 20px); bottom: calc(env(safe-area-inset-bottom) + 96px); width: 62px; height: 62px; background:#c9342b; color:#f4ead2; }
-    #t-upper { right: calc(env(safe-area-inset-right) + 22px); bottom: calc(env(safe-area-inset-bottom) + 20px); width: 60px; height: 60px; background:#2f5fa8; color:#f4ead2; }
-    #t-block { right: calc(env(safe-area-inset-right) + 98px); bottom: calc(env(safe-area-inset-bottom) + 14px); width: 58px; height: 58px; }
+    #t-soco  { right: calc(env(safe-area-inset-right) + 96px); bottom: calc(env(safe-area-inset-bottom) + 88px); width: 64px; height: 64px; background:#c9342b; color:#f4ead2; }
+    #t-chute { right: calc(env(safe-area-inset-right) + 18px); bottom: calc(env(safe-area-inset-bottom) + 96px); width: 64px; height: 64px; background:#2f5fa8; color:#f4ead2; }
+    #t-block { right: calc(env(safe-area-inset-right) + 22px); bottom: calc(env(safe-area-inset-bottom) + 18px); width: 60px; height: 60px; background:#e8b53a; }
+    #t-pause { right: calc(env(safe-area-inset-right) + 20px); top: calc(env(safe-area-inset-top) + 10px); width: 44px; height: 44px; font-size: 18px; }
   </style>
 </head>
 <body>
@@ -78,12 +78,12 @@
   <div id="touch">
     <div class="tb mv" id="t-left">◀</div>
     <div class="tb mv" id="t-right">▶</div>
-    <div class="tb" id="t-jab">JAB</div>
-    <div class="tb" id="t-cross">DIRE<br>TO</div>
-    <div class="tb" id="t-upper">UPPER</div>
+    <div class="tb" id="t-soco">SOCO</div>
+    <div class="tb" id="t-chute">CHUTE</div>
     <div class="tb" id="t-block">DEFESA</div>
+    <div class="tb" id="t-pause">⏸</div>
   </div>
 
-  <script src="game.js?v=1"></script>
+  <script src="game.js?v=2"></script>
 </body>
 </html>
