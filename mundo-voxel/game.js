@@ -336,7 +336,7 @@ rebuildWorld();
 // Spawn player above surface
 let spawnY=H-1;
 while(spawnY>0&&getBlock(Math.floor(W/2),spawnY,Math.floor(D/2))===AIR) spawnY--;
-player.pos.set(W/2, spawnY+2, D/2);
+player.pos.set(W/2, spawnY + 1 + player.EYE + 0.1, D/2);
 camera.position.copy(player.pos);
 camera.quaternion.setFromEuler(euler);
 
