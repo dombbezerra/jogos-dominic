@@ -37,15 +37,15 @@ const sfx = { whoosh: nop, hit: nop, block: nop, ko: nop, bell: nop, ui: nop };
 // ═══════════════════════════════════════════════════════════════════════════
 // hair: 'curto' | 'moicano' | 'careca' | 'coque' | 'barba'
 const FIGHTERS = [
-  { id:'bruno',  nome:'BRUNO SILVA', pele:'#c08050', sombra:'#a06a3e', cabelo:'#1e1410', hair:'curto',
+  { id:'bruno',  nome:'BRUNO SILVA', pele:'#cd8447', sombra:'#a86636', cabelo:'#17100c', hair:'curto',
     calcao: BLUE,     faixa: CREAM, hp:105, scale:1.20, ai:{ react:32, aggr:.32, guard:.22, range:196 } },
-  { id:'kai',    nome:'KAI TANAKA',  pele:'#dfb489', sombra:'#c2946a', cabelo:'#12100e', hair:'coque',
+  { id:'kai',    nome:'KAI TANAKA',  pele:'#eebb85', sombra:'#cb955f', cabelo:'#0f0d0b', hair:'coque',
     calcao:'#e8e2d0', faixa: RED,   hp:115, scale:1.17, ai:{ react:22, aggr:.48, guard:.34, range:204 } },
-  { id:'ivan',   nome:'IVAN PETROV', pele:'#dcab84', sombra:'#bd8b64', cabelo:'#c9a227', hair:'moicano',
+  { id:'ivan',   nome:'IVAN PETROV', pele:'#e9ac78', sombra:'#c68a56', cabelo:'#e2b62c', hair:'moicano',
     calcao: GREEN,    faixa: CREAM, hp:120, scale:1.21, ai:{ react:18, aggr:.55, guard:.40, range:206 } },
-  { id:'marcus', nome:'MARCUS KING', pele:'#71472a', sombra:'#573520', cabelo:'#241a12', hair:'careca',
+  { id:'marcus', nome:'MARCUS KING', pele:'#8a5228', sombra:'#693d1c', cabelo:'#241a12', hair:'careca',
     calcao: GOLD,     faixa: INK,   hp:128, scale:1.24, ai:{ react:16, aggr:.58, guard:.44, range:210 } },
-  { id:'tita',   nome:'TITÃ COSTA',  pele:'#cf9660', sombra:'#ae7a48', cabelo:'#7a3b1c', hair:'barba',
+  { id:'tita',   nome:'TITÃ COSTA',  pele:'#dc9a55', sombra:'#b87940', cabelo:'#8f3f14', hair:'barba',
     calcao: PURPLE,   faixa: GOLD,  hp:152, scale:1.36, ai:{ react:11, aggr:.68, guard:.54, range:216 } },
 ];
 const byId = id => FIGHTERS.find(f => f.id === id);
@@ -392,9 +392,13 @@ function glove(x, y, r, col, dir) {
 // ── Cabelo ────────────────────────────────────────────────────────────────
 function capHair(hx, hy, s, c, rx, ry) {
   ctx.beginPath();
-  ctx.ellipse(hx, hy - 1 * s, rx, ry, 0, Math.PI * 1.03, Math.PI * 1.97);
+  ctx.ellipse(hx, hy - 6 * s, rx, ry * .9, 0, Math.PI * 1.02, Math.PI * 1.98);
   ctx.closePath();
   ctx.fillStyle = c; ctx.fill(); ink(4); ctx.stroke();
+  // brilho no cabelo
+  ctx.beginPath();
+  ctx.ellipse(hx - rx * .38, hy - 16 * s, rx * .28, ry * .16, -.5, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,.16)'; ctx.fill();
 }
 function drawHair(f, hx, hy, s) {
   const L = f.look, c = L.cabelo, d = f.dir;
@@ -441,21 +445,45 @@ function drawHead(f, hx, hy, s) {
   const dead = f.state === 'down' || f.state === 'ko';
   const hurt = f.flash > 0 || f.state === 'hit';
   const atk  = f.state === 'soco' || f.state === 'chute';
-  const pele = (hurt && f.flash % 4 < 2) ? '#ffffff' : L.pele;
+  const flashing = hurt && f.flash % 4 < 2;
+  const pele = flashing ? '#ffffff' : L.pele;
 
   // orelhas
   blob(hx - 16 * s, hy + 2 * s, 4 * s, 5.5 * s, pele, 3.5);
   blob(hx + 16 * s, hy + 2 * s, 4 * s, 5.5 * s, pele, 3.5);
 
   // crânio + mandíbula
-  ctx.beginPath();
-  ctx.moveTo(hx - 16 * s, hy - 2 * s);
-  ctx.quadraticCurveTo(hx - 16 * s, hy - 21 * s, hx, hy - 21 * s);
-  ctx.quadraticCurveTo(hx + 16 * s, hy - 21 * s, hx + 16 * s, hy - 2 * s);
-  ctx.quadraticCurveTo(hx + 15 * s, hy + 12 * s, hx + d * 2 * s, hy + 18 * s);
-  ctx.quadraticCurveTo(hx - 15 * s, hy + 12 * s, hx - 16 * s, hy - 2 * s);
-  ctx.closePath();
-  ctx.fillStyle = pele; ctx.fill(); ink(4.5); ctx.stroke();
+  const skull = () => {
+    ctx.beginPath();
+    ctx.moveTo(hx - 16 * s, hy - 2 * s);
+    ctx.quadraticCurveTo(hx - 16 * s, hy - 21 * s, hx, hy - 21 * s);
+    ctx.quadraticCurveTo(hx + 16 * s, hy - 21 * s, hx + 16 * s, hy - 2 * s);
+    ctx.quadraticCurveTo(hx + 15 * s, hy + 12 * s, hx + d * 2 * s, hy + 18 * s);
+    ctx.quadraticCurveTo(hx - 15 * s, hy + 12 * s, hx - 16 * s, hy - 2 * s);
+    ctx.closePath();
+  };
+  skull();
+  ctx.fillStyle = pele; ctx.fill();
+
+  // modelado: luz de um lado, sombra do outro
+  if (!flashing) {
+    ctx.save();
+    skull(); ctx.clip();
+    const gl = ctx.createLinearGradient(hx - 16 * s, 0, hx + 16 * s, 0);
+    gl.addColorStop(0,  d > 0 ? 'rgba(20,10,0,.30)' : 'rgba(255,236,200,.20)');
+    gl.addColorStop(.5, 'rgba(0,0,0,0)');
+    gl.addColorStop(1,  d > 0 ? 'rgba(255,236,200,.20)' : 'rgba(20,10,0,.30)');
+    ctx.fillStyle = gl; ctx.fillRect(hx - 18 * s, hy - 24 * s, 36 * s, 46 * s);
+    // sombra sob o maxilar e na têmpora
+    const gj = ctx.createLinearGradient(0, hy + 4 * s, 0, hy + 19 * s);
+    gj.addColorStop(0, 'rgba(20,10,0,0)'); gj.addColorStop(1, 'rgba(20,10,0,.26)');
+    ctx.fillStyle = gj; ctx.fillRect(hx - 18 * s, hy + 4 * s, 36 * s, 16 * s);
+    const gt = ctx.createLinearGradient(0, hy - 21 * s, 0, hy - 8 * s);
+    gt.addColorStop(0, 'rgba(20,10,0,.22)'); gt.addColorStop(1, 'rgba(20,10,0,0)');
+    ctx.fillStyle = gt; ctx.fillRect(hx - 18 * s, hy - 22 * s, 36 * s, 15 * s);
+    ctx.restore();
+  }
+  skull(); ink(4.5); ctx.stroke();
 
   drawHair(f, hx, hy, s);
 
@@ -868,12 +896,16 @@ function drawStart(t) {
     const ps = b.w - 26, px = b.x + 13, py = b.y + 12;
     ctx.save();
     ctx.beginPath(); ctx.rect(px, py, ps, ps); ctx.clip();
-    const gg = ctx.createLinearGradient(0, py, 0, py + ps);
-    gg.addColorStop(0, '#6b4f36'); gg.addColorStop(1, '#2e2015');
+    // fundo frio, para a pele quente saltar
+    const gg = ctx.createRadialGradient(px + ps/2, py + ps*.42, ps*.08, px + ps/2, py + ps*.5, ps*.78);
+    gg.addColorStop(0, '#6f8093'); gg.addColorStop(.55, '#3d4a57'); gg.addColorStop(1, '#1c232b');
     ctx.fillStyle = gg; ctx.fillRect(px, py, ps, ps);
-    ctx.globalAlpha = on ? 1 : (hov ? .9 : .68);
+    // rosto sempre opaco (com alfa, o pescoço vazava através da cara)
     drawFace(f, px + ps / 2, py + ps * .46 + Math.sin(f.bob) * 2, ps);
-    ctx.globalAlpha = 1;
+    if (!on) {                                   // escurece os não escolhidos por cima
+      ctx.fillStyle = hov ? 'rgba(18,11,6,.16)' : 'rgba(18,11,6,.36)';
+      ctx.fillRect(px, py, ps, ps);
+    }
     ctx.restore();
     ctx.beginPath(); ctx.rect(px, py, ps, ps);
     ink(4); ctx.strokeStyle = on ? GOLD : INK; ctx.stroke();
