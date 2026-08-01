@@ -51,16 +51,16 @@
     aspect-ratio: 4 / 3;
     max-height: calc(100vh - 80px);
   }
-  canvas {
+  #game {
     display: block;
     width: 100%;
     height: 100%;
     background: radial-gradient(ellipse at center, #0b1030 0%, #02030a 70%);
     border: 1px solid #222a55;
     box-shadow: 0 0 40px #1a2070;
-    image-rendering: pixelated;
     touch-action: none;
   }
+  #preview, .ship-card canvas { display: block; margin: 0 auto; background: none; border: 0; }
   #hud {
     font-size: clamp(11px, 2.4vw, 14px);
     letter-spacing: 1px;
@@ -122,6 +122,89 @@
   }
   #overlay .start-btn:hover { background: #5060c0; }
   .hidden { display: none !important; }
+
+  /* ── Menu inicial ── */
+  #menu, #naves {
+    position: absolute;
+    inset: 0;
+    z-index: 12;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: radial-gradient(ellipse at 50% 36%, #3d2670 0%, #1c1036 55%, #0c0718 100%);
+    padding: 12px 16px 16px;
+    overflow-y: auto;
+  }
+  .menu-title { text-align: center; line-height: .9; margin-top: 2%; }
+  .menu-title .l1 {
+    display: block;
+    font-size: clamp(24px, 6.5vw, 50px);
+    font-weight: 900; letter-spacing: 2px; color: #ffd42a;
+    text-shadow: 0 4px 0 rgba(0,0,0,.5);
+  }
+  .menu-title .l2 {
+    display: block;
+    font-size: clamp(32px, 9.5vw, 72px);
+    font-weight: 900; letter-spacing: 1px; color: #ff4fd8;
+    text-shadow: 0 4px 0 rgba(0,0,0,.5);
+  }
+  #preview-wrap {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    width: 100%;
+  }
+  #preview {
+    width: clamp(130px, 30vw, 200px);
+    height: clamp(130px, 30vw, 200px);
+    animation: float 3.2s ease-in-out infinite;
+  }
+  @keyframes float { 0%,100% { transform: translateY(-6px); } 50% { transform: translateY(6px); } }
+  .ship-name { font-size: clamp(18px, 4.4vw, 28px); font-weight: 800; letter-spacing: 1px; margin-top: 2px; }
+  .ship-desc { font-size: clamp(12px, 2.8vw, 16px); opacity: .6; margin-top: 3px; }
+  .menu-btns {
+    display: flex; gap: clamp(8px, 2vw, 14px);
+    width: 100%; max-width: 620px;
+  }
+  .mbtn {
+    flex: 1;
+    border: 3px solid #14112a;
+    border-radius: 4px;
+    padding: clamp(11px, 2.4vw, 17px) 4px;
+    font-family: inherit;
+    font-weight: 900;
+    font-size: clamp(13px, 3vw, 20px);
+    letter-spacing: 1px;
+    color: #14112a;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,.5);
+  }
+  .mbtn:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,.5); }
+  .mbtn.naves { background: #5bc8f5; }
+  .mbtn.play  { background: #22c55e; color: #fff; flex: 1.4; font-size: clamp(16px, 3.8vw, 26px); }
+
+  /* ── Escolha de nave ── */
+  .ship-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(clamp(112px, 22vw, 150px), 1fr));
+    gap: 10px;
+    width: 100%; max-width: 620px;
+    margin-bottom: 14px;
+  }
+  .ship-card {
+    background: rgba(255,255,255,.05);
+    border: 2px solid #3b2f6e;
+    border-radius: 8px;
+    padding: 10px 6px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform .12s, border-color .12s;
+  }
+  .ship-card:hover { transform: translateY(-3px); }
+  .ship-card.on { border-color: #ffd42a; background: rgba(255,212,42,.13); }
+  .ship-card canvas { width: clamp(58px, 12vw, 76px); height: clamp(58px, 12vw, 76px); }
+  .ship-card .n { font-weight: 800; font-size: clamp(11px, 2.4vw, 14px); margin-top: 2px; }
+  .ship-card .s { font-size: clamp(9px, 2vw, 11px); opacity: .55; margin-top: 2px; }
 
   /* Touch controls */
   #touch-ui {
@@ -190,15 +273,32 @@
   <a href="../index.html" id="back-link" onclick="if(window!==window.top){event.preventDefault();window.parent.postMessage({type:'closeGame'},'*');}">← Menu</a>
   <div id="game-wrap">
     <canvas id="game" width="800" height="600" tabindex="0"></canvas>
-    <div id="overlay">
-      <div class="panel" id="panel">
-        <h1>SPACE SHOOTER</h1>
-        <p>Setas / WASD para mover</p>
-        <p>Espaço ou X para atirar</p>
-        <p>P ou Esc para pausar</p>
-        <p style="margin-top:10px;opacity:0.7">No celular: use o joystick + botão</p>
-        <button class="start-btn" id="startBtn">JOGAR</button>
+
+    <div id="menu">
+      <div class="menu-title"><span class="l1">SPACE</span><span class="l2">SHOOTER</span></div>
+      <div id="preview-wrap">
+        <canvas id="preview" width="220" height="220"></canvas>
+        <div class="ship-name" id="shipName">—</div>
+        <div class="ship-desc" id="shipDesc">—</div>
       </div>
+      <div class="menu-btns">
+        <button class="mbtn naves" id="btnNaves">NAVES</button>
+        <button class="mbtn play" id="btnPlay">JOGAR</button>
+      </div>
+    </div>
+
+    <div id="naves" class="hidden">
+      <div class="menu-title" style="margin: 6px 0 14px">
+        <span class="l1" style="font-size: clamp(19px, 5vw, 34px)">ESCOLHA SUA NAVE</span>
+      </div>
+      <div class="ship-grid" id="shipGrid"></div>
+      <div class="menu-btns">
+        <button class="mbtn naves" id="btnVoltar">VOLTAR</button>
+      </div>
+    </div>
+
+    <div id="overlay" class="hidden">
+      <div class="panel" id="panel"></div>
     </div>
   </div>
   <div id="hud">
@@ -228,7 +328,7 @@ const pauseBtn = document.getElementById('pauseBtn');
 const keys = {};
 addEventListener('keydown', e => {
   keys[e.key.toLowerCase()] = true;
-  if (e.key === 'Enter' && state.mode !== 'playing' && state.mode !== 'paused') startGame();
+  if (e.key === 'Enter' && (state.mode === 'menu' || state.mode === 'gameover')) startGame();
   if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') && (state.mode === 'playing' || state.mode === 'paused')) togglePause();
   if ([' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) e.preventDefault();
 });
@@ -236,15 +336,115 @@ addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
 canvas.addEventListener('click', () => {
   canvas.focus();
-  if (state.mode === 'menu' || state.mode === 'gameover') startGame();
-  else if (state.mode === 'paused') togglePause();
-});
-document.getElementById('startBtn').addEventListener('click', e => {
-  e.stopPropagation();
-  if (state.mode === 'menu' || state.mode === 'gameover') startGame();
-  else if (state.mode === 'paused') togglePause();
+  if (state.mode === 'paused') togglePause();
 });
 window.addEventListener('load', () => canvas.focus());
+
+// ══════════════════════════════════════════════════════════════════
+//  NAVES
+// ══════════════════════════════════════════════════════════════════
+const SHIPS = [
+  { id:'veloz',    nome:'VELOZ',    desc:'Voa rápido',      cor:'#5bc8f5', ac:'#dff6ff',
+    speed:7.0, cd:11, shots:1, vidas:3, w:26, h:26, forma:'dardo' },
+  { id:'metralha', nome:'METRALHA', desc:'Atira muito',     cor:'#ffd42a', ac:'#fff6c2',
+    speed:5.0, cd:5,  shots:1, vidas:3, w:32, h:28, forma:'caca' },
+  { id:'tridente', nome:'TRIDENTE', desc:'Atira em três',   cor:'#ff4fd8', ac:'#ffd9f6',
+    speed:4.6, cd:16, shots:3, vidas:3, w:38, h:28, forma:'asa' },
+  { id:'tanque',   nome:'TANQUE',   desc:'Aguenta pancada', cor:'#22c55e', ac:'#c9ffdb',
+    speed:3.9, cd:13, shots:2, vidas:5, w:42, h:32, forma:'bloco' },
+];
+const FORMAS = {
+  dardo: [[0,-20],[5,-6],[7,10],[3,13],[-3,13],[-7,10],[-5,-6]],
+  caca:  [[0,-19],[4,-8],[16,6],[16,11],[6,9],[4,13],[-4,13],[-6,9],[-16,11],[-16,6],[-4,-8]],
+  asa:   [[0,-16],[6,-6],[20,8],[10,10],[4,13],[-4,13],[-10,10],[-20,8],[-6,-6]],
+  bloco: [[0,-18],[7,-10],[9,2],[18,4],[18,12],[8,12],[6,15],[-6,15],[-8,12],[-18,12],[-18,4],[-9,2],[-7,-10]],
+};
+
+let shipIdx = 0;
+try { const v = +localStorage.getItem('ssNave'); if (v >= 0 && v < SHIPS.length) shipIdx = v; } catch (e) {}
+const nave = () => SHIPS[shipIdx];
+
+function drawShipArt(g, sh, x, y, size, t) {
+  const u = size / 44;
+  const pts = FORMAS[sh.forma];
+  g.save();
+  g.translate(x, y);
+
+  // fogo do motor
+  const fl = (7 + Math.sin(t * .35) * 3) * u;
+  const gf = g.createLinearGradient(0, 11 * u, 0, 11 * u + fl);
+  gf.addColorStop(0, 'rgba(255,220,120,.95)');
+  gf.addColorStop(1, 'rgba(255,90,40,0)');
+  g.fillStyle = gf;
+  g.beginPath();
+  g.moveTo(-4.5 * u, 11 * u); g.lineTo(0, 11 * u + fl); g.lineTo(4.5 * u, 11 * u);
+  g.closePath(); g.fill();
+
+  // casco
+  g.beginPath();
+  pts.forEach(([px, py], i) => i ? g.lineTo(px * u, py * u) : g.moveTo(px * u, py * u));
+  g.closePath();
+  const gg = g.createLinearGradient(0, -20 * u, 0, 15 * u);
+  gg.addColorStop(0, sh.ac); gg.addColorStop(.45, sh.cor); gg.addColorStop(1, '#1b1636');
+  g.fillStyle = gg; g.fill();
+  g.strokeStyle = '#0d0a1e'; g.lineWidth = 2.2 * u; g.lineJoin = 'round'; g.stroke();
+
+  // cabine
+  g.beginPath();
+  g.ellipse(0, -6 * u, 3.4 * u, 5.4 * u, 0, 0, Math.PI * 2);
+  g.fillStyle = '#0d1030'; g.fill();
+  g.strokeStyle = sh.ac; g.lineWidth = 1.4 * u; g.stroke();
+  g.beginPath();
+  g.ellipse(-1.1 * u, -7.6 * u, 1.2 * u, 2 * u, -.4, 0, Math.PI * 2);
+  g.fillStyle = 'rgba(255,255,255,.65)'; g.fill();
+
+  g.restore();
+}
+
+// ── Telas ──
+const menuEl = document.getElementById('menu');
+const navesEl = document.getElementById('naves');
+const previewCtx = document.getElementById('preview').getContext('2d');
+
+function showMenu() {
+  state.mode = 'menu';
+  menuEl.classList.remove('hidden');
+  navesEl.classList.add('hidden');
+  overlay.classList.add('hidden');
+  pauseBtn.disabled = true;
+  document.getElementById('shipName').textContent = nave().nome;
+  document.getElementById('shipDesc').textContent = nave().desc;
+}
+
+function montarGrade() {
+  const g = document.getElementById('shipGrid');
+  g.innerHTML = '';
+  SHIPS.forEach((sh, i) => {
+    const card = document.createElement('div');
+    card.className = 'ship-card' + (i === shipIdx ? ' on' : '');
+    card.innerHTML = `<canvas width="120" height="120"></canvas>
+                      <div class="n" style="color:${sh.cor}">${sh.nome}</div>
+                      <div class="s">${sh.desc}</div>`;
+    const c = card.querySelector('canvas');
+    drawShipArt(c.getContext('2d'), sh, 60, 62, 92, 0);
+    card.onclick = () => {
+      shipIdx = i;
+      try { localStorage.setItem('ssNave', i); } catch (e) {}
+      montarGrade();
+      showMenu();
+    };
+    g.appendChild(card);
+  });
+}
+
+document.getElementById('btnPlay').onclick = () => startGame();
+document.getElementById('btnNaves').onclick = () => {
+  state.mode = 'naves';
+  montarGrade();
+  menuEl.classList.add('hidden');
+  navesEl.classList.remove('hidden');
+};
+document.getElementById('btnVoltar').onclick = () => showMenu();
 
 // ── Touch controls ──
 if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
@@ -369,21 +569,26 @@ function makeStars() {
 }
 
 function startGame() {
+  const sh = nave();
   state.mode = 'playing';
+  state.ship = sh;
   state.score = 0;
-  state.lives = 3;
+  state.lives = sh.vidas;
   state.level = 1;
   state.bullets = [];
   state.enemies = [];
   state.enemyBullets = [];
   state.particles = [];
-  state.player = { x: W / 2, y: H - 60, w: 32, h: 28, speed: 5 };
+  state.player = { x: W / 2, y: H - 60, w: sh.w, h: sh.h, speed: sh.speed };
   state.spawnTimer = 0;
   state.invuln = 60;
+  menuEl.classList.add('hidden');
+  navesEl.classList.add('hidden');
   overlay.classList.add('hidden');
   pauseBtn.disabled = false;
   pauseBtn.textContent = 'PAUSAR';
   updateHUD();
+  canvas.focus();
 }
 
 function togglePause() {
@@ -415,9 +620,14 @@ function gameOver() {
     <h1>GAME OVER</h1>
     <p>Pontuação final: <b>${state.score}</b></p>
     <p>Nível alcançado: <b>${state.level}</b></p>
-    <p style="margin-top:14px;opacity:0.7">Pressione ENTER para jogar novamente</p>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="mbtn naves" id="goMenu" style="flex:1;font-size:14px">MENU</button>
+      <button class="mbtn play"  id="goAgain" style="flex:1;font-size:16px">DE NOVO</button>
+    </div>
   `;
   overlay.classList.remove('hidden');
+  document.getElementById('goMenu').onclick = e => { e.stopPropagation(); showMenu(); };
+  document.getElementById('goAgain').onclick = e => { e.stopPropagation(); startGame(); };
 }
 
 function updateHUD() {
@@ -452,7 +662,11 @@ function spawnEnemy() {
 }
 
 function shoot() {
-  state.bullets.push({ x: state.player.x, y: state.player.y - 14, vy: -9, w: 3, h: 10 });
+  const p = state.player, y = p.y - 14, sh = state.ship;
+  const add = (x, vx) => state.bullets.push({ x, y, vx, vy: -9, w: 3, h: 10 });
+  if (sh.shots === 2)      { add(p.x - 10, 0); add(p.x + 10, 0); }
+  else if (sh.shots === 3) { add(p.x, 0); add(p.x - 6, -2.6); add(p.x + 6, 2.6); }
+  else                       add(p.x, 0);
 }
 
 function enemyShoot(e) {
@@ -505,7 +719,7 @@ function update() {
   if (state.shootCooldown > 0) state.shootCooldown--;
   if ((keys[' '] || keys['x']) && state.shootCooldown === 0) {
     shoot();
-    state.shootCooldown = 10;
+    state.shootCooldown = state.ship.cd;
   }
 
   if (state.invuln > 0) state.invuln--;
@@ -525,8 +739,8 @@ function update() {
     updateHUD();
   }
 
-  for (const b of state.bullets) b.y += b.vy;
-  state.bullets = state.bullets.filter(b => b.y > -20);
+  for (const b of state.bullets) { b.y += b.vy; b.x += b.vx || 0; }
+  state.bullets = state.bullets.filter(b => b.y > -20 && b.x > -20 && b.x < W + 20);
 
   for (const b of state.enemyBullets) { b.x += b.vx; b.y += b.vy; }
   state.enemyBullets = state.enemyBullets.filter(b => b.y < H + 20 && b.y > -20 && b.x > -20 && b.x < W + 20);
@@ -596,20 +810,6 @@ function hitPlayer() {
   if (state.lives <= 0) gameOver();
 }
 
-function drawShip(x, y, w, h, color, flicker = false) {
-  if (flicker && Math.floor(performance.now() / 80) % 2 === 0) return;
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.moveTo(x, y - h / 2);
-  ctx.lineTo(x + w / 2, y + h / 2);
-  ctx.lineTo(x, y + h / 4);
-  ctx.lineTo(x - w / 2, y + h / 2);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = '#ffffffaa';
-  ctx.fillRect(x - 2, y - 4, 4, 6);
-}
-
 function drawEnemy(e) {
   const colors = { grunt: '#ff5d5d', zigzag: '#ffb84a', shooter: '#c46bff' };
   ctx.fillStyle = colors[e.type];
@@ -649,18 +849,37 @@ function render() {
     ctx.globalAlpha = 1;
     // jogador
     if (state.mode === 'playing') {
-      drawShip(state.player.x, state.player.y, state.player.w, state.player.h, '#7fb6ff', state.invuln > 0);
+      const piscar = state.invuln > 0 && Math.floor(performance.now() / 80) % 2 === 0;
+      if (!piscar) drawShipArt(ctx, state.ship, state.player.x, state.player.y, state.player.w * 1.5, tick);
     }
   }
 }
 
+let tick = 0;
 function loop() {
+  tick++;
   update();
   render();
+  if (state.mode === 'menu') {
+    previewCtx.clearRect(0, 0, 220, 220);
+    // sombra no chão
+    previewCtx.beginPath();
+    previewCtx.ellipse(110, 190, 62, 14, 0, 0, Math.PI * 2);
+    previewCtx.fillStyle = 'rgba(8,4,20,.55)';
+    previewCtx.fill();
+    // brilho atrás da nave
+    const gl = previewCtx.createRadialGradient(110, 105, 6, 110, 105, 96);
+    gl.addColorStop(0, nave().cor + '55');
+    gl.addColorStop(1, 'transparent');
+    previewCtx.fillStyle = gl;
+    previewCtx.fillRect(0, 0, 220, 220);
+    drawShipArt(previewCtx, nave(), 110, 105, 150, tick);
+  }
   requestAnimationFrame(loop);
 }
 
 makeStars();
+showMenu();
 loop();
 </script>
 </body>
