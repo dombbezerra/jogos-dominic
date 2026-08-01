@@ -106,7 +106,36 @@ if (pauseBtn) {
   pauseBtn.addEventListener('touchstart', tog, { passive: false });
   pauseBtn.addEventListener('mousedown', tog);
 }
-cv.addEventListener('pointerdown', () => { if (!paused && state !== 'fight') advance('KeyX'); });
+// ── Clique/toque na tela inicial ──────────────────────────────────────────
+const BTN = { x: W / 2 - 122, y: 446, w: 244, h: 54 };
+const pickBox = i => ({ x: W / (SELECT.length + 1) * (i + 1) - 62, y: 232, w: 124, h: 196 });
+const inBox = (p, b) => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
+
+function canvasPos(e) {
+  const r = cv.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * (W / r.width), y: (e.clientY - r.top) * (H / r.height) };
+}
+let hoverBtn = false, hoverPick = -1;
+
+cv.addEventListener('pointermove', e => {
+  if (state !== 'start') { hoverBtn = false; hoverPick = -1; return; }
+  const p = canvasPos(e);
+  hoverBtn = inBox(p, BTN);
+  hoverPick = SELECT.findIndex((_, i) => inBox(p, pickBox(i)));
+});
+cv.addEventListener('pointerleave', () => { hoverBtn = false; hoverPick = -1; });
+
+cv.addEventListener('pointerdown', e => {
+  if (paused || state === 'fight') return;
+  if (state === 'start') {
+    const p = canvasPos(e);
+    const i = SELECT.findIndex((_, k) => inBox(p, pickBox(k)));
+    if (i >= 0) { pickIdx = i; return; }          // escolhe o lutador
+    if (inBox(p, BTN)) startTournament();          // botão JOGAR
+    return;
+  }
+  advance('KeyX');
+});
 
 const held = {
   left:  () => keys.KeyA || keys.ArrowLeft  || touchBtn.left,
@@ -123,7 +152,7 @@ function pollAttacks() {
 // ═══════════════════════════════════════════════════════════════════════════
 //  ESTADO
 // ═══════════════════════════════════════════════════════════════════════════
-let state = 'title';
+let state = 'start';           // start | intro | fight | ko | win | gameover
 let paused = false;
 let msg = '', msgSub = '', msgT = 0;
 let shake = 0, hitStop = 0, slowmo = 0;
@@ -156,11 +185,10 @@ function nextFight() {
   msg = 'LUTA ' + (foeIdx + 1); msgSub = look.nome;
 }
 function advance(code) {
-  if (state === 'title') { state = 'select'; msgT = 0; }
-  else if (state === 'select') {
+  if (state === 'start') {
     if (code === 'ArrowLeft'  || code === 'KeyA') { pickIdx = (pickIdx + SELECT.length - 1) % SELECT.length; return; }
     if (code === 'ArrowRight' || code === 'KeyD') { pickIdx = (pickIdx + 1) % SELECT.length; return; }
-    if (msgT > 12) startTournament();
+    if (code === 'KeyX' || code === 'Enter' || code === 'Space' || code === 'NumpadEnter') startTournament();
   }
   else if (state === 'intro' && msgT > 40) state = 'fight';
   else if (state === 'ko' && msgT > 70) {
@@ -168,7 +196,7 @@ function advance(code) {
     else if (foeIdx >= TORNEIO.length - 1) { state = 'win'; msgT = 0; }
     else { foeIdx++; nextFight(); }
   }
-  else if ((state === 'gameover' || state === 'win') && msgT > 50) { state = 'title'; msgT = 0; }
+  else if ((state === 'gameover' || state === 'win') && msgT > 50) { state = 'start'; msgT = 0; }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -754,77 +782,98 @@ function blink(t, txt, y) {
   ctx.textAlign = 'left';
 }
 
-function drawTitle(t) {
+// ── Tela inicial: título + escolha de lutador + botão jogar ───────────────
+const RAISE = 82;                                // sobe os bonecos do chão
+const selDummies = SELECT.map((id, i) => {
+  const f = makeFighter(byId(id), { x: 0, dir: 1, isPlayer: true });
+  f.scale = byId(id).scale * .62; f.bob = i * 1.7;
+  return f;
+});
+
+function drawStart(t) {
+  ctx.fillStyle = 'rgba(18,11,6,.45)'; ctx.fillRect(0, 0, W, H);
   ctx.textAlign = 'center';
+
+  // ── título
   ctx.save();
-  ctx.translate(W / 2, 148 + Math.sin(t * .05) * 6);
-  ctx.font = 'bold 92px Georgia, serif';
-  ctx.lineWidth = 14; ctx.strokeStyle = INK; ctx.lineJoin = 'round';
+  ctx.translate(W / 2, 74 + Math.sin(t * .05) * 4);
+  ctx.font = 'bold 66px Georgia, serif';
+  ctx.lineWidth = 12; ctx.strokeStyle = INK; ctx.lineJoin = 'round';
   ctx.strokeText('NOCAUTE!', 0, 0);
-  const g = ctx.createLinearGradient(0, -60, 0, 20);
+  const g = ctx.createLinearGradient(0, -46, 0, 14);
   g.addColorStop(0, GOLD); g.addColorStop(1, RED);
   ctx.fillStyle = g; ctx.fillText('NOCAUTE!', 0, 0);
   ctx.restore();
 
-  ctx.font = 'italic 25px Georgia, serif'; ctx.fillStyle = PAPER;
-  ctx.fillText('MMA de desenho animado', W / 2, 200);
+  ctx.font = 'italic 19px Georgia, serif'; ctx.fillStyle = PAPER;
+  ctx.fillText('MMA de desenho animado', W / 2, 102);
 
-  const bx = W / 2 - 250, by = 228, bw = 500, bh = 148;
-  ctx.beginPath(); ctx.rect(bx, by, bw, bh);
-  ctx.fillStyle = 'rgba(18,11,6,.66)'; ctx.fill(); ink(4); ctx.stroke();
-  ctx.font = '20px Georgia, serif'; ctx.fillStyle = CREAM;
-  const lines = isTouch
-    ? ['◀ ▶  andar', 'SOCO  •  CHUTE', 'DEFESA segurar   •   ⏸ pausa']
-    : ['A D  ou  ← →   andar', 'X  soco        Z  chute', 'S  defesa (segurar)      P  pausa'];
-  lines.forEach((s, i) => ctx.fillText(s, W / 2, by + 44 + i * 35));
+  ctx.font = 'bold 21px Georgia, serif';
+  ctx.lineWidth = 6; ctx.strokeStyle = INK;
+  ctx.strokeText('ESCOLHA SEU LUTADOR', W / 2, 142);
+  ctx.fillStyle = GOLD; ctx.fillText('ESCOLHA SEU LUTADOR', W / 2, 142);
 
-  blink(t, isTouch ? 'toque para começar' : 'aperte qualquer tecla', 432);
-  ctx.textAlign = 'left';
-}
-
-// ── Escolha de lutador ────────────────────────────────────────────────────
-const selDummies = SELECT.map((id, i) => {
-  const f = makeFighter(byId(id), { x: 0, dir: 1, isPlayer: true });
-  f.scale = byId(id).scale * .70; f.bob = i * 1.7;
-  return f;
-});
-function drawSelect(t) {
-  ctx.fillStyle = 'rgba(18,11,6,.42)'; ctx.fillRect(0, 0, W, H);
-  ctx.textAlign = 'center';
-  ctx.font = 'bold 42px Georgia, serif';
-  ctx.lineWidth = 10; ctx.strokeStyle = INK; ctx.lineJoin = 'round';
-  ctx.strokeText('ESCOLHA SEU LUTADOR', W / 2, 72);
-  ctx.fillStyle = GOLD; ctx.fillText('ESCOLHA SEU LUTADOR', W / 2, 72);
-  blink(t, isTouch ? '◀ ▶ escolher  •  SOCO confirma' : '← → escolher  •  X confirma', 110);
-
+  // ── lutadores
   const step = W / (SELECT.length + 1);
   selDummies.forEach((f, i) => {
-    const on = i === pickIdx;
+    const on = i === pickIdx, hov = i === hoverPick;
+    const b = pickBox(i);
     f.x = step * (i + 1);
     f.bob += on ? .1 : .04;
     f.state = 'idle';
-    if (on) {
-      const g = ctx.createRadialGradient(f.x, FLOOR - 130, 10, f.x, FLOOR, 190);
-      g.addColorStop(0, 'rgba(255,236,180,.32)'); g.addColorStop(1, 'rgba(255,236,180,0)');
-      ctx.fillStyle = g; ctx.fillRect(f.x - 200, 130, 400, 400);
+
+    if (on) {                                    // moldura + holofote
+      ctx.beginPath(); ctx.rect(b.x, b.y, b.w, b.h);
+      ctx.fillStyle = 'rgba(232,181,58,.13)'; ctx.fill();
+      ink(4); ctx.strokeStyle = GOLD; ctx.stroke();
+      const sp = ctx.createRadialGradient(f.x, FLOOR - RAISE - 130, 10, f.x, FLOOR - RAISE, 160);
+      sp.addColorStop(0, 'rgba(255,236,180,.30)'); sp.addColorStop(1, 'rgba(255,236,180,0)');
+      ctx.fillStyle = sp; ctx.fillRect(b.x - 60, b.y - 20, b.w + 120, b.h + 40);
+    } else if (hov) {
+      ctx.beginPath(); ctx.rect(b.x, b.y, b.w, b.h);
+      ctx.fillStyle = 'rgba(246,239,220,.08)'; ctx.fill();
     }
-    ctx.globalAlpha = on ? 1 : .5;
+
+    ctx.save();
+    ctx.translate(0, -RAISE);
+    ctx.globalAlpha = on ? 1 : (hov ? .82 : .5);
     drawFighter(f, 10 + i);
     ctx.globalAlpha = 1;
+    ctx.restore();
 
-    ctx.font = on ? 'bold 20px Georgia, serif' : '17px Georgia, serif';
-    ctx.lineWidth = 6; ctx.strokeStyle = INK;
-    ctx.strokeText(f.nome, f.x, FLOOR + 40);
+    ctx.font = on ? 'bold 17px Georgia, serif' : '15px Georgia, serif';
+    ctx.lineWidth = 5; ctx.strokeStyle = INK;
+    ctx.strokeText(f.nome, f.x, b.y + b.h - 8);
     ctx.fillStyle = on ? GOLD : PAPER;
-    ctx.fillText(f.nome, f.x, FLOOR + 40);
-    if (on) {
-      ctx.font = 'bold 30px Georgia, serif';
-      ctx.lineWidth = 7; ctx.strokeStyle = INK;
-      const ay = 236 + Math.sin(t * .12) * 5;
-      ctx.strokeText('▼', f.x, ay);
-      ctx.fillStyle = GOLD; ctx.fillText('▼', f.x, ay);
-    }
+    ctx.fillText(f.nome, f.x, b.y + b.h - 8);
   });
+
+  // ── botão JOGAR
+  const grow = hoverBtn ? 1.05 : 1;
+  ctx.save();
+  ctx.translate(W / 2, BTN.y + BTN.h / 2);
+  ctx.scale(grow, grow);
+  ctx.beginPath();
+  ctx.rect(-BTN.w / 2, -BTN.h / 2, BTN.w, BTN.h);
+  ctx.fillStyle = hoverBtn ? '#e04a3d' : RED; ctx.fill();
+  ink(6); ctx.stroke();
+  ctx.beginPath();
+  ctx.rect(-BTN.w / 2 + 8, -BTN.h / 2 + 8, BTN.w - 16, BTN.h - 16);
+  ink(2.5); ctx.strokeStyle = 'rgba(246,239,220,.5)'; ctx.stroke();
+  ctx.font = 'bold 30px Georgia, serif';
+  ctx.fillStyle = CREAM; ctx.textBaseline = 'middle';
+  ctx.fillText('▶  JOGAR', 0, 2);
+  ctx.textBaseline = 'alphabetic';
+  ctx.restore();
+
+  // ── controles
+  ctx.font = '15px Georgia, serif';
+  ctx.fillStyle = 'rgba(246,239,220,.72)';
+  ctx.fillText(isTouch
+    ? '◀ ▶ andar  ·  SOCO  ·  CHUTE  ·  DEFESA segurar  ·  ⏸ pausa'
+    : '← → andar  ·  X soco  ·  Z chute  ·  S defesa (segurar)  ·  P pausa',
+    W / 2, 528);
+
   ctx.textAlign = 'left';
 }
 
@@ -866,8 +915,7 @@ function render() {
 
   drawArena(tm * 16);
 
-  if (state === 'title')  { grainVignette(); drawTitle(tm);  ctx.restore(); return; }
-  if (state === 'select') { grainVignette(); drawSelect(tm); ctx.restore(); return; }
+  if (state === 'start') { grainVignette(); drawStart(tm); ctx.restore(); return; }
 
   const order = player.x < foe.x ? [player, foe] : [foe, player];
   drawFighter(order[0], 1);
