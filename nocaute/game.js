@@ -50,7 +50,7 @@ const FIGHTERS = [
 ];
 const byId = id => FIGHTERS.find(f => f.id === id);
 
-const SELECT  = ['bruno', 'kai', 'ivan', 'marcus'];
+const SELECT  = ['bruno', 'kai', 'ivan', 'marcus', 'tita'];
 const TORNEIO = ['bruno', 'kai', 'ivan', 'marcus', 'tita'];
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -108,7 +108,8 @@ if (pauseBtn) {
 }
 // ── Clique/toque na tela inicial ──────────────────────────────────────────
 const BTN = { x: W / 2 - 122, y: 446, w: 244, h: 54 };
-const pickBox = i => ({ x: W / (SELECT.length + 1) * (i + 1) - 62, y: 232, w: 124, h: 196 });
+const PICK_W = Math.min(124, W / (SELECT.length + 1) - 14);
+const pickBox = i => ({ x: W / (SELECT.length + 1) * (i + 1) - PICK_W / 2, y: 232, w: PICK_W, h: 196 });
 const inBox = (p, b) => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
 
 function canvasPos(e) {
@@ -158,6 +159,7 @@ let msg = '', msgSub = '', msgT = 0;
 let shake = 0, hitStop = 0, slowmo = 0;
 const fx = [];
 let player, foe, foeIdx = 0, pickIdx = 0;
+let ordem = [];                 // adversários desta campanha (sem o escolhido)
 
 function makeFighter(look, o) {
   const hp = look.hp * (o.isPlayer ? 1.15 : 1);
@@ -170,13 +172,14 @@ function makeFighter(look, o) {
 }
 
 function startTournament() {
+  const pid = SELECT[pickIdx];
+  ordem = TORNEIO.filter(id => id !== pid);   // não luta contra si mesmo
   foeIdx = 0;
-  player = makeFighter(byId(SELECT[pickIdx]), { x: 330, dir: 1, isPlayer: true });
+  player = makeFighter(byId(pid), { x: 330, dir: 1, isPlayer: true });
   nextFight();
 }
 function nextFight() {
-  while (TORNEIO[foeIdx] === player.look.id) foeIdx++;
-  const look = byId(TORNEIO[foeIdx]);
+  const look = byId(ordem[foeIdx]);
   foe = makeFighter(look, { x: 640, dir: -1 });
   player.x = 320;
   player.hp = Math.min(player.hpMax, player.hp + 40);
@@ -193,7 +196,7 @@ function advance(code) {
   else if (state === 'intro' && msgT > 40) state = 'fight';
   else if (state === 'ko' && msgT > 70) {
     if (player.hp <= 0) { state = 'gameover'; msgT = 0; }
-    else if (foeIdx >= TORNEIO.length - 1) { state = 'win'; msgT = 0; }
+    else if (foeIdx >= ordem.length - 1) { state = 'win'; msgT = 0; }
     else { foeIdx++; nextFight(); }
   }
   else if ((state === 'gameover' || state === 'win') && msgT > 50) { state = 'start'; msgT = 0; }
@@ -786,7 +789,7 @@ function blink(t, txt, y) {
 const RAISE = 82;                                // sobe os bonecos do chão
 const selDummies = SELECT.map((id, i) => {
   const f = makeFighter(byId(id), { x: 0, dir: 1, isPlayer: true });
-  f.scale = byId(id).scale * .62; f.bob = i * 1.7;
+  f.scale = byId(id).scale * (SELECT.length > 4 ? .54 : .62); f.bob = i * 1.7;
   return f;
 });
 
@@ -841,7 +844,7 @@ function drawStart(t) {
     ctx.globalAlpha = 1;
     ctx.restore();
 
-    ctx.font = on ? 'bold 17px Georgia, serif' : '15px Georgia, serif';
+    ctx.font = on ? 'bold 15px Georgia, serif' : '13px Georgia, serif';
     ctx.lineWidth = 5; ctx.strokeStyle = INK;
     ctx.strokeText(f.nome, f.x, b.y + b.h - 8);
     ctx.fillStyle = on ? GOLD : PAPER;
