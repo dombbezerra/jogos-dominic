@@ -354,21 +354,34 @@ const SHIPS = [
     speed:3.9, cd:13, shots:2, vidas:5, w:42, h:32, forma:'bloco' },
 ];
 const FORMAS = {
+  // naves do jogador
   dardo: [[0,-20],[5,-6],[7,10],[3,13],[-3,13],[-7,10],[-5,-6]],
   caca:  [[0,-19],[4,-8],[16,6],[16,11],[6,9],[4,13],[-4,13],[-6,9],[-16,11],[-16,6],[-4,-8]],
   asa:   [[0,-16],[6,-6],[20,8],[10,10],[4,13],[-4,13],[-10,10],[-20,8],[-6,-6]],
   bloco: [[0,-18],[7,-10],[9,2],[18,4],[18,12],[8,12],[6,15],[-6,15],[-8,12],[-18,12],[-18,4],[-9,2],[-7,-10]],
+  // inimigos
+  besouro:  [[0,-16],[6,-5],[15,5],[7,8],[3,13],[-3,13],[-7,8],[-15,5],[-6,-5]],
+  lamina:   [[0,-19],[4,-5],[11,4],[5,7],[2,14],[-2,14],[-5,7],[-11,4],[-4,-5]],
+  canhao:   [[0,-13],[8,-8],[10,0],[19,2],[19,10],[12,9],[7,13],[-7,13],[-12,9],[-19,10],[-19,2],[-10,0],[-8,-8]],
+};
+// esc = ajuste para o desenho bater com a caixa de colisão
+const ENEMY_ART = {
+  grunt:   { forma:'besouro', cor:'#ff5d5d', ac:'#ffd2d2', esc:1.47, w:28, h:24 },
+  zigzag:  { forma:'lamina',  cor:'#ffb84a', ac:'#ffeac4', esc:2.00, w:22, h:26 },
+  shooter: { forma:'canhao',  cor:'#c46bff', ac:'#eed2ff', esc:1.16, w:36, h:24 },
 };
 
 let shipIdx = 0;
 try { const v = +localStorage.getItem('ssNave'); if (v >= 0 && v < SHIPS.length) shipIdx = v; } catch (e) {}
 const nave = () => SHIPS[shipIdx];
 
-function drawShipArt(g, sh, x, y, size, t) {
+// Desenha uma nave. flip = de cabeça para baixo (inimigos descendo).
+function drawShipArt(g, sh, x, y, size, t, flip, branco) {
   const u = size / 44;
   const pts = FORMAS[sh.forma];
   g.save();
   g.translate(x, y);
+  if (flip) g.scale(1, -1);
 
   // fogo do motor
   const fl = (7 + Math.sin(t * .35) * 3) * u;
@@ -384,9 +397,14 @@ function drawShipArt(g, sh, x, y, size, t) {
   g.beginPath();
   pts.forEach(([px, py], i) => i ? g.lineTo(px * u, py * u) : g.moveTo(px * u, py * u));
   g.closePath();
-  const gg = g.createLinearGradient(0, -20 * u, 0, 15 * u);
-  gg.addColorStop(0, sh.ac); gg.addColorStop(.45, sh.cor); gg.addColorStop(1, '#1b1636');
-  g.fillStyle = gg; g.fill();
+  if (branco) {
+    g.fillStyle = '#ffffff';
+  } else {
+    const gg = g.createLinearGradient(0, -20 * u, 0, 15 * u);
+    gg.addColorStop(0, sh.ac); gg.addColorStop(.45, sh.cor); gg.addColorStop(1, '#1b1636');
+    g.fillStyle = gg;
+  }
+  g.fill();
   g.strokeStyle = '#0d0a1e'; g.lineWidth = 2.2 * u; g.lineJoin = 'round'; g.stroke();
 
   // cabine
@@ -645,16 +663,18 @@ function spawnEnemy() {
     acc += weights[i];
     if (r < acc) { type = types[i]; break; }
   }
+  const art = ENEMY_ART[type];
   const e = {
     type,
     x: 30 + Math.random() * (W - 60),
     y: -30,
-    w: 28,
-    h: 24,
+    w: art.w,
+    h: art.h,
     vx: 0,
     vy: 1.2 + Math.random() * 0.6 + state.level * 0.2,
     hp: type === 'shooter' ? 2 : 1,
-    t: 0,
+    t: Math.random() * 60,
+    flash: 0,
     shootTimer: 60 + Math.random() * 60,
   };
   if (type === 'zigzag') e.vx = (Math.random() < 0.5 ? -1 : 1) * 2;
@@ -747,6 +767,7 @@ function update() {
 
   for (const e of state.enemies) {
     e.t++;
+    if (e.flash > 0) e.flash--;
     e.y += e.vy;
     if (e.type === 'zigzag') {
       e.x += e.vx;
@@ -767,6 +788,7 @@ function update() {
       if (e.hp <= 0) continue;
       if (rectsHit(b, e)) {
         e.hp--;
+        e.flash = 4;
         b.dead = true;
         spawnParticles(e.x, e.y, '#ffb04a', 6);
         if (e.hp <= 0) {
@@ -811,16 +833,8 @@ function hitPlayer() {
 }
 
 function drawEnemy(e) {
-  const colors = { grunt: '#ff5d5d', zigzag: '#ffb84a', shooter: '#c46bff' };
-  ctx.fillStyle = colors[e.type];
-  ctx.beginPath();
-  ctx.moveTo(e.x, e.y + e.h / 2);
-  ctx.lineTo(e.x + e.w / 2, e.y - e.h / 2);
-  ctx.lineTo(e.x - e.w / 2, e.y - e.h / 2);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = '#000';
-  ctx.fillRect(e.x - 3, e.y - 4, 6, 4);
+  const a = ENEMY_ART[e.type];
+  drawShipArt(ctx, a, e.x, e.y, e.w * a.esc, tick + e.t, true, e.flash > 0);
 }
 
 function render() {
