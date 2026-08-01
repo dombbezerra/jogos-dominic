@@ -654,11 +654,6 @@ function drawFighter(f, id) {
 // ═══════════════════════════════════════════════════════════════════════════
 //  CENÁRIO
 // ═══════════════════════════════════════════════════════════════════════════
-const crowd = [];
-for (let i = 0; i < 46; i++)
-  crowd.push({ x: 20 + Math.random() * 920, y: 130 + Math.random() * 105, r: 16 + Math.random() * 12, ph: Math.random() * 6 });
-let flashT = 0, flashX = 0, flashY = 0;
-
 function drawArena(tmm) {
   const gr = ctx.createLinearGradient(0, 0, 0, H);
   gr.addColorStop(0, '#3a2a1c'); gr.addColorStop(.45, '#6b4f36'); gr.addColorStop(1, '#3a2a1c');
@@ -671,18 +666,6 @@ function drawArena(tmm) {
     ctx.fillStyle = g2;
     ctx.beginPath(); ctx.moveTo(x, -40); ctx.lineTo(x - 200, 430); ctx.lineTo(x + 200, 430); ctx.closePath(); ctx.fill();
   }
-
-  crowd.forEach(c => {
-    const b = Math.sin(tmm * .004 + c.ph) * 4;
-    ctx.beginPath(); ctx.arc(c.x, c.y + b, c.r, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(20,14,10,.72)'; ctx.fill();
-    ctx.beginPath(); ctx.ellipse(c.x, c.y + c.r * 1.5 + b, c.r * 1.25, c.r, 0, Math.PI, 0); ctx.fill();
-  });
-  if (flashT > 0) {
-    ctx.globalAlpha = flashT / 8; ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(flashX, flashY, 26, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = 1; flashT--;
-  } else if (Math.random() < .02) { flashT = 8; flashX = Math.random() * W; flashY = 130 + Math.random() * 105; }
 
   ctx.beginPath();
   ctx.moveTo(60, FLOOR); ctx.lineTo(900, FLOOR); ctx.lineTo(985, H); ctx.lineTo(-25, H); ctx.closePath();
