@@ -107,9 +107,12 @@ if (pauseBtn) {
   pauseBtn.addEventListener('mousedown', tog);
 }
 // ── Clique/toque na tela inicial ──────────────────────────────────────────
-const BTN = { x: W / 2 - 122, y: 446, w: 244, h: 54 };
-const PICK_W = Math.min(124, W / (SELECT.length + 1) - 14);
-const pickBox = i => ({ x: W / (SELECT.length + 1) * (i + 1) - PICK_W / 2, y: 232, w: PICK_W, h: 196 });
+const BTN = { x: W / 2 - 122, y: 386, w: 244, h: 56 };
+const CARD_GAP = 12;
+const CARD_W = Math.min(168, (W - 60 - CARD_GAP * (SELECT.length - 1)) / SELECT.length);
+const CARD_H = 198, CARD_Y = 150;
+const CARDS_X0 = (W - (SELECT.length * CARD_W + (SELECT.length - 1) * CARD_GAP)) / 2;
+const pickBox = i => ({ x: CARDS_X0 + i * (CARD_W + CARD_GAP), y: CARD_Y, w: CARD_W, h: CARD_H });
 const inBox = (p, b) => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
 
 function canvasPos(e) {
@@ -403,10 +406,14 @@ function drawHair(f, hx, hy, s) {
       ctx.fillStyle = 'rgba(255,255,255,.26)'; ctx.fill();
       break;
     case 'moicano':
-      capHair(hx, hy, s, c, RX, RY * .5);
-      ctx.beginPath();
-      ctx.moveTo(hx - 5 * s, hy - 18 * s);
-      ctx.quadraticCurveTo(hx, hy - 40 * s, hx + 5 * s, hy - 18 * s);
+      ctx.globalAlpha = .35;                              // laterais raspadas
+      capHair(hx, hy, s, c, RX * .96, RY * .92);
+      ctx.globalAlpha = 1;
+      ctx.beginPath();                                    // crista
+      ctx.moveTo(hx - 6 * s, hy - 15 * s);
+      ctx.quadraticCurveTo(hx - 4 * s, hy - 34 * s, hx, hy - 33 * s);
+      ctx.quadraticCurveTo(hx + 4 * s, hy - 34 * s, hx + 6 * s, hy - 15 * s);
+      ctx.quadraticCurveTo(hx, hy - 20 * s, hx - 6 * s, hy - 15 * s);
       ctx.closePath(); ctx.fillStyle = c; ctx.fill(); ink(3.6); ctx.stroke();
       break;
     case 'coque':
@@ -415,10 +422,12 @@ function drawHair(f, hx, hy, s) {
       break;
     case 'barba':
       capHair(hx, hy, s, c, RX, RY);
-      ctx.beginPath();
-      ctx.moveTo(hx - 16 * s, hy + 2 * s);
-      ctx.quadraticCurveTo(hx, hy + 32 * s, hx + 16 * s, hy + 2 * s);
-      ctx.quadraticCurveTo(hx, hy + 15 * s, hx - 16 * s, hy + 2 * s);
+      ctx.beginPath();                                  // barba cheia no maxilar
+      ctx.moveTo(hx - 16.5 * s, hy - 2 * s);
+      ctx.quadraticCurveTo(hx - 16 * s, hy + 16 * s, hx, hy + 21 * s);
+      ctx.quadraticCurveTo(hx + 16 * s, hy + 16 * s, hx + 16.5 * s, hy - 2 * s);
+      ctx.quadraticCurveTo(hx + 10 * s, hy + 9 * s, hx, hy + 9 * s);
+      ctx.quadraticCurveTo(hx - 10 * s, hy + 9 * s, hx - 16.5 * s, hy - 2 * s);
       ctx.closePath(); ctx.fillStyle = c; ctx.fill(); ink(3.6); ctx.stroke();
       break;
     default:
@@ -451,19 +460,24 @@ function drawHead(f, hx, hy, s) {
   drawHair(f, hx, hy, s);
 
   // olhos
-  const ex = 7.5 * s, ey = -1 * s;
+  const ex = 7.2 * s, ey = -1 * s;
   [-1, 1].forEach(k => {
     const x = hx + k * ex;
     if (dead) {
       ink(3.2); ctx.beginPath();
-      ctx.moveTo(x - 4*s, hy + ey - 4*s); ctx.lineTo(x + 4*s, hy + ey + 4*s);
-      ctx.moveTo(x + 4*s, hy + ey - 4*s); ctx.lineTo(x - 4*s, hy + ey + 4*s);
+      ctx.moveTo(x - 3.6*s, hy + ey - 3.6*s); ctx.lineTo(x + 3.6*s, hy + ey + 3.6*s);
+      ctx.moveTo(x + 3.6*s, hy + ey - 3.6*s); ctx.lineTo(x - 3.6*s, hy + ey + 3.6*s);
       ctx.stroke();
     } else {
-      blob(x, hy + ey, 4.6 * s, 4 * s, CREAM, 2.6);
+      blob(x, hy + ey, 3.7 * s, 2.5 * s, CREAM, 1.9);      // amendoado, não redondo
       ctx.beginPath();
-      ctx.arc(x + d * 1.4 * s, hy + ey + .4 * s, 2.1 * s, 0, Math.PI * 2);
+      ctx.arc(x + d * .5 * s, hy + ey + .2 * s, 1.5 * s, 0, Math.PI * 2);
       ctx.fillStyle = INK; ctx.fill();
+      ink(1.9);                                            // pálpebra superior
+      ctx.beginPath();
+      ctx.moveTo(x - 3.7 * s, hy + ey - .6 * s);
+      ctx.quadraticCurveTo(x, hy + ey - 3.4 * s, x + 3.7 * s, hy + ey - .6 * s);
+      ctx.stroke();
     }
   });
   // sobrancelhas
@@ -785,13 +799,32 @@ function blink(t, txt, y) {
   ctx.textAlign = 'left';
 }
 
-// ── Tela inicial: título + escolha de lutador + botão jogar ───────────────
-const RAISE = 82;                                // sobe os bonecos do chão
+// ── Tela inicial: título + cards com o rosto + botão jogar ────────────────
 const selDummies = SELECT.map((id, i) => {
   const f = makeFighter(byId(id), { x: 0, dir: 1, isPlayer: true });
-  f.scale = byId(id).scale * (SELECT.length > 4 ? .54 : .62); f.bob = i * 1.7;
+  f.bob = i * 1.7;
   return f;
 });
+
+// retrato: cabeça + ombros dentro de um quadrado
+function drawFace(f, cx, cy, box) {
+  const s = box / 52;
+  ctx.save();
+  ctx.translate(cx, cy);
+  // pescoço (o queixo e os ombros escondem as pontas)
+  ctx.beginPath(); ctx.rect(-7 * s, 4 * s, 14 * s, 22 * s);
+  ctx.fillStyle = f.look.sombra; ctx.fill(); ink(4); ctx.stroke();
+  // ombros
+  ctx.beginPath();
+  ctx.moveTo(-40 * s, 54 * s);
+  ctx.quadraticCurveTo(-34 * s, 26 * s, -14 * s, 22 * s);
+  ctx.lineTo(14 * s, 22 * s);
+  ctx.quadraticCurveTo(34 * s, 26 * s, 40 * s, 54 * s);
+  ctx.closePath();
+  ctx.fillStyle = f.look.pele; ctx.fill(); ink(4.5); ctx.stroke();
+  drawHead(f, 0, 0, s);
+  ctx.restore();
+}
 
 function drawStart(t) {
   ctx.fillStyle = 'rgba(18,11,6,.45)'; ctx.fillRect(0, 0, W, H);
@@ -808,47 +841,59 @@ function drawStart(t) {
   ctx.fillStyle = g; ctx.fillText('NOCAUTE!', 0, 0);
   ctx.restore();
 
-  ctx.font = 'italic 19px Georgia, serif'; ctx.fillStyle = PAPER;
-  ctx.fillText('MMA de desenho animado', W / 2, 102);
+  ctx.font = 'italic 18px Georgia, serif'; ctx.fillStyle = PAPER;
+  ctx.fillText('MMA de desenho animado', W / 2, 100);
 
-  ctx.font = 'bold 21px Georgia, serif';
+  ctx.font = 'bold 20px Georgia, serif';
   ctx.lineWidth = 6; ctx.strokeStyle = INK;
-  ctx.strokeText('ESCOLHA SEU LUTADOR', W / 2, 142);
-  ctx.fillStyle = GOLD; ctx.fillText('ESCOLHA SEU LUTADOR', W / 2, 142);
+  ctx.strokeText('ESCOLHA SEU LUTADOR', W / 2, 134);
+  ctx.fillStyle = GOLD; ctx.fillText('ESCOLHA SEU LUTADOR', W / 2, 134);
 
-  // ── lutadores
-  const step = W / (SELECT.length + 1);
+  // ── cards com o rosto
+  const HP_MAX = Math.max(...FIGHTERS.map(x => x.hp));
   selDummies.forEach((f, i) => {
     const on = i === pickIdx, hov = i === hoverPick;
     const b = pickBox(i);
-    f.x = step * (i + 1);
-    f.bob += on ? .1 : .04;
-    f.state = 'idle';
+    f.dir = 1; f.state = 'idle'; f.bob += .05;
 
-    if (on) {                                    // moldura + holofote
-      ctx.beginPath(); ctx.rect(b.x, b.y, b.w, b.h);
-      ctx.fillStyle = 'rgba(232,181,58,.13)'; ctx.fill();
-      ink(4); ctx.strokeStyle = GOLD; ctx.stroke();
-      const sp = ctx.createRadialGradient(f.x, FLOOR - RAISE - 130, 10, f.x, FLOOR - RAISE, 160);
-      sp.addColorStop(0, 'rgba(255,236,180,.30)'); sp.addColorStop(1, 'rgba(255,236,180,0)');
-      ctx.fillStyle = sp; ctx.fillRect(b.x - 60, b.y - 20, b.w + 120, b.h + 40);
-    } else if (hov) {
-      ctx.beginPath(); ctx.rect(b.x, b.y, b.w, b.h);
-      ctx.fillStyle = 'rgba(246,239,220,.08)'; ctx.fill();
-    }
+    // moldura do card
+    ctx.beginPath(); ctx.rect(b.x, b.y, b.w, b.h);
+    ctx.fillStyle = on ? 'rgba(232,181,58,.17)' : (hov ? 'rgba(246,239,220,.10)' : 'rgba(18,11,6,.66)');
+    ctx.fill();
+    ink(on ? 6 : 4);
+    ctx.strokeStyle = on ? GOLD : INK;
+    ctx.stroke();
 
+    // quadrado do retrato
+    const ps = b.w - 26, px = b.x + 13, py = b.y + 12;
     ctx.save();
-    ctx.translate(0, -RAISE);
-    ctx.globalAlpha = on ? 1 : (hov ? .82 : .5);
-    drawFighter(f, 10 + i);
+    ctx.beginPath(); ctx.rect(px, py, ps, ps); ctx.clip();
+    const gg = ctx.createLinearGradient(0, py, 0, py + ps);
+    gg.addColorStop(0, '#6b4f36'); gg.addColorStop(1, '#2e2015');
+    ctx.fillStyle = gg; ctx.fillRect(px, py, ps, ps);
+    ctx.globalAlpha = on ? 1 : (hov ? .9 : .68);
+    drawFace(f, px + ps / 2, py + ps * .46 + Math.sin(f.bob) * 2, ps);
     ctx.globalAlpha = 1;
     ctx.restore();
+    ctx.beginPath(); ctx.rect(px, py, ps, ps);
+    ink(4); ctx.strokeStyle = on ? GOLD : INK; ctx.stroke();
 
-    ctx.font = on ? 'bold 15px Georgia, serif' : '13px Georgia, serif';
+    // nome
+    ctx.font = `bold ${b.w < 150 ? 13 : 15}px Georgia, serif`;
     ctx.lineWidth = 5; ctx.strokeStyle = INK;
-    ctx.strokeText(f.nome, f.x, b.y + b.h - 8);
+    ctx.strokeText(f.nome, b.x + b.w / 2, py + ps + 26);
     ctx.fillStyle = on ? GOLD : PAPER;
-    ctx.fillText(f.nome, f.x, b.y + b.h - 8);
+    ctx.fillText(f.nome, b.x + b.w / 2, py + ps + 26);
+
+    // barra de vida
+    const bw = b.w - 34, bx = b.x + 17, by = py + ps + 36;
+    ctx.beginPath(); ctx.rect(bx, by, bw, 11);
+    ctx.fillStyle = 'rgba(26,20,16,.72)'; ctx.fill(); ink(3); ctx.strokeStyle = INK; ctx.stroke();
+    ctx.beginPath(); ctx.rect(bx + 2, by + 2, (bw - 4) * (f.look.hp / HP_MAX), 7);
+    ctx.fillStyle = RED; ctx.fill();
+    ctx.font = '10px Georgia, serif';
+    ctx.fillStyle = 'rgba(246,239,220,.65)';
+    ctx.fillText('VIDA', b.x + b.w / 2, by + 25);
   });
 
   // ── botão JOGAR
@@ -875,7 +920,7 @@ function drawStart(t) {
   ctx.fillText(isTouch
     ? '◀ ▶ andar  ·  SOCO  ·  CHUTE  ·  DEFESA segurar  ·  ⏸ pausa'
     : '← → andar  ·  X soco  ·  Z chute  ·  S defesa (segurar)  ·  P pausa',
-    W / 2, 528);
+    W / 2, 488);
 
   ctx.textAlign = 'left';
 }
