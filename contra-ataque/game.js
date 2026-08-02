@@ -367,8 +367,27 @@ function olhar(dx, dy) {
   euler.x = Math.max(-Math.PI/2 + .01, Math.min(Math.PI/2 - .01, euler.x - dy * SENSI));
 }
 
-// No computador a câmera é virada só pelas setas — o mouse não mexe a mira,
-// serve apenas para atirar.
+// No computador a câmera é virada pelas setas. O mouse não gira a câmera:
+// ele escolhe o ponto da tela para onde o tiro vai.
+const mira = { x: innerWidth / 2, y: innerHeight / 2, nx: 0, ny: 0 };
+const elCross = $('cross'), elHit = $('hitmark');
+
+function moverMira(cx, cy) {
+  mira.x = cx; mira.y = cy;
+  mira.nx = (cx / innerWidth) * 2 - 1;
+  mira.ny = -(cy / innerHeight) * 2 + 1;
+  elCross.style.left = cx + 'px';
+  elCross.style.top = cy + 'px';
+  elHit.style.left = cx + 'px';
+  elHit.style.top = cy + 'px';
+}
+moverMira(mira.x, mira.y);
+
+addEventListener('mousemove', e => {
+  if (isTouch) return;
+  moverMira(e.clientX, e.clientY);
+});
+
 cv.addEventListener('mousedown', e => {
   if (!jogando) return;
   if (e.button === 0) mouseDown = true;
@@ -428,7 +447,8 @@ segurar($('b-reload'), () => recarregar());
 $('keysTxt').innerHTML = isTouch
   ? 'Analógico esquerdo <b>anda</b> · arraste à direita para <b>mirar</b><br>FOGO · PULO · REC recarrega'
   : '<b>↑ ↓</b> anda &nbsp;·&nbsp; <b>← →</b> vira a tela &nbsp;·&nbsp; <b>Q E</b> olha pra cima e pra baixo<br>'
-  + '<b>Clique</b> ou <b>Ctrl</b> atira · <b>Shift</b> corre · <b>Espaço</b> pula · <b>R</b> recarrega · <b>Esc</b> pausa';
+  + '<b>Mouse</b> aponta onde o tiro vai · <b>Clique</b> ou <b>Ctrl</b> atira<br>'
+  + '<b>Shift</b> corre · <b>Espaço</b> pula · <b>R</b> recarrega · <b>Esc</b> pausa';
 
 document.querySelectorAll('.dif').forEach(b => {
   b.onclick = () => {
@@ -506,6 +526,7 @@ function recarregar() {
 }
 
 const _dir = new THREE.Vector3();
+const _ndc = new THREE.Vector2();
 function atirar() {
   if (!player.vivo || player.recarregando > 0 || player.cadencia > 0) return;
   if (player.mag <= 0) { recarregar(); return; }
@@ -520,8 +541,14 @@ function atirar() {
   fl.visible = true; fl.rotation.z = Math.random() * 6.28;
   setTimeout(() => fl.visible = false, 45);
 
-  // direção com dispersão
-  camera.getWorldDirection(_dir);
+  // direção: atira no ponto da tela onde está o cursor
+  if (isTouch) {
+    camera.getWorldDirection(_dir);
+  } else {
+    camera.updateMatrixWorld();
+    ray.setFromCamera(_ndc.set(mira.nx, mira.ny), camera);
+    _dir.copy(ray.ray.direction);
+  }
   const disp = player.recuo * .055 + (player.noChao ? 0 : .05) + Math.hypot(player.vel.x, player.vel.z) * .012;
   _dir.x += (Math.random() - .5) * disp;
   _dir.y += (Math.random() - .5) * disp;
@@ -762,6 +789,7 @@ addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
+  moverMira(mira.x, mira.y);          // recalcula a mira no novo tamanho
 });
 
 camera.position.set(0, OLHO, 26);
