@@ -174,13 +174,15 @@ const player = {
 const MAG = 30;
 const euler = new THREE.Euler(0, 0, 0, 'YXZ');
 
-function pontosLivres() {
-  return [
-    new THREE.Vector3(0, 0, 26), new THREE.Vector3(-28, 0, 20), new THREE.Vector3(28, 0, -20),
-    new THREE.Vector3(-34, 0, -12), new THREE.Vector3(34, 0, 14), new THREE.Vector3(-2, 0, -30),
-    new THREE.Vector3(20, 0, 30), new THREE.Vector3(-24, 0, 34),
-  ];
-}
+const PONTOS_BRUTOS = [
+  new THREE.Vector3(0, 0, 21), new THREE.Vector3(-28, 0, 20), new THREE.Vector3(28, 0, -20),
+  new THREE.Vector3(-34, 0, -12), new THREE.Vector3(34, 0, 14), new THREE.Vector3(-2, 0, -30),
+  new THREE.Vector3(20, 0, 30), new THREE.Vector3(-24, 0, 34), new THREE.Vector3(14, 0, 6),
+  new THREE.Vector3(-16, 0, -16),
+];
+let PONTOS = PONTOS_BRUTOS;                 // filtrado abaixo, depois que o mapa existe
+function pontosLivres() { return PONTOS; }
+const sorteiaPonto = () => PONTOS[(Math.random() * PONTOS.length) | 0];
 
 // ── Colisão com o cenário ─────────────────────────────────────────────────
 function bate(p) {
@@ -204,6 +206,10 @@ function alturaChao(p) {                 // topo do obstáculo sob o jogador
   }
   return y;
 }
+
+// descarta pontos de nascimento que caíram dentro de alguma parede
+PONTOS = PONTOS_BRUTOS.filter(p => !bate(p));
+if (!PONTOS.length) PONTOS = PONTOS_BRUTOS;
 
 // ── Inimigos ──────────────────────────────────────────────────────────────
 const DIFS = [
@@ -442,7 +448,7 @@ function comecar() {
   bots.length = 0;
   for (let i = 0; i < dif.qtd; i++) criarBot(i);
 
-  player.pos.set(0, 0, 26); player.vel.set(0, 0, 0);
+  player.pos.copy(PONTOS[0]); player.vel.set(0, 0, 0);
   player.hp = 100; player.vivo = true; player.respawn = 0;
   player.mag = MAG; player.reserva = 90; player.recarregando = 0;
   player.kills = 0; player.deaths = 0;
@@ -613,6 +619,10 @@ function passoJogador(dt) {
   if (player.vel.y < -40) player.vel.y = -40;
 
   const p = player.pos;
+  // se ficou preso dentro de algo, sobe até sair (em vez de travar)
+  let saida = 0;
+  while (bate(p) && saida++ < 40) p.y += .25;
+
   const nx = p.clone(); nx.x += player.vel.x * dt;
   if (!bate(nx)) p.x = nx.x;
   const nz = p.clone(); nz.z += player.vel.z * dt;
@@ -708,11 +718,11 @@ function passoBot(b, dt) {
     b.verTimer = Math.max(0, b.verTimer - 2);
     // patrulha
     _v.subVectors(b.alvo, b.pos); _v.y = 0;
-    if (_v.length() < 2) b.alvo.copy(pontosLivres()[(Math.random() * 8) | 0]);
+    if (_v.length() < 2) b.alvo.copy(sorteiaPonto());
     _v.normalize();
     b.dir = Math.atan2(_v.x, _v.z);
     const nx = b.pos.clone(); nx.x += _v.x * 2.4 * dt;
-    if (!bate(nx)) b.pos.x = nx.x; else b.alvo.copy(pontosLivres()[(Math.random()*8)|0]);
+    if (!bate(nx)) b.pos.x = nx.x; else b.alvo.copy(sorteiaPonto());
     const nz = b.pos.clone(); nz.z += _v.z * 2.4 * dt;
     if (!bate(nz)) b.pos.z = nz.z;
   }
