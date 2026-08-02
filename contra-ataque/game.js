@@ -350,7 +350,7 @@ scene.add(camera);
 
 // ── Entrada ───────────────────────────────────────────────────────────────
 const keys = {};
-let jogando = false, travado = false, semTrava = false, mouseDown = false;
+let jogando = false, mouseDown = false;
 const toque = { f: 0, s: 0, fogo: 0, pulo: 0 };
 const SENSI = .0024;
 
@@ -367,41 +367,15 @@ function olhar(dx, dy) {
   euler.x = Math.max(-Math.PI/2 + .01, Math.min(Math.PI/2 - .01, euler.x - dy * SENSI));
 }
 
-// tenta prender o cursor; se o navegador não deixar, cai no modo livre
-function prenderMouse() {
-  if (isTouch || travado) return;
-  try {
-    const r = cv.requestPointerLock();
-    if (r && r.catch) r.catch(() => { semTrava = true; avisoMira(); });
-  } catch (e) { semTrava = true; }
-  avisoMira();
-}
-function avisoMira() {
-  document.body.classList.toggle('mirando', jogando && !isTouch && !travado && !semTrava);
-}
-
-addEventListener('mousemove', e => {
-  if (!jogando || isTouch) return;
-  // com o cursor preso, ou no modo livre, o movimento do mouse já vira a mira
-  if (travado || semTrava) olhar(e.movementX, e.movementY);
-});
-
-// primeiro clique prende o mouse; a partir daí clique atira
+// No computador a câmera é virada só pelas setas — o mouse não mexe a mira,
+// serve apenas para atirar.
 cv.addEventListener('mousedown', e => {
   if (!jogando) return;
-  if (!travado && !semTrava && !isTouch) { prenderMouse(); return; }
   if (e.button === 0) mouseDown = true;
 });
 addEventListener('mouseup', e => { if (e.button === 0) mouseDown = false; });
+addEventListener('blur', () => { mouseDown = false; });
 cv.addEventListener('contextmenu', e => e.preventDefault());
-
-document.addEventListener('pointerlockchange', () => {
-  travado = document.pointerLockElement === cv;
-  if (travado) semTrava = false;
-  mouseDown = false;
-  avisoMira();
-});
-document.addEventListener('pointerlockerror', () => { semTrava = true; avisoMira(); });
 
 // toque
 const stick = $('stick'), knob = $('knob');
@@ -453,8 +427,8 @@ segurar($('b-reload'), () => recarregar());
 // ── Menu ──────────────────────────────────────────────────────────────────
 $('keysTxt').innerHTML = isTouch
   ? 'Analógico esquerdo <b>anda</b> · arraste à direita para <b>mirar</b><br>FOGO · PULO · REC recarrega'
-  : '<b>↑ ↓</b> anda · <b>← →</b> vira a tela &nbsp;|&nbsp; ou <b>WASD</b> + <b>Mouse</b><br>'
-  + '<b>Clique</b> atira · <b>Shift</b> corre · <b>Espaço</b> pula · <b>R</b> recarrega · <b>Esc</b> pausa';
+  : '<b>↑ ↓</b> anda &nbsp;·&nbsp; <b>← →</b> vira a tela &nbsp;·&nbsp; <b>Q E</b> olha pra cima e pra baixo<br>'
+  + '<b>Clique</b> ou <b>Ctrl</b> atira · <b>Shift</b> corre · <b>Espaço</b> pula · <b>R</b> recarrega · <b>Esc</b> pausa';
 
 document.querySelectorAll('.dif').forEach(b => {
   b.onclick = () => {
@@ -481,15 +455,12 @@ function comecar() {
   $('menu').classList.add('hidden');
   $('killfeed').innerHTML = '';
   atualizarHUD();
-  prenderMouse();
-  // se em meio segundo o cursor não prendeu, libera o modo livre
-  setTimeout(() => { if (!travado && !isTouch) { semTrava = true; avisoMira(); } }, 500);
 }
 function pausar() {
   jogando = false;
-  document.body.classList.remove('playing', 'mirando');
+  mouseDown = false;
+  document.body.classList.remove('playing');
   $('menu').classList.remove('hidden');
-  if (travado) document.exitPointerLock();
 }
 
 // ── HUD ───────────────────────────────────────────────────────────────────
@@ -631,6 +602,11 @@ function passoJogador(dt) {
   const giro = (keys.ArrowLeft ? 1 : 0) - (keys.ArrowRight ? 1 : 0);
   if (giro) euler.y += giro * 2.3 * dt;
 
+  // Q / E olham para cima e para baixo
+  const olhaV = (keys.KeyQ ? 1 : 0) - (keys.KeyE ? 1 : 0);
+  if (olhaV) euler.x = Math.max(-1.1, Math.min(1.1, euler.x + olhaV * 1.6 * dt));
+  else if (!keys.KeyQ && !keys.KeyE) euler.x *= .97;   // volta devagar para o nível
+
   const sy = Math.sin(euler.y), cy = Math.cos(euler.y);
   let f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) + toque.f;
   let s = (keys.KeyA ? 1 : 0) - (keys.KeyD ? 1 : 0) + toque.s;
@@ -669,7 +645,7 @@ function passoJogador(dt) {
 
   // tiro
   if (player.cadencia > 0) player.cadencia--;
-  if ((mouseDown || toque.fogo) && jogando) atirar();
+  if ((mouseDown || toque.fogo || keys.ControlLeft || keys.ControlRight) && jogando) atirar();
   player.recuo *= .90;
 
   if (player.recarregando > 0) {
