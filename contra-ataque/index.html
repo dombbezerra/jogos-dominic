@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#12100c">
+  <title>Contra-Ataque</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: #12100c; color: #e8e2d4;
+      font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+      -webkit-user-select: none; user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none; overscroll-behavior: none;
+    }
+    canvas { display: block; }
+
+    #back-link {
+      position: fixed;
+      top: calc(env(safe-area-inset-top) + 8px);
+      left: calc(env(safe-area-inset-left) + 8px);
+      background: rgba(20,18,14,.85); color: #d8a24a;
+      border: 1px solid #6b5a34;
+      padding: 6px 12px; font-size: 13px; font-weight: bold;
+      text-decoration: none; border-radius: 4px; z-index: 100;
+    }
+
+    /* ── Menu ─────────────────────────────────────────────── */
+    #menu {
+      position: fixed; inset: 0; z-index: 60;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 20px;
+      background:
+        radial-gradient(ellipse at 50% 30%, rgba(216,162,74,.10), transparent 60%),
+        linear-gradient(#1b1813, #0c0a07);
+    }
+    #menu h1 {
+      font-size: clamp(30px, 8vw, 68px);
+      font-weight: 900; letter-spacing: 4px;
+      color: #e8c07a;
+      text-shadow: 0 0 26px rgba(216,162,74,.35), 0 4px 0 rgba(0,0,0,.6);
+    }
+    #menu .sub {
+      color: #9b8f76; letter-spacing: 3px; font-size: clamp(11px, 2.4vw, 15px);
+      margin: 6px 0 26px; text-transform: uppercase;
+    }
+    .row { display: flex; gap: 10px; margin-bottom: 22px; flex-wrap: wrap; justify-content: center; }
+    .dif {
+      background: rgba(40,35,26,.8); color: #cbbfa6;
+      border: 2px solid #5a4c30;
+      padding: 10px 20px; border-radius: 4px;
+      font: bold 14px inherit; letter-spacing: 2px; cursor: pointer;
+    }
+    .dif.on { background: #d8a24a; color: #1b1610; border-color: #f0c274; }
+    #play {
+      background: #b8862f; color: #17130c;
+      border: 3px solid #17130c;
+      padding: 16px 60px; border-radius: 4px;
+      font: 900 clamp(18px,4vw,26px) inherit; letter-spacing: 4px;
+      cursor: pointer; box-shadow: 0 5px 0 rgba(0,0,0,.55);
+    }
+    #play:hover { background: #d8a24a; }
+    #play:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,.55); }
+    .keys {
+      margin-top: 26px; color: #8a7f68; font-size: clamp(11px,2.2vw,14px);
+      line-height: 1.8; text-align: center;
+    }
+    .keys b { color: #d8a24a; }
+
+    /* ── HUD ──────────────────────────────────────────────── */
+    #hud { position: fixed; inset: 0; pointer-events: none; z-index: 20; display: none; }
+    body.playing #hud { display: block; }
+
+    #cross { position: absolute; top: 50%; left: 50%; }
+    #cross div { position: absolute; background: #6dfd8a; box-shadow: 0 0 3px rgba(0,0,0,.9); }
+    #cross .h { width: 2px; height: 9px; left: -1px; }
+    #cross .v { height: 2px; width: 9px; top: -1px; }
+    #cross .dot { width: 2px; height: 2px; left: -1px; top: -1px; background: #6dfd8a; }
+
+    #hitmark {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%,-50%); opacity: 0;
+      color: #ff5a4a; font-size: 26px; font-weight: bold; line-height: 1;
+      text-shadow: 0 0 4px #000;
+    }
+
+    .panel-bl, .panel-br, .panel-t {
+      position: absolute; padding: 10px 16px;
+      background: rgba(14,12,9,.62);
+      border: 1px solid rgba(216,162,74,.28);
+      border-radius: 3px;
+    }
+    .panel-bl { left: calc(env(safe-area-inset-left) + 16px); bottom: calc(env(safe-area-inset-bottom) + 16px); }
+    .panel-br { right: calc(env(safe-area-inset-right) + 16px); bottom: calc(env(safe-area-inset-bottom) + 16px); text-align: right; }
+    .panel-t  { left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top) + 12px); padding: 6px 20px; }
+    .lbl { font-size: 10px; letter-spacing: 2px; color: #9b8f76; }
+    .big { font-size: clamp(24px, 5vw, 34px); font-weight: 900; line-height: 1.05; }
+    #hp .big { color: #6dc9f5; }
+    #ammo .big { color: #e8c07a; }
+    #ammo .res { font-size: 15px; color: #9b8f76; font-weight: normal; }
+    #score .big { font-size: 20px; color: #e8e2d4; }
+    #reloading { color: #ff9a3c; font-size: 13px; letter-spacing: 2px; margin-top: 2px; height: 15px; }
+
+    #dmg {
+      position: absolute; inset: 0; pointer-events: none;
+      box-shadow: inset 0 0 120px rgba(200,20,20,.85);
+      opacity: 0; transition: opacity .25s;
+    }
+    #killfeed {
+      position: absolute; top: calc(env(safe-area-inset-top) + 60px);
+      right: calc(env(safe-area-inset-right) + 16px);
+      text-align: right; font-size: 13px; line-height: 1.7;
+    }
+    #killfeed div { color: #cbbfa6; text-shadow: 0 1px 3px #000; }
+    #killfeed b { color: #d8a24a; }
+
+    /* ── Toque ────────────────────────────────────────────── */
+    #touch { display: none; }
+    body.touch.playing #touch { display: block; }
+    #stick {
+      position: fixed; z-index: 30;
+      left: calc(env(safe-area-inset-left) + 20px);
+      bottom: calc(env(safe-area-inset-bottom) + 24px);
+      width: 124px; height: 124px; border-radius: 50%;
+      background: rgba(216,162,74,.10); border: 2px solid rgba(216,162,74,.34);
+      pointer-events: auto;
+    }
+    #knob {
+      position: absolute; left: 50%; top: 50%;
+      width: 52px; height: 52px; margin: -26px 0 0 -26px;
+      border-radius: 50%; background: rgba(216,162,74,.45);
+    }
+    .tb {
+      position: fixed; z-index: 30; pointer-events: auto;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid rgba(216,162,74,.45); border-radius: 50%;
+      background: rgba(30,26,19,.6); color: #e8d4a8;
+      font: bold 12px inherit; text-align: center;
+    }
+    #b-fire   { right: calc(env(safe-area-inset-right) + 24px); bottom: calc(env(safe-area-inset-bottom) + 30px); width: 92px; height: 92px; font-size: 15px; background: rgba(150,40,30,.55); }
+    #b-jump   { right: calc(env(safe-area-inset-right) + 126px); bottom: calc(env(safe-area-inset-bottom) + 40px); width: 62px; height: 62px; }
+    #b-reload { right: calc(env(safe-area-inset-right) + 34px); bottom: calc(env(safe-area-inset-bottom) + 136px); width: 62px; height: 62px; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <a href="../index.html" id="back-link"
+     onclick="if(window!==window.top){event.preventDefault();window.parent.postMessage({type:'closeGame'},'*');}">← Menu</a>
+
+  <div id="menu">
+    <h1>CONTRA-ATAQUE</h1>
+    <div class="sub">tiroteio tático · 3D</div>
+    <div class="row" id="difRow">
+      <button class="dif" data-d="0">FÁCIL</button>
+      <button class="dif on" data-d="1">NORMAL</button>
+      <button class="dif" data-d="2">DIFÍCIL</button>
+    </div>
+    <button id="play">▶ JOGAR</button>
+    <div class="keys" id="keysTxt"></div>
+  </div>
+
+  <div id="hud">
+    <div id="cross">
+      <div class="h" id="cr-up"></div><div class="h" id="cr-dn"></div>
+      <div class="v" id="cr-lf"></div><div class="v" id="cr-rt"></div>
+      <div class="dot"></div>
+    </div>
+    <div id="hitmark">✕</div>
+    <div id="dmg"></div>
+    <div class="panel-bl" id="hp">
+      <div class="lbl">VIDA</div><div class="big" id="hpVal">100</div>
+    </div>
+    <div class="panel-br" id="ammo">
+      <div class="lbl">MUNIÇÃO</div>
+      <div class="big"><span id="magVal">30</span> <span class="res">/ <span id="resVal">90</span></span></div>
+      <div id="reloading"></div>
+    </div>
+    <div class="panel-t" id="score">
+      <div class="big"><span id="kills">0</span> <span style="color:#6b5a34">—</span> <span id="deaths">0</span></div>
+      <div class="lbl" style="text-align:center">ABATES · MORTES</div>
+    </div>
+    <div id="killfeed"></div>
+  </div>
+
+  <div id="touch">
+    <div id="stick"><div id="knob"></div></div>
+    <div class="tb" id="b-fire">FOGO</div>
+    <div class="tb" id="b-jump">PULO</div>
+    <div class="tb" id="b-reload">REC</div>
+  </div>
+
+  <script src="three.min.js"></script>
+  <script src="game.js?v=1"></script>
+</body>
+</html>
