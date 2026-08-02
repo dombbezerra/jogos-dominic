@@ -119,6 +119,19 @@
     #killfeed div { color: #cbbfa6; text-shadow: 0 1px 3px #000; }
     #killfeed b { color: #d8a24a; }
 
+    #aim-hint {
+      position: absolute; left: 50%; top: 62%;
+      transform: translateX(-50%);
+      background: rgba(14,12,9,.82);
+      border: 1px solid rgba(216,162,74,.5);
+      color: #e8c07a; padding: 10px 22px; border-radius: 4px;
+      font-size: clamp(12px, 2.6vw, 15px); letter-spacing: 2px;
+      white-space: nowrap; display: none;
+      animation: pisca 1.4s ease-in-out infinite;
+    }
+    @keyframes pisca { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+    body.mirando #aim-hint { display: block; }
+
     /* ── Toque ────────────────────────────────────────────── */
     #touch { display: none; }
     body.touch.playing #touch { display: block; }
@@ -186,6 +199,7 @@
       <div class="lbl" style="text-align:center">ABATES · MORTES</div>
     </div>
     <div id="killfeed"></div>
+    <div id="aim-hint">CLIQUE NA TELA PARA MIRAR COM O MOUSE</div>
   </div>
 
   <div id="touch">
@@ -196,6 +210,6 @@
   </div>
 
   <script src="three.min.js"></script>
-  <script src="game.js?v=1"></script>
+  <script src="game.js?v=2"></script>
 </body>
 </html>

@@ -350,8 +350,9 @@ scene.add(camera);
 
 // ── Entrada ───────────────────────────────────────────────────────────────
 const keys = {};
-let jogando = false, travado = false, arrastar = false, mouseDown = false;
+let jogando = false, travado = false, semTrava = false, mouseDown = false;
 const toque = { f: 0, s: 0, fogo: 0, pulo: 0 };
+const SENSI = .0024;
 
 addEventListener('keydown', e => {
   keys[e.code] = true;
@@ -362,24 +363,45 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => { keys[e.code] = false; });
 
 function olhar(dx, dy) {
-  euler.y -= dx * .0022;
-  euler.x = Math.max(-Math.PI/2 + .01, Math.min(Math.PI/2 - .01, euler.x - dy * .0022));
+  euler.y -= dx * SENSI;
+  euler.x = Math.max(-Math.PI/2 + .01, Math.min(Math.PI/2 - .01, euler.x - dy * SENSI));
 }
+
+// tenta prender o cursor; se o navegador não deixar, cai no modo livre
+function prenderMouse() {
+  if (isTouch || travado) return;
+  try {
+    const r = cv.requestPointerLock();
+    if (r && r.catch) r.catch(() => { semTrava = true; avisoMira(); });
+  } catch (e) { semTrava = true; }
+  avisoMira();
+}
+function avisoMira() {
+  document.body.classList.toggle('mirando', jogando && !isTouch && !travado && !semTrava);
+}
+
 addEventListener('mousemove', e => {
-  if (!jogando) return;
-  if (travado) olhar(e.movementX, e.movementY);
-  else if (arrastar) olhar(e.movementX, e.movementY);
+  if (!jogando || isTouch) return;
+  // com o cursor preso, ou no modo livre, o movimento do mouse já vira a mira
+  if (travado || semTrava) olhar(e.movementX, e.movementY);
 });
+
+// primeiro clique prende o mouse; a partir daí clique atira
 cv.addEventListener('mousedown', e => {
   if (!jogando) return;
-  if (e.button === 0) { mouseDown = true; if (!travado && !isTouch) arrastar = true; }
-  if (!travado && !isTouch && !arrastar) cv.requestPointerLock();
+  if (!travado && !semTrava && !isTouch) { prenderMouse(); return; }
+  if (e.button === 0) mouseDown = true;
 });
-addEventListener('mouseup', () => { mouseDown = false; arrastar = false; });
+addEventListener('mouseup', e => { if (e.button === 0) mouseDown = false; });
 cv.addEventListener('contextmenu', e => e.preventDefault());
+
 document.addEventListener('pointerlockchange', () => {
   travado = document.pointerLockElement === cv;
+  if (travado) semTrava = false;
+  mouseDown = false;
+  avisoMira();
 });
+document.addEventListener('pointerlockerror', () => { semTrava = true; avisoMira(); });
 
 // toque
 const stick = $('stick'), knob = $('knob');
@@ -458,14 +480,13 @@ function comecar() {
   $('menu').classList.add('hidden');
   $('killfeed').innerHTML = '';
   atualizarHUD();
-  if (!isTouch) {
-    cv.requestPointerLock();
-    setTimeout(() => { if (!travado) arrastar = false; }, 300);
-  }
+  prenderMouse();
+  // se em meio segundo o cursor não prendeu, libera o modo livre
+  setTimeout(() => { if (!travado && !isTouch) { semTrava = true; avisoMira(); } }, 500);
 }
 function pausar() {
   jogando = false;
-  document.body.classList.remove('playing');
+  document.body.classList.remove('playing', 'mirando');
   $('menu').classList.remove('hidden');
   if (travado) document.exitPointerLock();
 }
