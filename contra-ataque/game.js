@@ -453,7 +453,8 @@ segurar($('b-reload'), () => recarregar());
 // ── Menu ──────────────────────────────────────────────────────────────────
 $('keysTxt').innerHTML = isTouch
   ? 'Analógico esquerdo <b>anda</b> · arraste à direita para <b>mirar</b><br>FOGO · PULO · REC recarrega'
-  : '<b>WASD</b> anda · <b>Mouse</b> mira · <b>Clique</b> atira<br><b>Shift</b> corre · <b>Espaço</b> pula · <b>R</b> recarrega · <b>Esc</b> pausa';
+  : '<b>↑ ↓</b> anda · <b>← →</b> vira a tela &nbsp;|&nbsp; ou <b>WASD</b> + <b>Mouse</b><br>'
+  + '<b>Clique</b> atira · <b>Shift</b> corre · <b>Espaço</b> pula · <b>R</b> recarrega · <b>Esc</b> pausa';
 
 document.querySelectorAll('.dif').forEach(b => {
   b.onclick = () => {
@@ -625,8 +626,13 @@ function passoJogador(dt) {
 
   const correr = keys.ShiftLeft || keys.ShiftRight;
   const vel = correr ? 8.2 : 5.4;
+
+  // setas ← → giram a tela junto (dá para jogar só no teclado)
+  const giro = (keys.ArrowLeft ? 1 : 0) - (keys.ArrowRight ? 1 : 0);
+  if (giro) euler.y += giro * 2.3 * dt;
+
   const sy = Math.sin(euler.y), cy = Math.cos(euler.y);
-  let f = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0) + toque.f;
+  let f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) + toque.f;
   let s = (keys.KeyA ? 1 : 0) - (keys.KeyD ? 1 : 0) + toque.s;
   const len = Math.hypot(f, s);
   if (len > 1) { f /= len; s /= len; }
