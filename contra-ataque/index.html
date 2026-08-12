@@ -121,6 +121,23 @@
 
     /* a setinha do mouse fica visível e a cruz verde a acompanha */
     #cross { transition: none; }
+    #armaNome { color: #e8c07a; font-size: 12px; letter-spacing: 3px; }
+
+    /* luneta da sniper */
+    #luneta { position: absolute; inset: 0; display: none; pointer-events: none; }
+    body.luneta #luneta { display: block; }
+    body.luneta #cross { display: none; }
+    #luneta::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 50% 50%,
+        transparent 0, transparent 38%, rgba(0,0,0,.9) 44%, rgba(0,0,0,.96) 100%);
+    }
+    #luneta .lin {
+      position: absolute; background: rgba(20,20,20,.85);
+      left: 50%; top: 50%;
+    }
+    #luneta .lv { width: 1.5px; height: 100%; transform: translate(-50%,-50%); }
+    #luneta .lh { height: 1.5px; width: 100%; transform: translate(-50%,-50%); }
 
     /* ── Toque ────────────────────────────────────────────── */
     #touch { display: none; }
@@ -169,6 +186,7 @@
   </div>
 
   <div id="hud">
+    <div id="luneta"><div class="lin lv"></div><div class="lin lh"></div></div>
     <div id="cross">
       <div class="h" id="cr-up"></div><div class="h" id="cr-dn"></div>
       <div class="v" id="cr-lf"></div><div class="v" id="cr-rt"></div>
@@ -180,9 +198,10 @@
       <div class="lbl">VIDA</div><div class="big" id="hpVal">100</div>
     </div>
     <div class="panel-br" id="ammo">
-      <div class="lbl">MUNIÇÃO</div>
+      <div class="lbl" id="armaNome">RIFLE</div>
       <div class="big"><span id="magVal">30</span> <span class="res">/ <span id="resVal">90</span></span></div>
       <div id="reloading"></div>
+      <div class="lbl" style="margin-top:4px;opacity:.6">1 · 2 · 3 troca</div>
     </div>
     <div class="panel-t" id="score">
       <div class="big"><span id="kills">0</span> <span style="color:#6b5a34">—</span> <span id="deaths">0</span></div>
@@ -199,6 +218,6 @@
   </div>
 
   <script src="three.min.js"></script>
-  <script src="game.js?v=5"></script>
+  <script src="game.js?v=7"></script>
 </body>
 </html>

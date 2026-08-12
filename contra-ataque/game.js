@@ -163,15 +163,28 @@ function montarMapa() {
 montarMapa();
 
 // ── Jogador ───────────────────────────────────────────────────────────────
+// ── Arsenal ───────────────────────────────────────────────────────────────
+const ARMAS = [
+  { id:'pistola', nome:'PISTOLA', mag:12, reserva:72, dano:24, danoCab:80,
+    cad:11, recuo:.10, disp:.020, recarga:70,  auto:false, zoom:0 },
+  { id:'rifle',   nome:'RIFLE',   mag:30, reserva:90, dano:26, danoCab:100,
+    cad:7,  recuo:.085, disp:.055, recarga:110, auto:true,  zoom:0 },
+  { id:'sniper',  nome:'SNIPER',  mag:5,  reserva:25, dano:100, danoCab:150,
+    cad:65, recuo:.55, disp:.004, recarga:160, auto:false, zoom:26 },
+];
+
 const OLHO = 1.62, RAIO = .38, ALT = 1.75;
 const player = {
   pos: new THREE.Vector3(0, 0, 26),
   vel: new THREE.Vector3(),
   noChao: false, hp: 100, vivo: true, respawn: 0,
-  mag: 30, reserva: 90, recarregando: 0, cadencia: 0,
-  recuo: 0, kills: 0, deaths: 0,
+  arma: 1,                                   // índice em ARMAS
+  bal: ARMAS.map(a => ({ mag: a.mag, reserva: a.reserva })),
+  recarregando: 0, cadencia: 0,
+  recuo: 0, kills: 0, deaths: 0, mirando: false,
 };
-const MAG = 30;
+const arma = () => ARMAS[player.arma];
+const bal  = () => player.bal[player.arma];
 const euler = new THREE.Euler(0, 0, 0, 'YXZ');
 
 const PONTOS_BRUTOS = [
@@ -319,38 +332,79 @@ function sangue(p) {
   }
 }
 
-// ── Arma na tela (viewmodel) ──────────────────────────────────────────────
-const armaGrp = new THREE.Group();
-{
-  const preto = new THREE.MeshLambertMaterial({ color: 0x24272e });
-  const cinza = new THREE.MeshLambertMaterial({ color: 0x3b4048 });
-  const mad   = new THREE.MeshLambertMaterial({ color: 0x5c3f27 });
-  const add = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); armaGrp.add(m); return m; };
-  add(new THREE.BoxGeometry(.15, .17, .95), preto, 0, 0, -.34);          // corpo
-  add(new THREE.BoxGeometry(.08, .08, .62), cinza, 0, .03, -.92);        // cano
-  add(new THREE.BoxGeometry(.11, .3, .16), preto, 0, -.21, -.2);         // carregador
-  add(new THREE.BoxGeometry(.1, .16, .3), mad, 0, -.03, .2);             // coronha
-  add(new THREE.BoxGeometry(.05, .1, .05), cinza, 0, .13, -.72);         // alça de mira
-  add(new THREE.BoxGeometry(.1, .12, .2), preto, 0, -.1, -.62);          // empunhadura dianteira
+// ── Armas na tela (viewmodel) ─────────────────────────────────────────────
+const matPreto = new THREE.MeshLambertMaterial({ color: 0x24272e });
+const matCinza = new THREE.MeshLambertMaterial({ color: 0x3b4048 });
+const matMad   = new THREE.MeshLambertMaterial({ color: 0x5c3f27 });
+
+function montarArma(id) {
+  const g = new THREE.Group();
+  const add = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); g.add(m); return m; };
+  let bocaZ;
+
+  if (id === 'pistola') {
+    add(new THREE.BoxGeometry(.14, .18, .5), matPreto, 0, 0, -.16);      // ferrolho
+    add(new THREE.BoxGeometry(.07, .07, .16), matCinza, 0, .01, -.46);   // cano
+    add(new THREE.BoxGeometry(.13, .3, .16), matPreto, 0, -.22, .04);    // punho
+    add(new THREE.BoxGeometry(.04, .06, .04), matCinza, 0, .11, -.36);   // massa de mira
+    bocaZ = -.58;
+  } else if (id === 'sniper') {
+    add(new THREE.BoxGeometry(.13, .15, 1.15), matPreto, 0, 0, -.4);     // corpo
+    add(new THREE.BoxGeometry(.07, .07, 1.0), matCinza, 0, .02, -1.3);   // cano longo
+    add(new THREE.BoxGeometry(.1, .26, .14), matPreto, 0, -.2, -.24);    // carregador
+    add(new THREE.BoxGeometry(.11, .17, .42), matMad, 0, -.02, .3);      // coronha
+    add(new THREE.CylinderGeometry(.07, .07, .52, 8), matCinza, 0, .17, -.5) // luneta
+      .rotation.x = Math.PI / 2;
+    add(new THREE.BoxGeometry(.04, .09, .04), matPreto, 0, .09, -.28);   // suporte
+    add(new THREE.BoxGeometry(.04, .09, .04), matPreto, 0, .09, -.72);
+    bocaZ = -1.82;
+  } else {                                                               // rifle
+    add(new THREE.BoxGeometry(.15, .17, .95), matPreto, 0, 0, -.34);
+    add(new THREE.BoxGeometry(.08, .08, .62), matCinza, 0, .03, -.92);
+    add(new THREE.BoxGeometry(.11, .3, .16), matPreto, 0, -.21, -.2);
+    add(new THREE.BoxGeometry(.1, .16, .3), matMad, 0, -.03, .2);
+    add(new THREE.BoxGeometry(.05, .1, .05), matCinza, 0, .13, -.72);
+    add(new THREE.BoxGeometry(.1, .12, .2), matPreto, 0, -.1, -.62);
+    bocaZ = -1.26;
+  }
+
   const luz = new THREE.Mesh(
     new THREE.PlaneGeometry(.42, .42),
     new THREE.MeshBasicMaterial({ color: 0xffd070, transparent: true, opacity: .9, side: THREE.DoubleSide })
   );
-  luz.position.set(0, .03, -1.26); luz.visible = false;
-  armaGrp.add(luz);
-  armaGrp.userData.flash = luz;
+  luz.position.set(0, .03, bocaZ); luz.visible = false;
+  g.add(luz);
+  g.userData.flash = luz;
+  return g;
 }
-// a arma anda presa à câmera
+
 const ARMA_BASE = new THREE.Vector3(.17, -.15, -.42);
-armaGrp.position.copy(ARMA_BASE);
-armaGrp.scale.setScalar(.42);
-armaGrp.rotation.y = .05;
-camera.add(armaGrp);
+const armaMalhas = ARMAS.map(a => {
+  const g = montarArma(a.id);
+  g.position.copy(ARMA_BASE);
+  g.scale.setScalar(a.id === 'pistola' ? .5 : .42);
+  g.rotation.y = .05;
+  g.visible = false;
+  camera.add(g);
+  return g;
+});
 scene.add(camera);
+const armaGrp = () => armaMalhas[player.arma];
+
+function trocarArma(i) {
+  if (i === player.arma || i < 0 || i >= ARMAS.length) return;
+  if (player.recarregando > 0) player.recarregando = 0;
+  player.arma = i;
+  player.recuo = 0;
+  player.mirando = false;
+  armaMalhas.forEach((g, k) => g.visible = (k === i));
+  atualizarHUD();
+}
+armaMalhas[player.arma].visible = true;
 
 // ── Entrada ───────────────────────────────────────────────────────────────
 const keys = {};
-let jogando = false, mouseDown = false;
+let jogando = false, mouseDown = false, botaoDir = false, gatilhoAnt = false;
 const toque = { f: 0, s: 0, fogo: 0, pulo: 0 };
 const SENSI = .0024;
 
@@ -358,6 +412,9 @@ addEventListener('keydown', e => {
   keys[e.code] = true;
   if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
   if (e.code === 'KeyR') recarregar();
+  if (e.code === 'Digit1') trocarArma(0);
+  if (e.code === 'Digit2') trocarArma(1);
+  if (e.code === 'Digit3') trocarArma(2);
   if (e.code === 'Escape' && jogando) pausar();
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
@@ -391,9 +448,13 @@ addEventListener('mousemove', e => {
 cv.addEventListener('mousedown', e => {
   if (!jogando) return;
   if (e.button === 0) mouseDown = true;
+  if (e.button === 2) botaoDir = true;
 });
-addEventListener('mouseup', e => { if (e.button === 0) mouseDown = false; });
-addEventListener('blur', () => { mouseDown = false; });
+addEventListener('mouseup', e => {
+  if (e.button === 0) mouseDown = false;
+  if (e.button === 2) botaoDir = false;
+});
+addEventListener('blur', () => { mouseDown = botaoDir = false; });
 cv.addEventListener('contextmenu', e => e.preventDefault());
 
 // toque
@@ -448,6 +509,7 @@ $('keysTxt').innerHTML = isTouch
   ? 'Analógico esquerdo <b>anda</b> · arraste à direita para <b>mirar</b><br>FOGO · PULO · REC recarrega'
   : '<b>↑ ↓</b> anda &nbsp;·&nbsp; <b>← →</b> vira a tela &nbsp;·&nbsp; <b>Q E</b> olha pra cima e pra baixo<br>'
   + '<b>Mouse</b> aponta onde o tiro vai · <b>Clique</b> ou <b>Ctrl</b> atira<br>'
+  + '<b>1</b> pistola · <b>2</b> rifle · <b>3</b> sniper (<b>botão direito</b> ou <b>Z</b> dá zoom)<br>'
   + '<b>Shift</b> corre · <b>Espaço</b> pula · <b>R</b> recarrega · <b>Esc</b> pausa';
 
 document.querySelectorAll('.dif').forEach(b => {
@@ -467,8 +529,10 @@ function comecar() {
 
   player.pos.copy(PONTOS[0]); player.vel.set(0, 0, 0);
   player.hp = 100; player.vivo = true; player.respawn = 0;
-  player.mag = MAG; player.reserva = 90; player.recarregando = 0;
+  player.bal = ARMAS.map(a => ({ mag: a.mag, reserva: a.reserva }));
+  player.recarregando = 0;
   player.kills = 0; player.deaths = 0;
+  trocarArma(1); armaMalhas.forEach((g, k) => g.visible = (k === player.arma));
   euler.set(0, 0, 0);
   jogando = true;
   document.body.classList.add('playing');
@@ -486,8 +550,9 @@ function pausar() {
 // ── HUD ───────────────────────────────────────────────────────────────────
 function atualizarHUD() {
   $('hpVal').textContent = Math.max(0, Math.round(player.hp));
-  $('magVal').textContent = player.mag;
-  $('resVal').textContent = player.reserva;
+  $('magVal').textContent = bal().mag;
+  $('resVal').textContent = bal().reserva;
+  $('armaNome').textContent = arma().nome;
   $('kills').textContent = player.kills;
   $('deaths').textContent = player.deaths;
   $('reloading').textContent = player.recarregando > 0 ? 'RECARREGANDO…' : '';
@@ -520,8 +585,9 @@ function atualizarMira() {
 // ── Combate ───────────────────────────────────────────────────────────────
 function recarregar() {
   if (!jogando || !player.vivo) return;
-  if (player.recarregando > 0 || player.mag === MAG || player.reserva === 0) return;
-  player.recarregando = 110;
+  const a = arma(), b = bal();
+  if (player.recarregando > 0 || b.mag === a.mag || b.reserva === 0) return;
+  player.recarregando = a.recarga;
   atualizarHUD();
 }
 
@@ -529,27 +595,31 @@ const _dir = new THREE.Vector3();
 const _ndc = new THREE.Vector2();
 function atirar() {
   if (!player.vivo || player.recarregando > 0 || player.cadencia > 0) return;
-  if (player.mag <= 0) { recarregar(); return; }
+  const a = arma(), b = bal();
+  if (b.mag <= 0) { recarregar(); return; }
 
-  player.mag--;
-  player.cadencia = 7;
-  player.recuo = Math.min(.5, player.recuo + .085);
+  b.mag--;
+  player.cadencia = a.cad;
+  player.recuo = Math.min(.9, player.recuo + a.recuo);
   atualizarHUD();
 
   // clarão + fumaça
-  const fl = armaGrp.userData.flash;
+  const fl = armaGrp().userData.flash;
   fl.visible = true; fl.rotation.z = Math.random() * 6.28;
   setTimeout(() => fl.visible = false, 45);
 
   // direção: atira no ponto da tela onde está o cursor
-  if (isTouch) {
+  // (com a luneta, a mira é o centro dela)
+  if (isTouch || player.mirando) {
     camera.getWorldDirection(_dir);
   } else {
     camera.updateMatrixWorld();
     ray.setFromCamera(_ndc.set(mira.nx, mira.ny), camera);
     _dir.copy(ray.ray.direction);
   }
-  const disp = player.recuo * .055 + (player.noChao ? 0 : .05) + Math.hypot(player.vel.x, player.vel.z) * .012;
+  const disp = a.disp * (1 + player.recuo * 2)
+             + (player.noChao ? 0 : .05)
+             + Math.hypot(player.vel.x, player.vel.z) * .010;
   _dir.x += (Math.random() - .5) * disp;
   _dir.y += (Math.random() - .5) * disp;
   _dir.z += (Math.random() - .5) * disp;
@@ -574,7 +644,7 @@ function atirar() {
   traco(origem.clone().addScaledVector(_dir, .6), ponta);
 
   if (alvoBot && distBot < distParede) {
-    const dano = naCabeca ? 100 : 26;
+    const dano = naCabeca ? a.danoCab : a.dano;
     alvoBot.hp -= dano;
     sangue(ponta);
     marcarAcerto();
@@ -616,7 +686,7 @@ function passoJogador(dt) {
       player.pos.copy(pts[(Math.random() * pts.length) | 0]);
       player.vel.set(0, 0, 0);
       player.hp = 100; player.vivo = true;
-      player.mag = MAG; player.reserva = 90;
+      player.bal = ARMAS.map(a => ({ mag: a.mag, reserva: a.reserva }));
       atualizarHUD();
     }
     return;
@@ -670,20 +740,33 @@ function passoJogador(dt) {
   p.x = Math.max(-lim, Math.min(lim, p.x));
   p.z = Math.max(-lim, Math.min(lim, p.z));
 
-  // tiro
+  // tiro — automático segura o gatilho, semiautomático precisa clicar de novo
   if (player.cadencia > 0) player.cadencia--;
-  if ((mouseDown || toque.fogo || keys.ControlLeft || keys.ControlRight) && jogando) atirar();
+  const quer = mouseDown || toque.fogo || keys.ControlLeft || keys.ControlRight;
+  if (jogando && quer && (arma().auto || !gatilhoAnt)) atirar();
+  gatilhoAnt = quer;
   player.recuo *= .90;
 
   if (player.recarregando > 0) {
     player.recarregando--;
     if (player.recarregando === 0) {
-      const falta = MAG - player.mag;
-      const usa = Math.min(falta, player.reserva);
-      player.mag += usa; player.reserva -= usa;
+      const a = arma(), b = bal();
+      const usa = Math.min(a.mag - b.mag, b.reserva);
+      b.mag += usa; b.reserva -= usa;
       atualizarHUD();
     }
   }
+
+  // luneta da sniper (botão direito ou tecla Z)
+  const querZoom = arma().zoom > 0 && (botaoDir || keys.KeyZ) && player.recarregando === 0;
+  player.mirando = querZoom;
+  const fovAlvo = querZoom ? arma().zoom : 78;
+  if (Math.abs(camera.fov - fovAlvo) > .3) {
+    camera.fov += (fovAlvo - camera.fov) * .25;
+    camera.updateProjectionMatrix();
+  }
+  armaMalhas[player.arma].visible = !querZoom;
+  document.body.classList.toggle('luneta', querZoom);
 
   // câmera: cabeça + balanço + recuo
   const andando = Math.hypot(player.vel.x, player.vel.z) > .5 && player.noChao;
@@ -693,12 +776,13 @@ function passoJogador(dt) {
   euler.x -= player.recuo * .0055;
   camera.quaternion.setFromEuler(euler);
 
-  armaGrp.position.set(
+  const g = armaGrp();
+  g.position.set(
     ARMA_BASE.x + bx * .5,
     ARMA_BASE.y + by * .6 - player.recuo * .05,
     ARMA_BASE.z + player.recuo * .14
   );
-  armaGrp.rotation.x = player.recuo * .55 + (player.recarregando > 0 ? Math.sin(player.recarregando * .06) * .5 - .5 : 0);
+  g.rotation.x = player.recuo * .55 + (player.recarregando > 0 ? Math.sin(player.recarregando * .06) * .5 - .5 : 0);
 }
 let bob = 0;
 
