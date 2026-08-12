@@ -57,15 +57,49 @@
       font: bold 14px inherit; letter-spacing: 2px; cursor: pointer;
     }
     .dif.on { background: #d8a24a; color: #1b1610; border-color: #f0c274; }
-    #play {
+    .acoes { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    .acoes button, #voltarArmas {
       background: #b8862f; color: #17130c;
       border: 3px solid #17130c;
-      padding: 16px 60px; border-radius: 4px;
-      font: 900 clamp(18px,4vw,26px) inherit; letter-spacing: 4px;
+      padding: 15px 40px; border-radius: 4px;
+      font: 900 clamp(15px,3.4vw,22px) inherit; letter-spacing: 3px;
       cursor: pointer; box-shadow: 0 5px 0 rgba(0,0,0,.55);
     }
-    #play:hover { background: #d8a24a; }
-    #play:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,.55); }
+    .acoes button:hover, #voltarArmas:hover { background: #d8a24a; }
+    .acoes button:active, #voltarArmas:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,.55); }
+    .acoes button.sec, #voltarArmas { background: #4a4436; color: #e8d4a8; }
+    .acoes button.sec:hover, #voltarArmas:hover { background: #615944; }
+    #continuar { background: #3f7a3f; color: #eaffea; }
+    #continuar:hover { background: #4f9a4f; }
+
+    /* ── Tela de armas ── */
+    #armasTela {
+      position: fixed; inset: 0; z-index: 61;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 20px; overflow-y: auto;
+      background: linear-gradient(#1b1813, #0c0a07);
+    }
+    #gradeArmas {
+      display: grid; gap: 10px; margin-top: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(clamp(150px,30vw,220px), 1fr));
+      width: 100%; max-width: 720px;
+    }
+    .arma-card {
+      background: rgba(40,35,26,.7);
+      border: 2px solid #5a4c30; border-radius: 5px;
+      padding: 12px 14px; cursor: pointer; text-align: left;
+      transition: transform .1s, border-color .1s;
+    }
+    .arma-card:hover { transform: translateY(-2px); border-color: #a8873f; }
+    .arma-card.on { border-color: #e8c07a; background: rgba(216,162,74,.16); }
+    .arma-card .n { font-weight: 900; font-size: clamp(15px,3vw,19px); color: #e8c07a; letter-spacing: 2px; }
+    .arma-card .t { font-size: 11px; color: #9b8f76; margin-bottom: 8px; letter-spacing: 1px; }
+    .barra { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+    .barra span { font-size: 9px; color: #8a7f68; width: 52px; letter-spacing: 1px; }
+    .barra i { flex: 1; height: 6px; background: rgba(0,0,0,.45); border-radius: 3px; overflow: hidden; }
+    .barra i b { display: block; height: 100%; background: #d8a24a; }
+    .arma-card .mun { font-size: 11px; color: #cbbfa6; margin-top: 8px; }
     .keys {
       margin-top: 26px; color: #8a7f68; font-size: clamp(11px,2.2vw,14px);
       line-height: 1.8; text-align: center;
@@ -181,8 +215,19 @@
       <button class="dif on" data-d="1">NORMAL</button>
       <button class="dif" data-d="2">DIFÍCIL</button>
     </div>
-    <button id="play">▶ JOGAR</button>
+    <div class="acoes">
+      <button id="continuar" class="hidden">CONTINUAR</button>
+      <button id="btnArmas" class="sec">ARMAS</button>
+      <button id="play">▶ JOGAR</button>
+    </div>
     <div class="keys" id="keysTxt"></div>
+  </div>
+
+  <div id="armasTela" class="hidden">
+    <h1 style="font-size:clamp(20px,5vw,38px)">ESCOLHA SUA ARMA</h1>
+    <div class="sub">você carrega a FK9 na tecla 1 e a escolhida na tecla 2</div>
+    <div id="gradeArmas"></div>
+    <button id="voltarArmas" class="sec" style="margin-top:18px">VOLTAR</button>
   </div>
 
   <div id="hud">
@@ -201,7 +246,7 @@
       <div class="lbl" id="armaNome">RIFLE</div>
       <div class="big"><span id="magVal">30</span> <span class="res">/ <span id="resVal">90</span></span></div>
       <div id="reloading"></div>
-      <div class="lbl" style="margin-top:4px;opacity:.6">1 · 2 · 3 troca</div>
+      <div class="lbl" style="margin-top:4px;opacity:.6">1 · 2 troca</div>
     </div>
     <div class="panel-t" id="score">
       <div class="big"><span id="kills">0</span> <span style="color:#6b5a34">—</span> <span id="deaths">0</span></div>
@@ -218,6 +263,6 @@
   </div>
 
   <script src="three.min.js"></script>
-  <script src="game.js?v=7"></script>
+  <script src="game.js?v=9"></script>
 </body>
 </html>

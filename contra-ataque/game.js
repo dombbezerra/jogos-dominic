@@ -164,14 +164,32 @@ montarMapa();
 
 // ── Jogador ───────────────────────────────────────────────────────────────
 // ── Arsenal ───────────────────────────────────────────────────────────────
-const ARMAS = [
-  { id:'pistola', nome:'PISTOLA', mag:12, reserva:72, dano:24, danoCab:80,
-    cad:11, recuo:.10, disp:.020, recarga:70,  auto:false, zoom:0 },
-  { id:'rifle',   nome:'RIFLE',   mag:30, reserva:90, dano:26, danoCab:100,
-    cad:7,  recuo:.085, disp:.055, recarga:110, auto:true,  zoom:0 },
-  { id:'sniper',  nome:'SNIPER',  mag:5,  reserva:25, dano:100, danoCab:150,
-    cad:65, recuo:.55, disp:.004, recarga:160, auto:false, zoom:26 },
+// pelotas = quantos projéteis saem por disparo (escopeta)
+const FK9 = { id:'fk9', nome:'FK9', tipo:'Pistola', modelo:'pistola',
+  mag:12, reserva:72, dano:24, danoCab:80, cad:11, recuo:.10, disp:.020,
+  recarga:70, auto:false, zoom:0, pelotas:1 };
+
+const PRIMARIAS = [
+  { id:'f200', nome:'F200', tipo:'Fuzil de assalto', modelo:'rifle',
+    mag:30, reserva:90, dano:26, danoCab:100, cad:7, recuo:.085, disp:.055,
+    recarga:110, auto:true, zoom:0, pelotas:1 },
+  { id:'mp5x', nome:'MP5-X', tipo:'Submetralhadora', modelo:'smg',
+    mag:30, reserva:120, dano:17, danoCab:58, cad:4, recuo:.055, disp:.075,
+    recarga:85, auto:true, zoom:0, pelotas:1 },
+  { id:'s12', nome:'S12', tipo:'Escopeta', modelo:'escopeta',
+    mag:8, reserva:32, dano:15, danoCab:24, cad:30, recuo:.42, disp:.11,
+    recarga:130, auto:false, zoom:0, pelotas:8 },
+  { id:'sniper4', nome:'SNIPER 4', tipo:'Fuzil de precisão', modelo:'sniper',
+    mag:5, reserva:25, dano:100, danoCab:150, cad:65, recuo:.55, disp:.004,
+    recarga:160, auto:false, zoom:26, pelotas:1 },
+  { id:'lmg60', nome:'LMG-60', tipo:'Metralhadora', modelo:'lmg',
+    mag:100, reserva:100, dano:21, danoCab:68, cad:6, recuo:.11, disp:.095,
+    recarga:210, auto:true, zoom:0, pelotas:1 },
 ];
+
+let primIdx = 0;
+try { const v = +localStorage.getItem('caArma'); if (v >= 0 && v < PRIMARIAS.length) primIdx = v; } catch (e) {}
+let ARMAS = [FK9, PRIMARIAS[primIdx]];   // slot 1 e slot 2
 
 const OLHO = 1.62, RAIO = .38, ALT = 1.75;
 const player = {
@@ -358,6 +376,27 @@ function montarArma(id) {
     add(new THREE.BoxGeometry(.04, .09, .04), matPreto, 0, .09, -.28);   // suporte
     add(new THREE.BoxGeometry(.04, .09, .04), matPreto, 0, .09, -.72);
     bocaZ = -1.82;
+  } else if (id === 'smg') {
+    add(new THREE.BoxGeometry(.13, .16, .62), matPreto, 0, 0, -.22);     // corpo curto
+    add(new THREE.BoxGeometry(.06, .06, .3), matCinza, 0, .02, -.62);    // cano
+    add(new THREE.BoxGeometry(.09, .34, .12), matPreto, 0, -.24, -.1);   // carregador longo
+    add(new THREE.BoxGeometry(.09, .12, .26), matPreto, 0, -.02, .18);   // coronha dobrável
+    add(new THREE.BoxGeometry(.04, .08, .04), matCinza, 0, .12, -.46);
+    bocaZ = -.84;
+  } else if (id === 'escopeta') {
+    add(new THREE.BoxGeometry(.16, .16, .8), matPreto, 0, 0, -.3);       // corpo grosso
+    add(new THREE.BoxGeometry(.1, .1, .72), matCinza, 0, .04, -.94);     // cano largo
+    add(new THREE.BoxGeometry(.11, .09, .3), matMad, 0, -.11, -.66);     // bombeamento
+    add(new THREE.BoxGeometry(.12, .19, .38), matMad, 0, -.04, .26);     // coronha de madeira
+    bocaZ = -1.34;
+  } else if (id === 'lmg') {
+    add(new THREE.BoxGeometry(.17, .2, 1.05), matPreto, 0, 0, -.38);     // corpo grandão
+    add(new THREE.BoxGeometry(.09, .09, .8), matCinza, 0, .04, -1.1);    // cano pesado
+    add(new THREE.BoxGeometry(.24, .3, .3), matPreto, 0, -.22, -.24);    // caixa de munição
+    add(new THREE.BoxGeometry(.12, .18, .34), matMad, 0, -.04, .26);     // coronha
+    add(new THREE.BoxGeometry(.05, .12, .05), matCinza, 0, .16, -.78);   // alça
+    add(new THREE.BoxGeometry(.05, .3, .05), matCinza, 0, -.22, -.86);   // bipé
+    bocaZ = -1.6;
   } else {                                                               // rifle
     add(new THREE.BoxGeometry(.15, .17, .95), matPreto, 0, 0, -.34);
     add(new THREE.BoxGeometry(.08, .08, .62), matCinza, 0, .03, -.92);
@@ -379,20 +418,39 @@ function montarArma(id) {
 }
 
 const ARMA_BASE = new THREE.Vector3(.17, -.15, -.42);
-const armaMalhas = ARMAS.map(a => {
-  const g = montarArma(a.id);
-  g.position.copy(ARMA_BASE);
-  g.scale.setScalar(a.id === 'pistola' ? .5 : .42);
-  g.rotation.y = .05;
-  g.visible = false;
-  camera.add(g);
-  return g;
-});
+let armaMalhas = [];
+
+function montarArsenal() {
+  armaMalhas.forEach(g => camera.remove(g));
+  armaMalhas = ARMAS.map(a => {
+    const g = montarArma(a.modelo);
+    g.position.copy(ARMA_BASE);
+    g.scale.setScalar(a.modelo === 'pistola' ? .5 : .42);
+    g.rotation.y = .05;
+    g.visible = false;
+    camera.add(g);
+    return g;
+  });
+  armaMalhas[player ? player.arma : 1].visible = true;
+}
 scene.add(camera);
 const armaGrp = () => armaMalhas[player.arma];
 
+function escolherPrimaria(i) {
+  primIdx = i;
+  try { localStorage.setItem('caArma', i); } catch (e) {}
+  ARMAS = [FK9, PRIMARIAS[i]];
+  if (player) {
+    player.bal = ARMAS.map(a => ({ mag: a.mag, reserva: a.reserva }));
+    player.arma = 1;
+  }
+  montarArsenal();
+  montarGradeArmas();
+  if (typeof atualizarHUD === 'function' && player) atualizarHUD();
+}
+
 function trocarArma(i) {
-  if (i === player.arma || i < 0 || i >= ARMAS.length) return;
+  if (i < 0 || i >= ARMAS.length) return;
   if (player.recarregando > 0) player.recarregando = 0;
   player.arma = i;
   player.recuo = 0;
@@ -400,7 +458,7 @@ function trocarArma(i) {
   armaMalhas.forEach((g, k) => g.visible = (k === i));
   atualizarHUD();
 }
-armaMalhas[player.arma].visible = true;
+montarArsenal();
 
 // ── Entrada ───────────────────────────────────────────────────────────────
 const keys = {};
@@ -414,8 +472,11 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyR') recarregar();
   if (e.code === 'Digit1') trocarArma(0);
   if (e.code === 'Digit2') trocarArma(1);
-  if (e.code === 'Digit3') trocarArma(2);
-  if (e.code === 'Escape' && jogando) pausar();
+  // P (ou Esc) pausa e abre o menu; apertando de novo, volta ao jogo
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    if (jogando) pausar();
+    else if (pausado) retomar();
+  }
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
 
@@ -509,8 +570,8 @@ $('keysTxt').innerHTML = isTouch
   ? 'Analógico esquerdo <b>anda</b> · arraste à direita para <b>mirar</b><br>FOGO · PULO · REC recarrega'
   : '<b>↑ ↓</b> anda &nbsp;·&nbsp; <b>← →</b> vira a tela &nbsp;·&nbsp; <b>Q E</b> olha pra cima e pra baixo<br>'
   + '<b>Mouse</b> aponta onde o tiro vai · <b>Clique</b> ou <b>Ctrl</b> atira<br>'
-  + '<b>1</b> pistola · <b>2</b> rifle · <b>3</b> sniper (<b>botão direito</b> ou <b>Z</b> dá zoom)<br>'
-  + '<b>Shift</b> corre · <b>Espaço</b> pula · <b>R</b> recarrega · <b>Esc</b> pausa';
+  + '<b>1</b> pistola FK9 · <b>2</b> sua arma (<b>botão direito</b> ou <b>Z</b> dá zoom)<br>'
+  + '<b>Shift</b> corre · <b>Espaço</b> pula · <b>R</b> recarrega · <b>P</b> pausa';
 
 document.querySelectorAll('.dif').forEach(b => {
   b.onclick = () => {
@@ -519,6 +580,44 @@ document.querySelectorAll('.dif').forEach(b => {
     dif = DIFS[+b.dataset.d];
   };
 });
+
+// ── Tela de armas ─────────────────────────────────────────────────────────
+const MAXES = {
+  dano: 100, cad: 30, mun: 100,
+};
+function montarGradeArmas() {
+  const g = $('gradeArmas');
+  if (!g) return;
+  g.innerHTML = '';
+  PRIMARIAS.forEach((a, i) => {
+    const dps = (a.dano * a.pelotas) / (a.cad / 60);          // dano por segundo
+    const barra = (rot, pct) =>
+      `<div class="barra"><span>${rot}</span><i><b style="width:${Math.min(100, pct)}%"></b></i></div>`;
+    const d = document.createElement('div');
+    d.className = 'arma-card' + (i === primIdx ? ' on' : '');
+    d.innerHTML =
+      `<div class="n">${a.nome}</div><div class="t">${a.tipo}</div>` +
+      barra('DANO',    a.dano * a.pelotas) +
+      barra('CADÊNCIA', 100 - a.cad * 3) +
+      barra('PONTARIA', 100 - a.disp * 850) +
+      `<div class="mun">Pente ${a.mag} · reserva ${a.reserva}` +
+      (a.pelotas > 1 ? ` · ${a.pelotas} bagos` : '') +
+      (a.zoom ? ' · com luneta' : '') + `</div>`;
+    d.onclick = () => escolherPrimaria(i);
+    g.appendChild(d);
+  });
+}
+montarGradeArmas();
+
+$('btnArmas').onclick = () => {
+  $('menu').classList.add('hidden');
+  $('armasTela').classList.remove('hidden');
+};
+$('voltarArmas').onclick = () => {
+  $('armasTela').classList.add('hidden');
+  $('menu').classList.remove('hidden');
+};
+$('continuar').onclick = () => retomar();
 $('play').onclick = () => comecar();
 
 function comecar() {
@@ -534,17 +633,30 @@ function comecar() {
   player.kills = 0; player.deaths = 0;
   trocarArma(1); armaMalhas.forEach((g, k) => g.visible = (k === player.arma));
   euler.set(0, 0, 0);
-  jogando = true;
+  jogando = true; pausado = false;
   document.body.classList.add('playing');
   $('menu').classList.add('hidden');
+  $('armasTela').classList.add('hidden');
+  $('continuar').classList.add('hidden');
   $('killfeed').innerHTML = '';
   atualizarHUD();
 }
+let pausado = false;
 function pausar() {
-  jogando = false;
-  mouseDown = false;
-  document.body.classList.remove('playing');
+  jogando = false; pausado = true;
+  mouseDown = botaoDir = false;
+  document.body.classList.remove('playing', 'luneta');
+  $('armasTela').classList.add('hidden');
   $('menu').classList.remove('hidden');
+  $('continuar').classList.remove('hidden');
+}
+function retomar() {
+  if (!pausado) return;
+  pausado = false; jogando = true;
+  document.body.classList.add('playing');
+  $('menu').classList.add('hidden');
+  $('continuar').classList.add('hidden');
+  ultimo = performance.now();
 }
 
 // ── HUD ───────────────────────────────────────────────────────────────────
@@ -608,60 +720,67 @@ function atirar() {
   fl.visible = true; fl.rotation.z = Math.random() * 6.28;
   setTimeout(() => fl.visible = false, 45);
 
-  // direção: atira no ponto da tela onde está o cursor
+  // direção base: o ponto da tela onde está o cursor
   // (com a luneta, a mira é o centro dela)
+  const base = new THREE.Vector3();
   if (isTouch || player.mirando) {
-    camera.getWorldDirection(_dir);
+    camera.getWorldDirection(base);
   } else {
     camera.updateMatrixWorld();
     ray.setFromCamera(_ndc.set(mira.nx, mira.ny), camera);
-    _dir.copy(ray.ray.direction);
+    base.copy(ray.ray.direction);
   }
   const disp = a.disp * (1 + player.recuo * 2)
              + (player.noChao ? 0 : .05)
              + Math.hypot(player.vel.x, player.vel.z) * .010;
-  _dir.x += (Math.random() - .5) * disp;
-  _dir.y += (Math.random() - .5) * disp;
-  _dir.z += (Math.random() - .5) * disp;
-  _dir.normalize();
 
   const origem = camera.position.clone();
-  ray.set(origem, _dir);
+  let acertouAlgum = false;
 
-  // o que está mais perto: bot ou parede?
-  let alvoBot = null, distBot = Infinity, naCabeca = false;
-  for (const b of bots) {
-    if (!b.vivo) continue;
-    const hits = ray.intersectObjects([b.cabeca, b.torso], false);
-    if (hits.length && hits[0].distance < distBot) {
-      distBot = hits[0].distance; alvoBot = b; naCabeca = hits[0].object === b.cabeca;
+  // a escopeta solta vários projéteis de uma vez
+  for (let n = 0; n < a.pelotas; n++) {
+    _dir.copy(base);
+    _dir.x += (Math.random() - .5) * disp;
+    _dir.y += (Math.random() - .5) * disp;
+    _dir.z += (Math.random() - .5) * disp;
+    _dir.normalize();
+    ray.set(origem, _dir);
+
+    // o que está mais perto: bot ou parede?
+    let alvoBot = null, distBot = Infinity, naCabeca = false;
+    for (const b of bots) {
+      if (!b.vivo) continue;
+      const hits = ray.intersectObjects([b.cabeca, b.torso], false);
+      if (hits.length && hits[0].distance < distBot) {
+        distBot = hits[0].distance; alvoBot = b; naCabeca = hits[0].object === b.cabeca;
+      }
+    }
+    const hitParede = ray.intersectObjects(paredes, false);
+    const distParede = hitParede.length ? hitParede[0].distance : Infinity;
+
+    const ponta = origem.clone().addScaledVector(_dir, Math.min(distBot, distParede, 200));
+    if (n === 0 || a.pelotas <= 4) traco(origem.clone().addScaledVector(_dir, .6), ponta);
+
+    if (alvoBot && distBot < distParede) {
+      alvoBot.hp -= naCabeca ? a.danoCab : a.dano;
+      sangue(ponta);
+      acertouAlgum = true;
+      if (alvoBot.hp <= 0 && alvoBot.vivo) {
+        alvoBot.vivo = false;
+        alvoBot.respawn = 180;
+        alvoBot.obj.rotation.z = Math.PI / 2;      // tomba
+        player.kills++;
+        feed(`<b>VOCÊ</b> eliminou INIMIGO ${naCabeca ? '· <b>NA CABEÇA</b>' : ''}`);
+        atualizarHUD();
+      }
+    } else if (hitParede.length) {
+      const h = hitParede[0];
+      const nm = h.face ? h.face.normal.clone().transformDirection(h.object.matrixWorld) : new THREE.Vector3(0,1,0);
+      marcarFuro(h.point, nm);
+      if (n === 0) fumaca(h.point);
     }
   }
-  const hitParede = ray.intersectObjects(paredes, false);
-  const distParede = hitParede.length ? hitParede[0].distance : Infinity;
-
-  const ponta = origem.clone().addScaledVector(_dir, Math.min(distBot, distParede, 200));
-  traco(origem.clone().addScaledVector(_dir, .6), ponta);
-
-  if (alvoBot && distBot < distParede) {
-    const dano = naCabeca ? a.danoCab : a.dano;
-    alvoBot.hp -= dano;
-    sangue(ponta);
-    marcarAcerto();
-    if (alvoBot.hp <= 0) {
-      alvoBot.vivo = false;
-      alvoBot.respawn = 180;
-      alvoBot.obj.rotation.z = Math.PI / 2;      // tomba
-      player.kills++;
-      feed(`<b>VOCÊ</b> eliminou INIMIGO ${naCabeca ? '· <b>NA CABEÇA</b>' : ''}`);
-      atualizarHUD();
-    }
-  } else if (hitParede.length) {
-    const h = hitParede[0];
-    const n = h.face ? h.face.normal.clone().transformDirection(h.object.matrixWorld) : new THREE.Vector3(0,1,0);
-    marcarFuro(h.point, n);
-    fumaca(h.point);
-  }
+  if (acertouAlgum) marcarAcerto();
 }
 
 function levarDano(d) {
