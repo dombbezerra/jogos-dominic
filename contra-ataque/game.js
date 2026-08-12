@@ -200,6 +200,8 @@ const player = {
   bal: ARMAS.map(a => ({ mag: a.mag, reserva: a.reserva })),
   recarregando: 0, cadencia: 0,
   recuo: 0, kills: 0, deaths: 0, mirando: false,
+  protegido: 0,        // quadros de imunidade ao renascer
+  semLevar: 0,         // quadros sem tomar tiro (para a vida voltar)
 };
 const arma = () => ARMAS[player.arma];
 const bal  = () => player.bal[player.arma];
@@ -243,10 +245,11 @@ PONTOS = PONTOS_BRUTOS.filter(p => !bate(p));
 if (!PONTOS.length) PONTOS = PONTOS_BRUTOS;
 
 // ── Inimigos ──────────────────────────────────────────────────────────────
+// alcance = até onde o inimigo enxerga o jogador (metros)
 const DIFS = [
-  { nome:'FÁCIL',   qtd:4, reacao:55, precisao:.30, dano:6,  cad:70, vida:100 },
-  { nome:'NORMAL',  qtd:5, reacao:34, precisao:.46, dano:9,  cad:52, vida:100 },
-  { nome:'DIFÍCIL', qtd:6, reacao:18, precisao:.62, dano:13, cad:38, vida:100 },
+  { nome:'FÁCIL',   qtd:3, reacao:85, precisao:.16, dano:4,  cad:100, vida:100, alcance:32, veloc:2.4 },
+  { nome:'NORMAL',  qtd:4, reacao:55, precisao:.28, dano:6,  cad:72,  vida:100, alcance:46, veloc:2.9 },
+  { nome:'DIFÍCIL', qtd:6, reacao:26, precisao:.50, dano:11, cad:44,  vida:100, alcance:68, veloc:3.4 },
 ];
 let dif = DIFS[1];
 const bots = [];
@@ -628,6 +631,7 @@ function comecar() {
 
   player.pos.copy(PONTOS[0]); player.vel.set(0, 0, 0);
   player.hp = 100; player.vivo = true; player.respawn = 0;
+  player.protegido = 180; player.semLevar = 0;
   player.bal = ARMAS.map(a => ({ mag: a.mag, reserva: a.reserva }));
   player.recarregando = 0;
   player.kills = 0; player.deaths = 0;
@@ -784,8 +788,9 @@ function atirar() {
 }
 
 function levarDano(d) {
-  if (!player.vivo) return;
+  if (!player.vivo || player.protegido > 0) return;
   player.hp -= d;
+  player.semLevar = 0;
   avisoDano();
   atualizarHUD();
   if (player.hp <= 0) {
@@ -805,10 +810,20 @@ function passoJogador(dt) {
       player.pos.copy(pts[(Math.random() * pts.length) | 0]);
       player.vel.set(0, 0, 0);
       player.hp = 100; player.vivo = true;
+      player.protegido = 150;          // 2,5 s de proteção ao voltar
+      player.semLevar = 0;
       player.bal = ARMAS.map(a => ({ mag: a.mag, reserva: a.reserva }));
       atualizarHUD();
     }
     return;
+  }
+
+  // proteção ao renascer e vida que volta sozinha depois de 3 s sem levar tiro
+  if (player.protegido > 0) player.protegido--;
+  player.semLevar++;
+  if (player.semLevar > 180 && player.hp < 100) {
+    player.hp = Math.min(100, player.hp + .35);
+    if (player.semLevar % 12 === 0) atualizarHUD();
   }
 
   const correr = keys.ShiftLeft || keys.ShiftRight;
@@ -923,7 +938,7 @@ function passoBot(b, dt) {
 
   // enxerga o jogador?
   let vendo = false;
-  if (player.vivo && dist < 70) {
+  if (player.vivo && dist < dif.alcance) {
     ray.set(olhoBot, _v);
     const h = ray.intersectObjects(paredes, false);
     vendo = !h.length || h[0].distance > dist - .6;
@@ -934,9 +949,9 @@ function passoBot(b, dt) {
     b.dir = Math.atan2(_v.x, _v.z);
     // se aproxima até uma distância de combate
     if (dist > 12) {
-      const nx = b.pos.clone(); nx.x += _v.x * 3.4 * dt;
+      const nx = b.pos.clone(); nx.x += _v.x * dif.veloc * dt;
       if (!bate(nx)) b.pos.x = nx.x;
-      const nz = b.pos.clone(); nz.z += _v.z * 3.4 * dt;
+      const nz = b.pos.clone(); nz.z += _v.z * dif.veloc * dt;
       if (!bate(nz)) b.pos.z = nz.z;
     }
     // atira depois do tempo de reação
