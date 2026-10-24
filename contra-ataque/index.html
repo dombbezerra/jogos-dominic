@@ -56,6 +56,8 @@
       padding: 10px 20px; border-radius: 4px;
       font: bold 14px inherit; letter-spacing: 2px; cursor: pointer;
     }
+    .ctl-lbl { align-self: center; color: #9b8f76; letter-spacing: 2px; font-size: 13px; }
+    body.touch #ctlRow { display: none; }
     .dif.on { background: #d8a24a; color: #1b1610; border-color: #f0c274; }
     .acoes { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
     .acoes button, #voltarArmas {
@@ -215,6 +217,11 @@
       <button class="dif on" data-d="1">NORMAL</button>
       <button class="dif" data-d="2">DIFÍCIL</button>
     </div>
+    <div class="row" id="ctlRow">
+      <span class="ctl-lbl">CONTROLE:</span>
+      <button class="dif ctl" data-c="setas">SETINHAS</button>
+      <button class="dif ctl" data-c="mouse">MOUSE</button>
+    </div>
     <div class="acoes">
       <button id="continuar" class="hidden">CONTINUAR</button>
       <button id="btnArmas" class="sec">ARMAS</button>
@@ -244,8 +251,7 @@
     </div>
     <div class="panel-br" id="ammo">
       <div class="lbl" id="armaNome">RIFLE</div>
-      <div class="big"><span id="magVal">30</span> <span class="res">/ <span id="resVal">90</span></span></div>
-      <div id="reloading"></div>
+      <div class="big">∞</div>
       <div class="lbl" style="margin-top:4px;opacity:.6">1 · 2 troca</div>
     </div>
     <div class="panel-t" id="score">
@@ -259,10 +265,9 @@
     <div id="stick"><div id="knob"></div></div>
     <div class="tb" id="b-fire">FOGO</div>
     <div class="tb" id="b-jump">PULO</div>
-    <div class="tb" id="b-reload">REC</div>
   </div>
 
   <script src="three.min.js"></script>
-  <script src="game.js?v=10"></script>
+  <script src="game.js?v=12"></script>
 </body>
 </html>

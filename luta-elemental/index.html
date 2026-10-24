@@ -102,6 +102,33 @@
       transition: transform 0.1s;
     }
     #botao-pausa:hover { transform: scale(1.1); }
+    /* Controles de celular: só aparecem no celular, durante a partida */
+    #toque { display: none; }
+    body.celular.em-jogo #toque { display: block; }
+    .stick {
+      position: fixed; bottom: calc(env(safe-area-inset-bottom) + 24px);
+      width: 130px; height: 130px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.12); border: 3px solid rgba(255, 204, 0, 0.6);
+      z-index: 15; touch-action: none;
+    }
+    #stick-andar { left: calc(env(safe-area-inset-left) + 20px); }
+    #stick-mirar { right: calc(env(safe-area-inset-right) + 20px); border-color: rgba(255, 90, 90, 0.7); }
+    .stick .knob {
+      position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px;
+      border-radius: 50%; background: rgba(255, 204, 0, 0.85); pointer-events: none;
+    }
+    #stick-mirar .knob { background: rgba(255, 90, 90, 0.9); }
+    .stick span {
+      position: absolute; top: -20px; left: -20px; right: -20px; text-align: center;
+      font: bold 11px Arial, sans-serif; color: rgba(255, 255, 255, 0.75); pointer-events: none;
+    }
+    #b-super {
+      position: fixed; right: calc(env(safe-area-inset-right) + 46px); bottom: calc(env(safe-area-inset-bottom) + 184px);
+      width: 78px; height: 78px; border-radius: 50%; border: 3px solid #fff;
+      background: #6a3a8a; color: #fff; font: bold 14px Arial, sans-serif;
+      z-index: 15; opacity: 0.55; touch-action: none;
+    }
+    #b-super.pronto { background: #ff00ff; opacity: 1; box-shadow: 0 0 18px #ff00ff; }
     #placar {
       font-size: clamp(13px, 2vw, 18px);
       text-align: center;
@@ -119,7 +146,12 @@
     <canvas id="tela" width="800" height="600"></canvas>
     <button id="botao-pausa" title="Pausar (P)">⏸</button>
   </div>
+  <div id="toque">
+    <div class="stick" id="stick-andar"><div class="knob"></div><span>ANDAR</span></div>
+    <div class="stick" id="stick-mirar"><div class="knob"></div><span>MIRAR E ATIRAR</span></div>
+    <button id="b-super">SUPER</button>
+  </div>
   <div id="placar">Clique em JOGAR pra começar</div>
-  <script src="game.js?v=4"></script>
+  <script src="game.js?v=5"></script>
 </body>
 </html>

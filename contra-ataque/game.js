@@ -472,7 +472,6 @@ const SENSI = .0024;
 addEventListener('keydown', e => {
   keys[e.code] = true;
   if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
-  if (e.code === 'KeyR') recarregar();
   if (e.code === 'Digit1') trocarArma(0);
   if (e.code === 'Digit2') trocarArma(1);
   // P (ou Esc) pausa e abre o menu; apertando de novo, volta ao jogo
@@ -504,13 +503,42 @@ function moverMira(cx, cy) {
 }
 moverMira(mira.x, mira.y);
 
+// Controle com MOUSE (escolhido no menu): o cursor some e mexer o mouse vira a tela, com a mira no meio
+let controle = 'setas';
+try { controle = localStorage.getItem('contra-ataque-controle') === 'mouse' ? 'mouse' : 'setas'; } catch (e) { /* sem localStorage */ }
+const modoMouse = () => !isTouch && controle === 'mouse';
+const preso = () => document.pointerLockElement === cv;
+function prenderMouse() {
+  if (!modoMouse() || preso()) return;
+  try { const r = cv.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (e) { /* sem suporte */ }
+}
+function mostrarControle() {
+  document.querySelectorAll('.ctl').forEach(b => b.classList.toggle('on', b.dataset.c === controle));
+}
+document.querySelectorAll('.ctl').forEach(b => {
+  b.onclick = () => {
+    controle = b.dataset.c;
+    try { localStorage.setItem('contra-ataque-controle', controle); } catch (e) { /* sem localStorage */ }
+    mostrarControle();
+  };
+});
+mostrarControle();
+if (isTouch) document.body.classList.add('touch');
+document.addEventListener('pointerlockchange', () => {
+  if (preso()) moverMira(innerWidth / 2, innerHeight / 2);
+  else if (jogando && modoMouse()) pausar();   // apertou Esc: o navegador solta o mouse, então pausa
+});
+
 addEventListener('mousemove', e => {
   if (isTouch) return;
+  if (preso()) { if (jogando) olhar(e.movementX, e.movementY); return; }
+  if (modoMouse()) return;
   moverMira(e.clientX, e.clientY);
 });
 
 cv.addEventListener('mousedown', e => {
   if (!jogando) return;
+  if (modoMouse() && !preso()) { prenderMouse(); return; }   // primeiro clique só prende o mouse
   if (e.button === 0) mouseDown = true;
   if (e.button === 2) botaoDir = true;
 });
@@ -566,19 +594,18 @@ const segurar = (el, on, off) => {
 };
 segurar($('b-fire'), () => toque.fogo = 1, () => toque.fogo = 0);
 segurar($('b-jump'), () => toque.pulo = 1, () => toque.pulo = 0);
-segurar($('b-reload'), () => recarregar());
 
 // ── Menu ──────────────────────────────────────────────────────────────────
 $('keysTxt').innerHTML = isTouch
-  ? 'Analógico esquerdo <b>anda</b> · arraste à direita para <b>mirar</b><br>FOGO · PULO · REC recarrega'
+  ? 'Analógico esquerdo <b>anda</b> · arraste à direita para <b>mirar</b><br>FOGO · PULO'
   : '<b>↑ ↓</b> anda &nbsp;·&nbsp; <b>← →</b> vira a tela &nbsp;·&nbsp; <b>Q E</b> olha pra cima e pra baixo<br>'
-  + '<b>Mouse</b> aponta onde o tiro vai · <b>Clique</b> ou <b>Ctrl</b> atira<br>'
+  + '<b>Mouse</b> aponta onde o tiro vai (no controle MOUSE, vira a tela) · <b>Clique</b> ou <b>Ctrl</b> atira<br>'
   + '<b>1</b> pistola FK9 · <b>2</b> sua arma (<b>botão direito</b> ou <b>Z</b> dá zoom)<br>'
-  + '<b>Shift</b> corre · <b>Espaço</b> pula · <b>R</b> recarrega · <b>P</b> pausa';
+  + '<b>Shift</b> corre · <b>Espaço</b> pula · <b>P</b> pausa';
 
-document.querySelectorAll('.dif').forEach(b => {
+document.querySelectorAll('.dif[data-d]').forEach(b => {
   b.onclick = () => {
-    document.querySelectorAll('.dif').forEach(o => o.classList.remove('on'));
+    document.querySelectorAll('.dif[data-d]').forEach(o => o.classList.remove('on'));
     b.classList.add('on');
     dif = DIFS[+b.dataset.d];
   };
@@ -603,7 +630,7 @@ function montarGradeArmas() {
       barra('DANO',    a.dano * a.pelotas) +
       barra('CADÊNCIA', 100 - a.cad * 3) +
       barra('PONTARIA', 100 - a.disp * 850) +
-      `<div class="mun">Pente ${a.mag} · reserva ${a.reserva}` +
+      `<div class="mun">Munição infinita` +
       (a.pelotas > 1 ? ` · ${a.pelotas} bagos` : '') +
       (a.zoom ? ' · com luneta' : '') + `</div>`;
     d.onclick = () => escolherPrimaria(i);
@@ -644,11 +671,14 @@ function comecar() {
   $('continuar').classList.add('hidden');
   $('killfeed').innerHTML = '';
   atualizarHUD();
+  if (modoMouse()) moverMira(innerWidth / 2, innerHeight / 2);
+  prenderMouse();
 }
 let pausado = false;
 function pausar() {
   jogando = false; pausado = true;
   mouseDown = botaoDir = false;
+  if (preso()) document.exitPointerLock();
   document.body.classList.remove('playing', 'luneta');
   $('armasTela').classList.add('hidden');
   $('menu').classList.remove('hidden');
@@ -661,17 +691,16 @@ function retomar() {
   $('menu').classList.add('hidden');
   $('continuar').classList.add('hidden');
   ultimo = performance.now();
+  if (modoMouse()) moverMira(innerWidth / 2, innerHeight / 2);
+  prenderMouse();
 }
 
 // ── HUD ───────────────────────────────────────────────────────────────────
 function atualizarHUD() {
   $('hpVal').textContent = Math.max(0, Math.round(player.hp));
-  $('magVal').textContent = bal().mag;
-  $('resVal').textContent = bal().reserva;
   $('armaNome').textContent = arma().nome;
   $('kills').textContent = player.kills;
   $('deaths').textContent = player.deaths;
-  $('reloading').textContent = player.recarregando > 0 ? 'RECARREGANDO…' : '';
 }
 let hitTimer = 0;
 function marcarAcerto() { hitTimer = 12; $('hitmark').style.opacity = '1'; }
@@ -699,22 +728,12 @@ function atualizarMira() {
 }
 
 // ── Combate ───────────────────────────────────────────────────────────────
-function recarregar() {
-  if (!jogando || !player.vivo) return;
-  const a = arma(), b = bal();
-  if (player.recarregando > 0 || b.mag === a.mag || b.reserva === 0) return;
-  player.recarregando = a.recarga;
-  atualizarHUD();
-}
-
 const _dir = new THREE.Vector3();
 const _ndc = new THREE.Vector2();
 function atirar() {
   if (!player.vivo || player.recarregando > 0 || player.cadencia > 0) return;
-  const a = arma(), b = bal();
-  if (b.mag <= 0) { recarregar(); return; }
-
-  b.mag--;
+  // Munição infinita: não tem pente nem reserva, nunca precisa recarregar
+  const a = arma();
   player.cadencia = a.cad;
   player.recuo = Math.min(.9, player.recuo + a.recuo);
   atualizarHUD();
@@ -881,15 +900,6 @@ function passoJogador(dt) {
   gatilhoAnt = quer;
   player.recuo *= .90;
 
-  if (player.recarregando > 0) {
-    player.recarregando--;
-    if (player.recarregando === 0) {
-      const a = arma(), b = bal();
-      const usa = Math.min(a.mag - b.mag, b.reserva);
-      b.mag += usa; b.reserva -= usa;
-      atualizarHUD();
-    }
-  }
 
   // luneta da sniper (botão direito ou tecla Z)
   const querZoom = arma().zoom > 0 && (botaoDir || keys.KeyZ) && player.recarregando === 0;

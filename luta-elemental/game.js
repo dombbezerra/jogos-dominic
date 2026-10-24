@@ -252,6 +252,84 @@ tela.addEventListener('touchmove', (e) => {
 tela.addEventListener('touchend',    () => { segurandoTiro = false; });
 tela.addEventListener('touchcancel', () => { segurandoTiro = false; });
 
+// ----- CONTROLES DE CELULAR -----
+// No celular aparecem dois analógicos (andar / mirar e atirar) e o botão de SUPER
+const ehCelular = matchMedia('(pointer: coarse)').matches && (navigator.maxTouchPoints > 0 || 'ontouchstart' in window);
+if (ehCelular) document.body.classList.add('celular');
+const toqueAndar = { x: 0, y: 0 };
+let mirandoNoToque = false;
+
+function fazerAnalogico(el, aoMover, aoSoltar) {
+  const knob = el.querySelector('.knob');
+  let dedo = null;
+  const mover = (t) => {
+    const r = el.getBoundingClientRect();
+    let dx = t.clientX - (r.left + r.width / 2), dy = t.clientY - (r.top + r.height / 2);
+    const max = r.width / 2 - 10, d = Math.hypot(dx, dy);
+    if (d > max) { dx = dx / d * max; dy = dy / d * max; }
+    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+    aoMover(dx / max, dy / max);
+  };
+  el.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (dedo !== null) return;
+    const t = e.changedTouches[0];
+    dedo = t.identifier;
+    mover(t);
+  }, { passive: false });
+  el.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    for (const t of e.changedTouches) if (t.identifier === dedo) mover(t);
+  }, { passive: false });
+  const soltar = (e) => {
+    for (const t of e.changedTouches) {
+      if (t.identifier !== dedo) continue;
+      dedo = null;
+      knob.style.transform = '';
+      aoSoltar();
+    }
+  };
+  el.addEventListener('touchend', soltar);
+  el.addEventListener('touchcancel', soltar);
+}
+fazerAnalogico(document.getElementById('stick-andar'),
+  (x, y) => { toqueAndar.x = x; toqueAndar.y = y; },
+  () => { toqueAndar.x = 0; toqueAndar.y = 0; });
+// Mirar: arrastar aponta pra onde o tiro vai e já vai atirando
+fazerAnalogico(document.getElementById('stick-mirar'),
+  (x, y) => {
+    if (!jogador || Math.hypot(x, y) < 0.25) return;
+    const d = Math.hypot(x, y);
+    mouse.x = jogador.x + x / d * 200; mouse.y = jogador.y + y / d * 200;
+    mirandoNoToque = true;
+    if (estado === 'jogando' && !pausado) segurandoTiro = true;
+  },
+  () => { mirandoNoToque = false; segurandoTiro = false; });
+
+// Super: se você não está mirando, vai no inimigo mais perto
+const botaoSuper = document.getElementById('b-super');
+botaoSuper.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (!jogador || estado !== 'jogando' || pausado) return;
+  if (!mirandoNoToque) {
+    let alvo = null, melhor = Infinity;
+    for (const ini of inimigos) {
+      const d = Math.hypot(ini.x - jogador.x, ini.y - jogador.y);
+      if (d < melhor) { melhor = d; alvo = ini; }
+    }
+    if (alvo) { mouse.x = alvo.x; mouse.y = alvo.y; }
+    else if (Math.hypot(mouse.x - jogador.x, mouse.y - jogador.y) < 1) { mouse.x = jogador.x; mouse.y = jogador.y - 100; }
+  }
+  tentarSuper();
+}, { passive: false });
+function atualizarControlesToque() {
+  if (!ehCelular) return;
+  const emJogo = estado === 'jogando' || estado === 'countdown';
+  document.body.classList.toggle('em-jogo', emJogo);
+  if (!emJogo) { toqueAndar.x = toqueAndar.y = 0; return; }
+  botaoSuper.classList.toggle('pronto', !!jogador && jogador.superCarga >= SUPER_NECESSARIO);
+}
+
 // ----- INICIAR PARTIDA -----
 function iniciarPartida() {
   const p = getPersonagem(salvo.personagemAtual);
@@ -391,6 +469,8 @@ function moverJogador() {
   if (teclas['s'] || teclas['arrowdown'])  jogador.y += v;
   if (teclas['a'] || teclas['arrowleft'])  jogador.x -= v;
   if (teclas['d'] || teclas['arrowright']) jogador.x += v;
+  jogador.x += toqueAndar.x * v;   // analógico do celular
+  jogador.y += toqueAndar.y * v;
   jogador.x = Math.max(TAMANHO_JOGADOR/2, Math.min(tela.width  - TAMANHO_JOGADOR/2, jogador.x));
   jogador.y = Math.max(TAMANHO_JOGADOR/2, Math.min(tela.height - TAMANHO_JOGADOR/2, jogador.y));
 }
@@ -2950,7 +3030,7 @@ function desenharHUD() {
   // super
   const sx = tela.width - 180, sy = tela.height - 30;
   ctx.fillStyle = 'white';
-  ctx.fillText('Super (Q)', sx, sy - 10);
+  ctx.fillText(ehCelular ? 'Super' : 'Super (Q)', sx, sy - 10);
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
   ctx.fillRect(sx, sy, 160, 14);
   const pronto = jogador.superCarga >= SUPER_NECESSARIO;
@@ -3104,6 +3184,7 @@ function loop() {
   }
   desenhar();
   atualizarPlacar();
+  atualizarControlesToque();
   requestAnimationFrame(loop);
 }
 
