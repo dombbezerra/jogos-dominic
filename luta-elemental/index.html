@@ -129,6 +129,18 @@
       z-index: 15; opacity: 0.55; touch-action: none;
     }
     #b-super.pronto { background: #ff00ff; opacity: 1; box-shadow: 0 0 18px #ff00ff; }
+    /* Celular em pé: os controles ficam numa faixa embaixo e o jogo encolhe pra caber em cima;
+       o SUPER fica no meio, entre os dois analógicos */
+    @media (orientation: portrait) {
+      body.celular.em-jogo { padding-bottom: calc(env(safe-area-inset-bottom) + 172px); }
+      .stick { width: 120px; height: 120px; bottom: calc(env(safe-area-inset-bottom) + 16px); }
+      #stick-andar { left: calc(env(safe-area-inset-left) + 14px); }
+      #stick-mirar { right: calc(env(safe-area-inset-right) + 14px); }
+      #b-super {
+        width: 70px; height: 70px; font-size: 12px;
+        left: 50%; right: auto; margin-left: -35px; bottom: calc(env(safe-area-inset-bottom) + 40px);
+      }
+    }
     #placar {
       font-size: clamp(13px, 2vw, 18px);
       text-align: center;
@@ -152,6 +164,6 @@
     <button id="b-super">SUPER</button>
   </div>
   <div id="placar">Clique em JOGAR pra começar</div>
-  <script src="game.js?v=5"></script>
+  <script src="game.js?v=6"></script>
 </body>
 </html>
