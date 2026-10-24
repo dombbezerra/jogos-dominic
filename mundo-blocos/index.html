@@ -29,40 +29,90 @@
       text-decoration: none; z-index: 100;
     }
 
-    /* ── Menu ─────────────────────────────────────────────── */
-    #menu {
+    /* ── Telas (título, mundos, criar, pausa) ─────────────── */
+    .screen {
       position: fixed; inset: 0; z-index: 60;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      gap: 14px; padding: 20px;
-      background: rgba(30, 20, 12, .72);
-      text-align: center;
+      gap: 12px; padding: 56px 16px 20px;
+      text-align: center; overflow-y: auto;
     }
-    #menu.hidden { display: none; }
-    #menu h1 {
+    .screen.hidden { display: none; }
+    .screen.dirt {
+      background-color: #3b2a1e;
+      background-image: var(--dirt);
+      background-size: 64px 64px;
+      image-rendering: pixelated;
+    }
+    #scr-pause { background: rgba(0, 0, 0, .55); }
+    .screen h1 {
       font-size: clamp(34px, 8vw, 72px);
       font-weight: 900; letter-spacing: 4px;
       color: #e8e8e8;
       text-shadow: 4px 4px 0 #3a3a3a, 8px 8px 0 rgba(0,0,0,.35);
     }
-    #menu .sub { opacity: .85; font-size: 15px; margin-bottom: 8px; }
+    .screen h2 { font-size: 22px; text-shadow: 2px 2px 0 #222; margin-bottom: 4px; }
+    .splash {
+      color: #ffeb3b; font-weight: bold; font-size: 16px;
+      text-shadow: 2px 2px 0 #3f3a00;
+      transform: rotate(-12deg) translate(110px, -18px);
+      animation: pulse .6s ease-in-out infinite alternate;
+    }
+    @keyframes pulse { to { transform: rotate(-12deg) translate(110px, -18px) scale(1.08); } }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    .row .btn { width: min(220px, 44vw); }
     .btn {
       width: min(320px, 90vw);
       padding: 14px 0;
-      font: bold 18px 'Courier New', monospace; letter-spacing: 2px;
+      font: bold 18px 'Courier New', monospace; letter-spacing: 1px;
       color: #fff; cursor: pointer;
       background: linear-gradient(#8a8a8a, #6a6a6a);
       border: 3px solid #1a1a1a;
       box-shadow: inset 2px 2px 0 #aaa, inset -2px -2px 0 #444;
       text-shadow: 2px 2px 0 #333;
     }
-    .btn:hover { background: linear-gradient(#7d93c9, #5a70a8); }
+    .btn:hover:not(:disabled) { background: linear-gradient(#7d93c9, #5a70a8); }
+    .btn:disabled { opacity: .45; cursor: default; }
     .btn.small { font-size: 14px; padding: 10px 0; }
-    #controls {
+    .controls {
       margin-top: 10px; font-size: 13px; line-height: 1.7;
-      opacity: .85; max-width: 440px;
+      opacity: .85; max-width: 480px;
     }
-    #controls b { color: #ffd84a; }
+    .controls b { color: #ffd84a; }
+
+    #world-list {
+      width: min(460px, 100%); max-height: 46vh; overflow-y: auto;
+      background: rgba(0,0,0,.5); border: 2px solid #000; padding: 6px;
+      display: flex; flex-direction: column; gap: 6px; text-align: left;
+    }
+    .world {
+      padding: 8px 10px; border: 2px solid transparent; cursor: pointer;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .world:hover { background: rgba(255,255,255,.08); }
+    .world.sel { border-color: #fff; background: rgba(255,255,255,.12); }
+    .world b { font-size: 16px; }
+    .world span { font-size: 12px; opacity: .7; }
+    .world-list .empty, #world-list .empty { padding: 20px; text-align: center; opacity: .8; }
+
+    .field { display: flex; flex-direction: column; gap: 4px; width: min(320px, 90vw); text-align: left; font-size: 13px; }
+    .field input {
+      font: 16px 'Courier New', monospace; color: #fff;
+      background: #000; border: 2px solid #a0a0a0; padding: 8px;
+      -webkit-user-select: text; user-select: text;
+    }
+    #c-desc { font-size: 13px; opacity: .8; max-width: 340px; min-height: 2.6em; }
+    .opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: min(460px, 100%); }
+    .opts .btn { width: 100%; }
+    .bar { width: min(320px, 80vw); height: 10px; background: #333; border: 2px solid #000; }
+    #load-bar { height: 100%; width: 0; background: #7ccf4a; }
+
+    #underwater {
+      position: fixed; inset: 0; pointer-events: none; z-index: 5;
+      background: rgba(20, 60, 170, .35); display: none;
+    }
+    body.underwater #underwater { display: block; }
+    body:not(.ingame) #hotbar, body:not(.ingame) #info, body:not(.ingame) #toast { display: none; }
 
     /* ── HUD ──────────────────────────────────────────────── */
     #crosshair {
@@ -200,13 +250,62 @@
 <body>
   <a href="../index.html" id="back-link">← MENU</a>
 
-  <div id="menu">
+  <div id="scr-title" class="screen dirt">
     <h1>MUNDO DE BLOCOS</h1>
-    <div class="sub">Construa o que quiser!</div>
-    <button class="btn" id="play">JOGAR</button>
-    <button class="btn small" id="new-world">NOVO MUNDO</button>
-    <div id="controls"></div>
+    <div class="splash">Agora com cavernas!</div>
+    <button class="btn" id="t-play">Um jogador</button>
+    <div class="controls"></div>
   </div>
+
+  <div id="scr-worlds" class="screen dirt hidden">
+    <h2>Escolha o mundo</h2>
+    <div id="world-list"></div>
+    <div class="row">
+      <button class="btn" id="w-play">Jogar</button>
+      <button class="btn" id="w-new">Criar novo mundo</button>
+    </div>
+    <div class="row">
+      <button class="btn small" id="w-delete">Apagar</button>
+      <button class="btn small" id="w-back">Voltar</button>
+    </div>
+  </div>
+
+  <div id="scr-create" class="screen dirt hidden">
+    <h2>Criar novo mundo</h2>
+    <label class="field">Nome do mundo
+      <input id="c-name" maxlength="32" autocomplete="off">
+    </label>
+    <button class="btn" id="c-type">Tipo de mundo: Normal</button>
+    <div id="c-desc"></div>
+    <div class="opts">
+      <button class="btn small" data-opt="caves"></button>
+      <button class="btn small" data-opt="water"></button>
+      <button class="btn small" data-opt="animals"></button>
+      <button class="btn small" data-opt="daynight"></button>
+      <button class="btn small" data-opt="infinite"></button>
+    </div>
+    <label class="field">Semente (deixe vazio pra sortear)
+      <input id="c-seed" maxlength="20" autocomplete="off">
+    </label>
+    <div class="row">
+      <button class="btn" id="c-create">Criar mundo</button>
+      <button class="btn" id="c-cancel">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="scr-loading" class="screen dirt hidden">
+    <h2>Gerando o mundo...</h2>
+    <div class="bar"><div id="load-bar"></div></div>
+  </div>
+
+  <div id="scr-pause" class="screen hidden">
+    <h2>Jogo pausado</h2>
+    <button class="btn" id="p-resume">Voltar ao jogo</button>
+    <button class="btn" id="p-quit">Salvar e sair</button>
+    <div class="controls"></div>
+  </div>
+
+  <div id="underwater"></div>
 
   <div id="crosshair"></div>
   <div id="info"></div>
@@ -244,6 +343,6 @@
   </div>
 
   <script src="three.min.js"></script>
-  <script src="game.js?v=8"></script>
+  <script src="game.js?v=10"></script>
 </body>
 </html>
