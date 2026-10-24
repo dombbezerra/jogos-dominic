@@ -1764,7 +1764,7 @@
   function updateTarget() {
     placeCamera();
     // No computador mira onde o cursor está (igual ao Contra-Ataque); no celular, o centro da tela
-    if (hasPointer && !isTouch) {
+    if (hasPointer && !isTouch && !mouseLook()) {
       ray.setFromCamera(pointer, camera);
       lookDir.copy(ray.ray.direction);
     } else {
@@ -2211,6 +2211,9 @@
     if (!invOpen && document.activeElement && document.activeElement.blur) document.activeElement.blur();
     keys.clear();
     if (invOpen) { renderInventory(); invName.textContent = 'Clique num item pra colocar na barra'; }
+    // No controle com mouse, solta o cursor pra clicar nos itens e prende de novo ao fechar
+    if (invOpen && locked()) document.exitPointerLock();
+    if (!invOpen && playing) lockMouse();
   }
   $('inv-close').addEventListener('click', () => toggleInventory(false));
   $('inv-clear').addEventListener('click', () => {
@@ -2306,7 +2309,7 @@
     infinite: v => `Tamanho: ${v ? 'Infinito' : 'Pequeno'}`,
   };
   function resetCreate() {
-    opts = { type: 'normal', mode: 'creative', caves: true, water: true, animals: true, daynight: true, infinite: true };
+    opts = { type: 'normal', mode: 'creative', control: 'arrows', caves: true, water: true, animals: true, daynight: true, infinite: true };
     $('c-name').value = 'Novo mundo' + (worldList().length ? ' ' + (worldList().length + 1) : '');
     $('c-seed').value = '';
     renderCreate();
@@ -2314,6 +2317,7 @@
   function renderCreate() {
     $('c-type').textContent = `Tipo de mundo: ${opts.type === 'flat' ? 'Plano' : 'Normal'}`;
     $('c-mode').textContent = `Modo de jogo: ${opts.mode === 'survival' ? 'Sobrevivência' : 'Criativo'}`;
+    $('c-control').textContent = controlLabel(opts.control);
     $('c-desc').textContent = (opts.type === 'flat'
       ? 'Tudo liso, sem morros, árvores nem nada. Ótimo pra construir!'
       : 'Morros, árvores, praias e biomas: floresta, deserto, neve e ilha de cogumelos.') + ' ' + (opts.mode === 'survival'
@@ -2328,6 +2332,7 @@
   }
   $('c-type').addEventListener('click', () => { opts.type = opts.type === 'flat' ? 'normal' : 'flat'; renderCreate(); });
   $('c-mode').addEventListener('click', () => { opts.mode = opts.mode === 'survival' ? 'creative' : 'survival'; renderCreate(); });
+  $('c-control').addEventListener('click', () => { opts.control = opts.control === 'mouse' ? 'arrows' : 'mouse'; renderCreate(); });
   document.querySelectorAll('[data-opt]').forEach(b => b.addEventListener('click', () => { opts[b.dataset.opt] = !opts[b.dataset.opt]; renderCreate(); }));
   $('c-cancel').addEventListener('click', () => { renderWorlds(); showScreen('worlds'); });
   $('c-create').addEventListener('click', () => {
@@ -2427,6 +2432,8 @@
     resetWorldState();
     current = null; settings = null;
     inGame = false; playing = false;
+    if (locked()) document.exitPointerLock();
+    document.body.classList.remove('mouselook');
     document.body.classList.remove('ingame', 'underwater');
     renderWorlds();
     showScreen('worlds');
@@ -2441,15 +2448,45 @@
   let holdTimer = 0;
   let lastSpace = 0;
 
+  // Controle com mouse (igual ao Minecraft): o cursor some e mexer o mouse vira a tela
+  const controlLabel = c => `Controle: ${c === 'mouse' ? 'Mouse' : 'Setinhas'}`;
+  const mouseLook = () => !isTouch && settings && settings.control === 'mouse';
+  const locked = () => document.pointerLockElement === canvas;
+  function lockMouse() {
+    if (!mouseLook() || locked()) return;
+    try {
+      const r = canvas.requestPointerLock();
+      if (r && r.catch) r.catch(() => toast('Clique na tela pra controlar com o mouse'));
+    } catch (e) { /* navegador sem suporte */ }
+  }
+  function applyControl() {
+    document.body.classList.toggle('mouselook', !!mouseLook());
+    $('p-control').textContent = controlLabel(settings && settings.control);
+    if (!mouseLook() && locked()) document.exitPointerLock();
+  }
+  $('p-control').addEventListener('click', () => {
+    if (!settings) return;
+    settings.control = settings.control === 'mouse' ? 'arrows' : 'mouse';
+    applyControl();
+    saveWorld();
+  });
+  document.addEventListener('pointerlockchange', () => {
+    // Apertou Esc com o mouse preso: o navegador solta o mouse, então pausa
+    if (!locked() && playing && !invOpen && mouseLook()) pause();
+  });
+
   function startPlaying() {
     // Tira o foco do botão clicado, senão o Espaço "aperta" ele de novo em vez de pular/voar
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     playing = true;
     showScreen(null);
+    applyControl();
+    lockMouse();
   }
   function pause() {
     if (!inGame) return;
     playing = false;
+    if (locked()) document.exitPointerLock();
     keys.clear();
     held.break = held.place = false;
     invOpen = false;
@@ -2462,6 +2499,7 @@
 
   canvas.addEventListener('mousedown', e => {
     if (!playing || invOpen) return;
+    if (mouseLook() && !locked()) { lockMouse(); return; }   // primeiro clique só prende o mouse
     if (e.button === 0) { breakBlock(); held.break = true; }
     if (e.button === 2) { placeBlock(); held.place = true; }
     holdTimer = 0.3;
@@ -2473,6 +2511,7 @@
   window.addEventListener('contextmenu', e => { if (inGame) e.preventDefault(); });
   // O mouse não gira a câmera: só escolhe o bloco que vai quebrar/colocar
   window.addEventListener('mousemove', e => {
+    if (locked()) { if (playing && !invOpen) look(e.movementX, e.movementY, 0.0025); return; }
     pointer.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
     hasPointer = true;
   });

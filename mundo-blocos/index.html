@@ -121,6 +121,7 @@
       pointer-events: none; z-index: 10; mix-blend-mode: difference;
     }
     body.mouse #crosshair { display: none; }
+    body.mouse.mouselook #crosshair { display: block; }
     body.mouse.playing canvas { cursor: crosshair; }
     #crosshair::before, #crosshair::after {
       content: ''; position: absolute; background: #fff;
@@ -320,6 +321,7 @@
     <label class="field">Semente (deixe vazio pra sortear)
       <input id="c-seed" maxlength="20" autocomplete="off">
     </label>
+    <button class="btn" id="c-control">Controle: Setinhas</button>
     <div class="row">
       <button class="btn" id="c-create">Criar mundo</button>
       <button class="btn" id="c-cancel">Cancelar</button>
@@ -334,6 +336,7 @@
   <div id="scr-pause" class="screen hidden">
     <h2>Jogo pausado</h2>
     <button class="btn" id="p-resume">Voltar ao jogo</button>
+    <button class="btn" id="p-control">Controle: Setinhas</button>
     <button class="btn" id="p-quit">Salvar e sair</button>
     <div class="controls"></div>
   </div>
@@ -380,6 +383,6 @@
   </div>
 
   <script src="three.min.js"></script>
-  <script src="game.js?v=32"></script>
+  <script src="game.js?v=33"></script>
 </body>
 </html>
