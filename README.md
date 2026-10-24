@@ -7,6 +7,7 @@ Coleção de 3 mini-jogos web feitos em HTML5 + Canvas, com tela de menu inicial
 - **Luta Elemental** — Combate top-down com poderes elementais
 - **Pixel Futebol** — Futebol em pixel art
 - **Space Shooter** — Shoot 'em up espacial
+- **Mundo de Blocos** — Mundo 3D de blocos estilo Minecraft
 
 ## Rodar localmente
 
