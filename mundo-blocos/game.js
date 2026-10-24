@@ -38,6 +38,7 @@
     { name: 'rosa', color: [255, 120, 200] }, { name: 'branca', color: [245, 245, 255] },
   ];
   const NEONS = NEON_COLORS.map((c, i) => 163 + i);   // 163 a 170
+  const IRON_BLOCK = 171;
   const NOTE_NAMES = ['Dó', 'Ré', 'Mi', 'Fá', 'Sol', 'Lá', 'Si', 'Dó', 'Ré', 'Mi', 'Fá', 'Sol', 'Lá', 'Si', 'Dó'];
 
   // 20 cores pra decorar: concreto, concreto em pó e lã
@@ -93,6 +94,7 @@
     vine: 162, lampPost: 163, lampPostTop: 164, bush: 165, pathTop: 166,
     slime: 167, speedTop: 168, speedSide: 169, noteSide: 170, noteTop: 171, cakeTop: 172, cakeSide: 173,
     giftSide: 174, giftTop: 175, neon0: 176,   // + 8 luzes coloridas (176 a 183)
+    ironBlock: 184,
   };
 
   // Formatos que não são cubo, em 1/16 de bloco. A frente aponta pra +z (vira pro jogador ao colocar)
@@ -187,6 +189,7 @@
     const t = T.banner0 + i;
     BLOCKS[BANNERS[i]] = { name: `Bandeirinha ${c.name}`, tex: [T.planks, t, t], shape: 'banner', solid: false, art: t };
   });
+  BLOCKS[IRON_BLOCK] = { name: 'Bloco de ferro', tex: [T.ironBlock, T.ironBlock, T.ironBlock] };
   NEON_COLORS.forEach((c, i) => { BLOCKS[NEONS[i]] = { name: `Luz ${c.name}`, tex: Array(3).fill(T.neon0 + i), bright: true }; });
   BLOCKS[VINE] = { name: 'Folhagem de parede', tex: [T.vine, T.vine, T.vine], shape: 'painting', solid: false, art: T.vine };
   Object.assign(BLOCKS, {
@@ -228,15 +231,23 @@
   const toolId = (type, mat) => TOOL_BASE + type * 10 + mat;
   const isTool = id => id >= TOOL_BASE && TOOLS[Math.floor((id - TOOL_BASE) / 10)] && ARMOR_MATS[(id - TOOL_BASE) % 10];
   const toolOf = id => ({ type: Math.floor((id - TOOL_BASE) / 10), mat: (id - TOOL_BASE) % 10 });
+  // Ovos: colocam um bicho no mundo. Também ficam na barra, com número a partir de 300
+  const EGG_BASE = 300;
+  const EGG_TYPES = ['porco', 'vaca', 'ovelha', 'galinha', 'coguvaca', 'morcego', 'aldeao', 'golem', 'golemNeve',
+                     'zumbi', 'esqueleto', 'creeper', 'enderman'];
+  const EGGS = EGG_TYPES.map((t, i) => EGG_BASE + i);
+  const isEgg = id => id >= EGG_BASE && id < EGG_BASE + EGG_TYPES.length;
+  const eggType = id => EGG_TYPES[id - EGG_BASE];
   const itemName = id => {
     if (isTool(id)) { const t = toolOf(id); return `${TOOLS[t.type].name} ${ARMOR_MATS[t.mat].name}`; }
+    if (isEgg(id)) return `Ovo de ${MOBS[eggType(id)].name.toLowerCase()}`;
     return BLOCKS[id].name;
   };
-  const validItem = id => (BLOCKS[id] || isTool(id) ? id : null);
+  const validItem = id => (BLOCKS[id] || isTool(id) || isEgg(id) ? id : null);
 
   const CATEGORIES = [
     { name: 'Blocos', items: [GRASS, DIRT, STONE, COBBLE, SAND, SANDSTONE, GRAVEL, WOOD, PLANKS, LEAVES,
-                              GLASS, BRICK, SNOW, ICE, MYCELIUM, GOLD, DIAMOND, COAL_ORE, IRON_ORE, GOLD_ORE,
+                              GLASS, BRICK, SNOW, ICE, MYCELIUM, GOLD, IRON_BLOCK, DIAMOND, COAL_ORE, IRON_ORE, GOLD_ORE,
                               DIAMOND_ORE] },
     { name: 'Natureza', items: [WATER, FLOWER_RED, FLOWER_YELLOW, SHROOM_RED, SHROOM_BROWN, CACTUS,
                                 MUSH_STEM, MUSH_RED, MUSH_BROWN] },
@@ -244,6 +255,7 @@
     { name: 'Armadura', armor: true },
     { name: 'Decorações', items: [FLOWER_POT, LANTERN, PUMPKIN, VINE, LAMP_POST, BUSH, PATH, ...PAINTINGS, ...BANNERS, ...CONCRETE, ...POWDER, ...WOOLS] },
     { name: 'Diversão', items: [SLIME, SPEED, NOTE, CAKE, GIFT, ...NEONS] },
+    { name: 'Bichos', items: EGGS },
   ];
 
   const isTransparent = id => id === AIR || id === LEAVES || id === GLASS || id === WATER || !!(BLOCKS[id] && BLOCKS[id].shape);
@@ -343,6 +355,129 @@
     return y < 30 && noise3(x / 30, y / 18, z / 30, 62) > 0.79;                                             // salões
   }
 
+  // ── Vilas ─────────────────────────────────────────────────
+  // O mundo é dividido em quadrados de 80 blocos e mais ou menos metade tem uma vila:
+  // um poço no meio, casinhas em volta com a porta virada pro poço e caminhos ligando tudo
+  const VCELL = 80, VRAD = 24;
+  const villageCache = new Map();
+  const HOUSE_SLOTS = [[-12, -3], [11, -5], [-3, -13], [3, 12], [-12, 10], [12, 8], [10, -15]];
+  function villageIn(gx, gz) {
+    const k = gx + ',' + gz;
+    if (villageCache.has(k)) return villageCache.get(k);
+    let v = null;
+    if (settings.villages && settings.type !== 'flat' && hash(gx, 7, gz, 90) < 0.5) {
+      const x = gx * VCELL + 26 + Math.floor(hash(gx, 8, gz, 91) * 28);
+      const z = gz * VCELL + 26 + Math.floor(hash(gx, 9, gz, 92) * 28);
+      const { h, biome } = colInfo(x, z);
+      if (biome !== 'cogumelo' && h <= 40 && !(settings.water && h <= SEA) && inWorld(x >> 4, z >> 4)) {
+        v = { key: k, x, z, h, desert: biome === 'deserto', houses: [] };
+        HOUSE_SLOTS.forEach(([dx, dz], i) => {
+          if (hash(gx, 10 + i, gz, 93) < 0.25) return;
+          const hx = x + dx + Math.floor(hash(gx, 20 + i, gz, 94) * 3) - 1;
+          const hz = z + dz + Math.floor(hash(gx, 30 + i, gz, 95) * 3) - 1;
+          const hy = colInfo(hx, hz).h;
+          if (Math.abs(hy - h) > 5 || (settings.water && hy < SEA) || !inWorld(hx >> 4, hz >> 4)) return;
+          const ddx = x - hx, ddz = z - hz;
+          const dir = Math.abs(ddx) > Math.abs(ddz) ? (ddx > 0 ? 1 : 3) : (ddz > 0 ? 0 : 2);
+          v.houses.push({ x: hx, z: hz, y: hy, dir });
+        });
+        if (v.houses.length < 2) v = null;
+      }
+    }
+    villageCache.set(k, v);
+    return v;
+  }
+  // Vilas que encostam no retângulo (x0, z0) - (x1, z1)
+  function villagesNear(x0, z0, x1, z1) {
+    const out = [];
+    for (let gz = Math.floor((z0 - VRAD) / VCELL); gz <= Math.floor((z1 + VRAD) / VCELL); gz++)
+      for (let gx = Math.floor((x0 - VRAD) / VCELL); gx <= Math.floor((x1 + VRAD) / VCELL); gx++) {
+        const v = villageIn(gx, gz);
+        if (v && v.x + VRAD >= x0 && v.x - VRAD <= x1 && v.z + VRAD >= z0 && v.z - VRAD <= z1) out.push(v);
+      }
+    return out;
+  }
+  function buildVillage(v, blocks, meta, x0, z0) {
+    const set = (x, y, z, id, m = 0) => {
+      const lx = x - x0, lz = z - z0;
+      if (lx < 0 || lz < 0 || lx >= CS || lz >= CS || y < 1 || y >= H) return;
+      const i = CI(lx, y, lz);
+      if (blocks[i] === BEDROCK) return;
+      blocks[i] = id; meta[i] = m;
+    };
+    const get = (x, y, z) => {
+      const lx = x - x0, lz = z - z0;
+      return lx < 0 || lz < 0 || lx >= CS || lz >= CS || y < 0 ? -1 : blocks[CI(lx, y, lz)];
+    };
+    const pathId = v.desert ? SANDSTONE : PATH;
+    const pathAt = (x, z) => {
+      if (x < x0 || z < z0 || x >= x0 + CS || z >= z0 + CS) return;
+      const y = colInfo(x, z).h;
+      if (settings.water && y < SEA) return;
+      set(x, y, z, pathId);
+      for (let k = 1; k <= 3; k++) set(x, y + k, z, AIR);
+    };
+    // Pracinha e caminhos do poço até a porta de cada casa
+    for (let dx = -3; dx <= 4; dx++) for (let dz = -3; dz <= 4; dz++) pathAt(v.x + dx, v.z + dz);
+    for (const hs of v.houses) {
+      const [fx, , fz] = FRONT[hs.dir];
+      const tx = hs.x + fx * 3, tz = hs.z + fz * 3;
+      const sx = Math.sign(tx - v.x) || 1, sz = Math.sign(tz - v.z) || 1;
+      for (let x = v.x; x !== tx + sx; x += sx) { pathAt(x, v.z); pathAt(x, v.z + 1); }
+      for (let z = v.z; z !== tz + sz; z += sz) { pathAt(tx, z); pathAt(tx + 1, z); }
+    }
+    // Poço
+    const y = v.h;
+    for (let dx = -1; dx <= 2; dx++) for (let dz = -1; dz <= 2; dz++) {
+      const x = v.x + dx, z = v.z + dz, edge = dx === -1 || dx === 2 || dz === -1 || dz === 2;
+      for (let k = 1; k <= 4; k++) set(x, y - k, z, edge || k === 4 ? COBBLE : WATER);
+      set(x, y, z, edge ? COBBLE : WATER);
+      for (let k = 1; k <= 2; k++) set(x, y + k, z, (dx === -1 || dx === 2) && (dz === -1 || dz === 2) ? FENCE : AIR);
+      set(x, y + 3, z, COBBLE);
+    }
+    // Postes de luz na pracinha
+    for (const [dx, dz] of [[-3, -3], [4, 4]]) {
+      const x = v.x + dx, z = v.z + dz, py = colInfo(x, z).h;
+      set(x, py + 1, z, LAMP_POST); set(x, py + 2, z, LAMP_POST_TOP);
+    }
+    for (const hs of v.houses) buildHouse(hs, v, set, get);
+  }
+  // Casinha 5x5 com telhado. Montada "de frente" (porta pro +z) e girada pro lado do poço
+  function buildHouse(hs, v, set, get) {
+    const { x: hx, z: hz, y: fy, dir } = hs;
+    const wall = v.desert ? SANDSTONE : PLANKS, post = v.desert ? SANDSTONE : WOOD, roof = v.desert ? SANDSTONE : BRICK;
+    const R = (lx, lz) => dir === 0 ? [lx, lz] : dir === 1 ? [lz, -lx] : dir === 2 ? [-lx, -lz] : [-lz, lx];
+    const at = (lx, y, lz, id, m = 0) => { const [rx, rz] = R(lx, lz); set(hx + rx, y, hz + rz, id, (m + dir) % 4); };
+    for (let lx = -3; lx <= 3; lx++) for (let lz = -3; lz <= 3; lz++) {
+      for (let y = fy + 1; y <= fy + 8; y++) at(lx, y, lz, AIR);
+      if (Math.abs(lx) > 2 || Math.abs(lz) > 2) continue;
+      // Alicerce até o chão, se a casa ficou num barranco
+      const [rx, rz] = R(lx, lz);
+      for (let y = fy - 1; y > fy - 8; y--) {
+        const b = get(hx + rx, y, hz + rz);
+        if (b !== AIR && b !== WATER && b !== LEAVES) break;
+        at(lx, y, lz, COBBLE);
+      }
+      const edge = Math.abs(lx) === 2 || Math.abs(lz) === 2, corner = Math.abs(lx) === 2 && Math.abs(lz) === 2;
+      at(lx, fy, lz, edge ? COBBLE : PLANKS);
+      if (edge) for (let y = fy + 1; y <= fy + 3; y++) at(lx, y, lz, corner ? post : wall);
+    }
+    // Telhado
+    if (v.desert) {
+      for (let lx = -2; lx <= 2; lx++) for (let lz = -2; lz <= 2; lz++) at(lx, fy + 4, lz, roof);
+    } else {
+      for (let s = 0; s <= 3; s++) for (let lx = s - 3; lx <= 3 - s; lx++) for (let lz = s - 3; lz <= 3 - s; lz++) at(lx, fy + 4 + s, lz, roof);
+    }
+    // Janelas, porta e um degrau na frente
+    at(-2, fy + 2, 0, GLASS); at(2, fy + 2, 0, GLASS); at(0, fy + 2, -2, GLASS);
+    at(0, fy + 1, 2, DOOR); at(0, fy + 2, 2, DOOR_TOP);
+    at(0, fy, 3, v.desert ? SANDSTONE : COBBLE);
+    // Móveis: cama, mesa com cadeira, baú e tocha
+    at(-1, fy + 1, -1, BED_HEAD); at(-1, fy + 1, 0, BED);
+    at(1, fy + 1, -1, TABLE); at(1, fy + 1, 0, CHAIR, 2);
+    at(-1, fy + 1, 1, CHEST); at(1, fy + 1, 1, TORCH);
+  }
+
   function genChunk(cx, cz) {
     const blocks = new Uint8Array(CS * CS * H), meta = new Uint8Array(CS * CS * H);
     const x0 = cx * CS, z0 = cz * CS;
@@ -400,7 +535,9 @@
       const i = CI(lx, y, lz);
       if (force ? blocks[i] !== BEDROCK : blocks[i] === AIR) blocks[i] = id;
     };
+    const vNear = villagesNear(x0 - 3, z0 - 3, x0 + CS + 2, z0 + CS + 2);
     for (let z = z0 - 3; z < z0 + CS + 3; z++) for (let x = x0 - 3; x < x0 + CS + 3; x++) {
+      if (vNear.some(v => Math.abs(x - v.x) < VRAD && Math.abs(z - v.z) < VRAD)) continue;   // sem árvore na vila
       const inside = x >= x0 && x < x0 + CS && z >= z0 && z < z0 + CS;
       const info = inside ? { h: heights[(x - x0) + (z - z0) * CS], biome: biomes[(x - x0) + (z - z0) * CS] } : colInfo(x, z);
       const { h, biome } = info;
@@ -439,6 +576,7 @@
         }
       }
     }
+    for (const v of vNear) buildVillage(v, blocks, meta, x0, z0);
     return { blocks, meta };
   }
 
@@ -519,6 +657,7 @@
     try {
       localStorage.setItem(worldKey(current.id), JSON.stringify({
         v: 3, settings, time, slot, hotbar, armor, chunks: store.chunks,
+        mobs: mobs.filter(m => m.kept && !m.dead).map(m => [m.type, +m.pos.x.toFixed(2), +m.pos.y.toFixed(2), +m.pos.z.toFixed(2)]),
         p: [player.pos.x, player.pos.y, player.pos.z, player.yaw, player.fly],
       }));
       const list = worldList(), e = list.find(w => w.id === current.id);
@@ -616,6 +755,8 @@
   tile(T.bedrock, () => vary(trnd() < 0.5 ? [50, 50, 50] : [90, 90, 90], 0.3));
   tile(T.snow, () => vary([240, 246, 252], 0.05));
   tile(T.gold, (x, y) => (x === 0 || y === 0) ? [255, 240, 150] : (x === 15 || y === 15) ? [190, 140, 30] : vary([245, 205, 60], 0.1));
+  tile(T.ironBlock, (x, y) => (x === 0 || y === 0) ? [245, 245, 248] : (x === 15 || y === 15) ? [150, 150, 158]
+    : y % 5 === 2 ? [195, 195, 200] : vary([222, 222, 228], 0.05));
   tile(T.diamond, (x, y) => (x === 0 || y === 0) ? [200, 255, 255] : (x === 15 || y === 15) ? [40, 150, 150] : vary([90, 220, 220], 0.12));
   tile(T.woolW, wool([235, 235, 235]));
   tile(T.woolR, wool([180, 45, 40]));
@@ -1407,6 +1548,10 @@
       }
       return { group: g, legs: [], mats, wings };
     } },
+    // Moradores da vila e golens (o de ferro e o de neve protegem você dos monstros)
+    aldeao: { name: 'Aldeão', hw: 0.3, hh: 1.95, hp: 5, speed: 0.9, npc: true, build: villagerModel },
+    golem: { name: 'Golem de ferro', hw: 0.7, hh: 2.7, hp: 30, speed: 0.9, npc: true, guard: 'iron', build: ironGolemModel },
+    golemNeve: { name: 'Golem de neve', hw: 0.35, hh: 1.9, hp: 4, speed: 1.2, npc: true, guard: 'snow', build: snowGolemModel },
     // Monstros: só de noite, no mundo normal, no modo Sobrevivência
     zumbi: { name: 'Zumbi', hw: 0.3, hh: 1.8, hp: 6, speed: 2.1, hostile: true,
       build: () => humanoid({ h: 1.8, skin: 0x5f9e4a, shirt: 0x2f8f9a, pants: 0x46407e, eyes: 0x111111, limb: 4, armsForward: true }) },
@@ -1432,6 +1577,67 @@
       return { group: g, legs, mats, wings: [] };
     } },
   };
+  function rig() {
+    const g = new THREE.Group(), mats = [];
+    const part = (w, h, d, color) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), litMat(color)); mats.push(m.material); return m; };
+    return { g, mats, part };
+  }
+  // Aldeão: narigão, roupão até o joelho e braços cruzados
+  const ROBES = [0x6b4a2e, 0xe4e4dc, 0x4f7a34, 0x7b3f8c, 0x2d5f9a];
+  function villagerModel() {
+    const { g, mats, part } = rig();
+    const P = 1.95 / 34, skin = 0xbd8b6e, robe = ROBES[Math.floor(Math.random() * ROBES.length)];
+    const legs = [];
+    for (const sx of [-1, 1]) {
+      const pivot = new THREE.Group(); pivot.position.set(sx * 2 * P, 12 * P, 0);
+      const leg = part(4 * P, 12 * P, 4 * P, 0x4a3a2a); leg.position.y = -6 * P;
+      pivot.add(leg); g.add(pivot); legs.push(pivot);
+    }
+    const body = part(8 * P, 12 * P, 6 * P, robe); body.position.y = 18 * P; g.add(body);
+    const skirt = part(8.4 * P, 6 * P, 6.4 * P, robe); skirt.position.y = 9 * P; g.add(skirt);
+    const arms = part(10 * P, 4 * P, 4 * P, skin); arms.position.set(0, 20 * P, 4 * P); g.add(arms);
+    const head = part(8 * P, 10 * P, 8 * P, skin); head.position.y = 29 * P; g.add(head);
+    const nose = part(2 * P, 4 * P, 2 * P, 0xa8765a); nose.position.set(0, -2 * P, 5 * P); head.add(nose);
+    const brow = part(8 * P, 1 * P, 0.3 * P, 0x3a2a1a); brow.position.set(0, 2.5 * P, 4.05 * P); head.add(brow);
+    for (const sx of [-1, 1]) { const e = part(2 * P, 1 * P, 0.3 * P, 0x2d6b2d); e.position.set(sx * 2 * P, 1 * P, 4.1 * P); head.add(e); }
+    return { group: g, legs, mats, wings: [] };
+  }
+  // Golem de ferro: grandão, braços compridos e cipós no peito
+  function ironGolemModel() {
+    const { g, mats, part } = rig();
+    const P = 2.7 / 40, iron = 0xd6d0c4, vine = 0x4f8a34;
+    const legs = [];
+    for (const sx of [-1, 1]) {
+      const pivot = new THREE.Group(); pivot.position.set(sx * 3.5 * P, 13 * P, 0);
+      const leg = part(6 * P, 13 * P, 5 * P, iron); leg.position.y = -6.5 * P;
+      pivot.add(leg); g.add(pivot); legs.push(pivot);
+    }
+    const waist = part(9 * P, 5 * P, 6 * P, iron); waist.position.y = 15.5 * P; g.add(waist);
+    const chest = part(18 * P, 12 * P, 11 * P, iron); chest.position.y = 24 * P; g.add(chest);
+    for (const [x, y, h] of [[-5, 2, 8], [4, -1, 6]]) { const v = part(2 * P, h * P, 11.2 * P, vine); v.position.set(x * P, y * P, 0); chest.add(v); }
+    const head = part(8 * P, 10 * P, 8 * P, iron); head.position.set(0, 35 * P, 1.5 * P); g.add(head);
+    const nose = part(2 * P, 4 * P, 2 * P, 0xc0b8aa); nose.position.set(0, -2 * P, 5 * P); head.add(nose);
+    for (const sx of [-1, 1]) { const e = part(2 * P, 1.2 * P, 0.3 * P, 0x9a2020); e.position.set(sx * 2 * P, 1.5 * P, 4.05 * P); head.add(e); }
+    for (const sx of [-1, 1]) {
+      const pivot = new THREE.Group(); pivot.position.set(sx * 11 * P, 29 * P, 0);
+      const arm = part(4 * P, 30 * P, 6 * P, iron); arm.position.y = -14 * P;
+      pivot.add(arm); g.add(pivot); legs.push(pivot);   // os braços balançam junto com as pernas
+    }
+    return { group: g, legs, mats, wings: [] };
+  }
+  // Golem de neve: duas bolas de neve, cabeça de abóbora e bracinhos de graveto
+  function snowGolemModel() {
+    const { g, mats, part } = rig();
+    const P = 1.9 / 30;
+    const low = part(12 * P, 12 * P, 12 * P, 0xf4f8fb); low.position.y = 6 * P; g.add(low);
+    const mid = part(10 * P, 10 * P, 10 * P, 0xeaf0f5); mid.position.y = 17 * P; g.add(mid);
+    const head = part(8 * P, 8 * P, 8 * P, 0xdc7819); head.position.y = 26 * P; g.add(head);
+    const face = (w, h, x, y) => { const f = part(w * P, h * P, 0.3 * P, 0x2a1a08); f.position.set(x * P, y * P, 4.05 * P); head.add(f); };
+    face(2, 2, -2, 1); face(2, 2, 2, 1); face(6, 1.5, 0, -2);
+    for (const sx of [-1, 1]) { const a = part(1 * P, 12 * P, 1 * P, 0x6b4a2a); a.position.set(sx * 9 * P, 19 * P, 0); a.rotation.z = -sx * 1.0; g.add(a); }
+    return { group: g, legs: [], mats, wings: [] };
+  }
+
   // Monstro em pé (zumbi, esqueleto, enderman). Medidas em "pixels" do Minecraft; a frente aponta pra +z
   function humanoid(o) {
     const g = new THREE.Group(), mats = [];
@@ -1465,6 +1671,7 @@
     m.group.position.copy(m.pos);
     scene.add(m.group);
     mobs.push(m);
+    return m;
   }
   function removeMob(i) {
     const m = mobs[i];
@@ -1479,6 +1686,9 @@
     arrows.length = 0;
     for (const f of blasts) { scene.remove(f.mesh); f.mesh.geometry.dispose(); }
     blasts.length = 0;
+    for (const b of snowballs) { scene.remove(b.mesh); b.mesh.geometry.dispose(); }
+    snowballs.length = 0;
+    villagesAwake.clear();
   }
   // Monstros aparecem de noite no mundo normal. No Criativo só andam por aí;
   // no Sobrevivência atacam (empurram, atiram flecha e o creeper explode).
@@ -1525,6 +1735,66 @@
         scene.remove(a.mesh); a.mesh.geometry.dispose();
         arrows.splice(i, 1);
       }
+    }
+  }
+
+  // Bicho levando dano de um golem
+  function damageMob(o, dmg, from, force) {
+    o.hp -= dmg; o.hurt = 0.35;
+    const away = new THREE.Vector3(o.pos.x - from.x, 0, o.pos.z - from.z);
+    if (away.lengthSq() < 1e-4) away.set(1, 0, 0);
+    o.knock.copy(away.normalize()).multiplyScalar(force);
+    o.vel.y = Math.max(o.vel.y, 6);
+    o.fuse = 0;
+    if (o.hp <= 0) o.dead = true;
+  }
+  // Bolas de neve do golem de neve
+  const snowballs = [];
+  const snowMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  function throwSnowball(m, foe) {
+    const from = new THREE.Vector3(m.pos.x, m.pos.y + 1.3, m.pos.z);
+    const to = new THREE.Vector3(foe.pos.x, foe.pos.y + foe.hh * 0.6, foe.pos.z);
+    const dist = from.distanceTo(to);
+    const vel = to.sub(from).normalize().multiplyScalar(16);
+    vel.y += dist * 0.3;
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.22), snowMat);
+    mesh.position.copy(from);
+    scene.add(mesh);
+    snowballs.push({ mesh, pos: from, vel, life: 3 });
+  }
+  function updateSnowballs(dt) {
+    for (let i = snowballs.length - 1; i >= 0; i--) {
+      const b = snowballs[i];
+      b.vel.y -= 9 * dt;
+      b.pos.addScaledVector(b.vel, dt);
+      b.life -= dt;
+      b.mesh.position.copy(b.pos);
+      const hit = mobs.find(o => MOBS[o.type].hostile && !o.dead && Math.abs(o.pos.x - b.pos.x) < o.hw + 0.2
+        && Math.abs(o.pos.z - b.pos.z) < o.hw + 0.2 && b.pos.y > o.pos.y && b.pos.y < o.pos.y + o.hh);
+      if (hit) damageMob(hit, 1, b.pos.clone().sub(b.vel), 5);
+      if (hit || b.life <= 0 || isSolid(Math.floor(b.pos.x), Math.floor(b.pos.y), Math.floor(b.pos.z))) {
+        scene.remove(b.mesh); b.mesh.geometry.dispose();
+        snowballs.splice(i, 1);
+      }
+    }
+  }
+  // Quando você chega perto de uma vila, os aldeões e o golem de ferro aparecem
+  const villagesAwake = new Map();
+  function wakeVillages() {
+    if (!settings.villages) return;
+    const px = player.pos.x, pz = player.pos.z;
+    for (const [k, v] of villagesAwake) if (Math.hypot(v.x - px, v.z - pz) > 85) villagesAwake.delete(k);
+    for (const v of villagesNear(px - 56, pz - 56, px + 56, pz + 56)) {
+      if (villagesAwake.has(v.key) || Math.hypot(v.x - px, v.z - pz) > 56) continue;
+      if (!chunks.has(ckey(v.x >> 4, v.z >> 4))) continue;
+      villagesAwake.set(v.key, v);
+      for (const hs of v.houses) {
+        const [fx, , fz] = FRONT[hs.dir];
+        const x = hs.x + fx * 4, z = hs.z + fz * 4, y = groundSpot(x, z, 2);
+        if (y != null) spawnMob('aldeao', x + 0.5, y, z + 0.5).home = v;
+      }
+      const gy = groundSpot(v.x + 4, v.z - 1, 3);
+      if (gy != null) spawnMob('golem', v.x + 4.5, gy, v.z - 0.5).home = v;
     }
   }
 
@@ -1578,9 +1848,9 @@
     if (y != null) spawnMob(type, x + 0.5, y, z + 0.5);
   }
 
-  let spawnTimer = 0;
+  let spawnTimer = 0, villageTimer = 0;
   function trySpawn() {
-    const land = mobs.filter(m => !MOBS[m.type].fly && !MOBS[m.type].hostile).length;
+    const land = mobs.filter(m => !MOBS[m.type].fly && !MOBS[m.type].hostile && !MOBS[m.type].npc && !m.kept).length;
     const bats = mobs.filter(m => MOBS[m.type].fly).length;
     if (land < 12) {
       const a = Math.random() * Math.PI * 2, d = 14 + Math.random() * 26;
@@ -1615,12 +1885,19 @@
     zombieTimer -= dt;
     if (monstersOn() && isNight() && zombieTimer <= 0) { zombieTimer = 2.5; trySpawnMonster(); }
     const daytime = !settings.daynight || (time > 0.02 && time < 0.48);
+    villageTimer -= dt;
+    if (villageTimer <= 0) { villageTimer = 2; wakeVillages(); }
     updateArrows(dt);
     updateBlasts(dt);
+    updateSnowballs(dt);
     for (let i = mobs.length - 1; i >= 0; i--) {
       const m = mobs[i], def = MOBS[m.type];
+      if (m.dead) { removeMob(i); toast(`${def.name} derrotado! 💪`); continue; }
       const dx = m.pos.x - player.pos.x, dz = m.pos.z - player.pos.z;
-      if (dx * dx + dz * dz > 75 * 75 || !chunks.has(ckey(Math.floor(m.pos.x) >> 4, Math.floor(m.pos.z) >> 4))) { removeMob(i); continue; }
+      const loaded = chunks.has(ckey(Math.floor(m.pos.x) >> 4, Math.floor(m.pos.z) >> 4));
+      // Bicho que você colocou (ovo ou golem montado) não some: fica parado esperando você voltar
+      if (m.kept) { if (!loaded) continue; }
+      else if (dx * dx + dz * dz > 75 * 75 || !loaded) { removeMob(i); continue; }
       m.timer -= dt; m.hurt = Math.max(0, m.hurt - dt); m.flee -= dt;
       if (def.fly) {
         if (m.timer <= 0) {
@@ -1635,7 +1912,7 @@
         let sp = null;   // null = anda como bicho normal
         if (def.hostile) {
           // De manhã os monstros pegam fogo e somem
-          if (daytime && Math.random() < dt * 0.6) { removeMob(i); continue; }
+          if (daytime && !m.kept && Math.random() < dt * 0.6) { removeMob(i); continue; }
           const pdx = player.pos.x - m.pos.x, pdz = player.pos.z - m.pos.z, dist = Math.hypot(pdx, pdz);
           const toPlayer = Math.atan2(pdx, pdz);
           m.attack = (m.attack || 0) - dt;
@@ -1675,10 +1952,38 @@
             }
           }
         }
+        if (def.guard) {
+          // Golem: vai atrás do monstro mais perto. O de ferro bate, o de neve joga bola de neve
+          let foe = null, best = def.guard === 'snow' ? 12 : 16;
+          for (const o of mobs) {
+            if (!MOBS[o.type].hostile || o.dead) continue;
+            const d = Math.hypot(o.pos.x - m.pos.x, o.pos.z - m.pos.z);
+            if (d < best) { best = d; foe = o; }
+          }
+          m.attack = (m.attack || 0) - dt;
+          if (foe) {
+            m.yaw = Math.atan2(foe.pos.x - m.pos.x, foe.pos.z - m.pos.z);
+            if (def.guard === 'iron') {
+              sp = best > 2 ? def.speed * 1.8 : 0;
+              if (best < 2.7 && Math.abs(foe.pos.y - m.pos.y) < 2.5 && m.attack <= 0) {
+                m.attack = 1.2; m.swing = 0.35;
+                damageMob(foe, 6, m.pos, 11);
+              }
+            } else {
+              sp = best > 7 ? def.speed : 0;
+              if (m.attack <= 0) { m.attack = 1; throwSnowball(m, foe); }
+            }
+          }
+        }
         if (sp === null && m.timer <= 0) {
           m.timer = 2 + Math.random() * 4;
           m.walking = Math.random() < 0.6;
           m.yaw = Math.random() * Math.PI * 2;
+          // Aldeão e golem não vão longe da vila
+          if (m.home && Math.hypot(m.home.x - m.pos.x, m.home.z - m.pos.z) > 15) {
+            m.yaw = Math.atan2(m.home.x - m.pos.x, m.home.z - m.pos.z);
+            m.walking = true;
+          }
         }
         if (sp === null) sp = m.flee > 0 ? def.speed * 2.5 : m.walking ? def.speed : 0;
         m.vel.x = Math.sin(m.yaw) * sp;
@@ -1694,6 +1999,7 @@
         m.walk += sp * dt;
         const swing = sp > 0 ? Math.sin(m.walk * 5) * 0.6 : 0;
         m.legs.forEach((leg, k) => { leg.rotation.x = (k % 2 === (k < 2 ? 0 : 1) ? swing : -swing); });
+        if (m.swing > 0) { m.swing -= dt; m.legs[2].rotation.x = m.legs[3].rotation.x = -1.9; }   // golem levanta os braços
       }
       m.knock.multiplyScalar(Math.pow(0.03, dt));
       m.group.position.copy(m.pos);
@@ -1955,6 +2261,16 @@
     const id = hotbar[slot];
     if (id == null) { toast('Escolha um bloco no 🎒'); return; }
     if (isTool(id)) return;   // arma não se coloca no chão
+    if (isEgg(id)) {
+      const type = eggType(id);
+      const ex = target.x + target.nx, ey = target.y + target.ny, ez = target.z + target.nz;
+      const m = spawnMob(type, ex + 0.5, ey + (MOBS[type].fly ? 0.3 : 0), ez + 0.5);
+      m.kept = true;
+      m.yaw = Math.atan2(player.pos.x - m.pos.x, player.pos.z - m.pos.z);
+      swingHand();
+      saveSoon();
+      return;
+    }
     const x = target.x + target.nx, y = target.y + target.ny, z = target.z + target.nz;
     if (!canFill(x, y, z)) return;
     if (BLOCKS[id].solid !== false && blocksPlayer(x, y, z)) return;
@@ -1976,8 +2292,32 @@
       setBlock(hx, y, hz, BED_HEAD, m);
     } else {
       setBlock(x, y, z, id, id === CAKE || id === NOTE ? 0 : m);
+      if (id === PUMPKIN) buildGolem(x, y, z);
     }
     updateTarget();
+  }
+  // Abóbora em cima de 2 blocos de neve vira golem de neve; em cima de um T de bloco de ferro, golem de ferro
+  function buildGolem(x, y, z) {
+    const born = (type, msg) => {
+      const m = spawnMob(type, x + 0.5, y - 2, z + 0.5);
+      m.kept = true;
+      m.yaw = Math.atan2(player.pos.x - m.pos.x, player.pos.z - m.pos.z);
+      toast(msg);
+      saveSoon();
+    };
+    if (getBlock(x, y - 1, z) === SNOW && getBlock(x, y - 2, z) === SNOW) {
+      for (let k = 0; k <= 2; k++) setBlock(x, y - k, z, AIR);
+      born('golemNeve', 'Nasceu um golem de neve! ☃️');
+      return;
+    }
+    if (getBlock(x, y - 1, z) !== IRON_BLOCK || getBlock(x, y - 2, z) !== IRON_BLOCK) return;
+    for (const [ax, az] of [[1, 0], [0, 1]]) {
+      if (getBlock(x + ax, y - 1, z + az) !== IRON_BLOCK || getBlock(x - ax, y - 1, z - az) !== IRON_BLOCK) continue;
+      for (let k = 0; k <= 2; k++) setBlock(x, y - k, z, AIR);
+      setBlock(x + ax, y - 1, z + az, AIR); setBlock(x - ax, y - 1, z - az, AIR);
+      born('golem', 'Nasceu um golem de ferro! 🛡️');
+      return;
+    }
   }
 
   // ── Ícones ────────────────────────────────────────────────
@@ -2020,11 +2360,29 @@
       g.fillRect(x, y, 1, 1);
     }));
   }
+  const EGG_COLORS = {
+    porco: ['#f0a0a0', '#d86a6a'], vaca: ['#443626', '#b5b5b5'], ovelha: ['#e7e7e7', '#ffb5b5'], galinha: ['#a8a8a8', '#e02020'],
+    coguvaca: ['#a00f10', '#c8c8c8'], morcego: ['#4c3e30', '#141414'], aldeao: ['#563c33', '#bd8b72'], golem: ['#d8d2c6', '#74a332'],
+    golemNeve: ['#f0f8fb', '#e08a2a'], zumbi: ['#00afaf', '#799c65'], esqueleto: ['#c1c1c1', '#494949'], creeper: ['#0da70b', '#111111'],
+    enderman: ['#161616', '#8a3ab0'],
+  };
+  function drawEgg(g, id) {
+    const [base, spot] = EGG_COLORS[eggType(id)];
+    for (let y = 1; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const ry = y < 9 ? 7.5 : 6;
+      if (((x - 7.5) / 5.4) ** 2 + ((y - 9) / ry) ** 2 > 1) continue;
+      const sx = x >> 1, sy = y >> 1;
+      g.fillStyle = (sx * 5 + sy * 3) % 7 === 0 ? spot : base;
+      g.fillRect(x, y, 1, 1);
+    }
+    g.fillStyle = 'rgba(255,255,255,.45)'; g.fillRect(5, 4, 2, 2);
+  }
   function makeIcon(entry) {
     const c = document.createElement('canvas');
     c.width = c.height = 16;
     const g = c.getContext('2d');
     if (entry.id != null && isTool(entry.id)) { drawTool(g, entry.id); return c; }
+    if (entry.id != null && isEgg(entry.id)) { drawEgg(g, entry.id); return c; }
     if (entry.armor) {
       const col = ARMOR_MATS[entry.mat].color;
       ARMOR_MASKS[entry.piece].forEach((row, y) => [...row].forEach((ch, x) => {
@@ -2080,7 +2438,7 @@
   function updateHand() {
     const id = hotbar[slot];
     handEl.innerHTML = '';
-    if (id != null && isTool(id)) handEl.appendChild(makeIcon({ id }));
+    if (id != null && (isTool(id) || isEgg(id))) handEl.appendChild(makeIcon({ id }));
   }
   function swingHand() {
     handEl.classList.remove('swing');
@@ -2305,11 +2663,12 @@
     caves: v => `Cavernas: ${v ? 'Sim' : 'Não'}`,
     water: v => `Mar e lagos: ${v ? 'Sim' : 'Não'}`,
     animals: v => `Bichos: ${v ? 'Sim' : 'Não'}`,
+    villages: v => `Vilas: ${v ? 'Sim' : 'Não'}`,
     daynight: v => `Dia e noite: ${v ? 'Sim' : 'Sempre dia'}`,
     infinite: v => `Tamanho: ${v ? 'Infinito' : 'Pequeno'}`,
   };
   function resetCreate() {
-    opts = { type: 'normal', mode: 'creative', control: 'arrows', caves: true, water: true, animals: true, daynight: true, infinite: true };
+    opts = { type: 'normal', mode: 'creative', control: 'arrows', caves: true, water: true, animals: true, villages: true, daynight: true, infinite: true };
     $('c-name').value = 'Novo mundo' + (worldList().length ? ' ' + (worldList().length + 1) : '');
     $('c-seed').value = '';
     renderCreate();
@@ -2325,7 +2684,7 @@
       : (opts.type === 'flat' ? 'Criativo: voa à vontade.' : 'Criativo: voa, e os monstros da noite não atacam.'));
     document.querySelectorAll('[data-opt]').forEach(b => {
       const k = b.dataset.opt;
-      const off = opts.type === 'flat' && (k === 'caves' || k === 'water');
+      const off = opts.type === 'flat' && (k === 'caves' || k === 'water' || k === 'villages');
       b.disabled = off;
       b.textContent = off ? OPT_LABELS[k](false) : OPT_LABELS[k](opts[k]);
     });
@@ -2343,13 +2702,14 @@
     else if (/^-?\d+$/.test(txt)) s = Number(txt) | 0;
     else { s = 0; for (const ch of txt) s = (Math.imul(s, 31) + ch.charCodeAt(0)) | 0; }
     const flat = opts.type === 'flat';
-    createWorld(name, { ...opts, caves: !flat && opts.caves, water: !flat && opts.water, seed: s });
+    createWorld(name, { ...opts, caves: !flat && opts.caves, water: !flat && opts.water, villages: !flat && opts.villages, seed: s });
   });
 
   function resetWorldState() {
     for (const c of chunks.values()) disposeMeshes(c);
     chunks.clear();
     remesh.clear();
+    villageCache.clear();
     clearMobs();
     thirdPerson = false;
     seated = null;
@@ -2388,6 +2748,7 @@
     slot = data.slot || 0;
     player.pos.set(data.p[0], data.p[1], data.p[2]);
     player.yaw = data.p[3] || 0; player.fly = !!data.p[4];
+    for (const [t, x, y, z] of Array.isArray(data.mobs) ? data.mobs : []) if (MOBS[t]) spawnMob(t, x, y, z).kept = true;
     enterWorld(false);
   }
   const nextTick = () => new Promise(r => setTimeout(r, 0));
@@ -2823,7 +3184,7 @@
 
   // Só pra testar: abrindo a página com #debug no endereço dá pra espiar o jogo pelo console
   if (location.hash === '#debug') {
-    window.mbDebug = { mobs, player, arrows, keys, setTime: t => { time = t; }, step: (n = 20) => { for (let i = 0; i < n; i++) update(0.05); } };
+    window.mbDebug = { mobs, player, arrows, keys, setTime: t => { time = t; }, villagesNear, getBlock, setBlock, buildGolem, give: id => { hotbar[slot] = id; renderHotbar(); }, place: () => placeBlock(), look: (y, p) => { player.yaw = y; player.pitch = p; }, step: (n = 20) => { for (let i = 0; i < n; i++) update(0.05); } };
   }
 
   // ── Início ────────────────────────────────────────────────
