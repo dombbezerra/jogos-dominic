@@ -668,8 +668,8 @@
 
   function updateTarget() {
     placeCamera();
-    // Com o mouse preso mira pela cruz do centro; com o cursor solto, mira onde ele está
-    if (hasPointer && !isTouch && !isLocked()) {
+    // No computador mira onde o cursor está (igual ao Contra-Ataque); no celular, o centro da tela
+    if (hasPointer && !isTouch) {
       ray.setFromCamera(pointer, camera);
       lookDir.copy(ray.ray.direction);
     } else {
@@ -913,8 +913,6 @@
     invOpen = force !== undefined ? force : !invOpen;
     invEl.classList.toggle('hidden', !invOpen);
     keys.clear();
-    if (invOpen && isLocked()) document.exitPointerLock();
-    else if (!invOpen && playing) lock();
     if (invOpen) { renderInventory(); invName.textContent = 'Clique num item pra colocar na barra'; }
   }
   document.getElementById('inv-close').addEventListener('click', () => toggleInventory(false));
@@ -949,7 +947,7 @@
   if (isTouch) document.body.classList.add('touch');
   document.getElementById('controls').innerHTML = isTouch
     ? '<b>Joystick</b> anda · <b>arrastar</b> a tela olha<br><b>⛏</b> quebra · <b>🧱</b> coloca · <b>⬆</b> pula · <b>🕊</b> voa · <b>👁</b> câmera<br>Toque no <b>🎒</b> pra escolher blocos e armaduras'
-    : '<b>Mouse</b> ou <b>← →</b> giram a tela · <b>↑ ↓</b> ou <b>W S</b> anda · <b>A D</b> anda de lado<br><b>Q E</b> também olham pra cima e pra baixo · <b>Espaço</b> pula · <b>Shift</b> corre<br><b>Clique esquerdo</b> quebra · <b>Clique direito</b> coloca<br><b>🎒</b> ou <b>I</b> abre os blocos · <b>1-9</b> escolhe · <b>F</b> voa · <b>V</b> câmera de trás<br><b>Esc</b> solta o mouse e pausa';
+    : '<b>← →</b> giram a tela · <b>↑ ↓</b> ou <b>W S</b> anda · <b>A D</b> anda de lado<br><b>Q E</b> olham pra cima e pra baixo · <b>Espaço</b> pula · <b>Shift</b> corre<br><b>Clique esquerdo</b> quebra · <b>Clique direito</b> coloca (onde o cursor está)<br><b>🎒</b> ou <b>I</b> abre os blocos · <b>1-9</b> escolhe · <b>F</b> voa · <b>V</b> câmera de trás<br><b>P</b> ou <b>Esc</b> pausa';
   if (!isTouch) document.body.classList.add('mouse');
 
   const menuEl = document.getElementById('menu');
@@ -961,22 +959,7 @@
   let holdTimer = 0;
   let pitchByKeys = false;
 
-  const isLocked = () => document.pointerLockElement === canvas;
-  function lock() {
-    if (isTouch || isLocked()) return;
-    try {
-      const r = canvas.requestPointerLock();
-      if (r && r.catch) r.catch(() => {});
-    } catch (e) { /* sem mouse preso: mexer o mouse ainda vira a tela */ }
-  }
-  document.addEventListener('pointerlockchange', () => {
-    document.body.classList.toggle('locked', isLocked());
-    // Esc solta o mouse: pausa, a não ser que foi o inventário que soltou
-    if (!isLocked() && playing && !invOpen) pause();
-  });
-
   function startPlaying() {
-    lock();
     playing = true;
     menuEl.classList.add('hidden');
     document.body.classList.add('playing');
@@ -988,7 +971,6 @@
     held.break = held.place = false;
     invOpen = false;
     invEl.classList.add('hidden');
-    if (isLocked()) document.exitPointerLock();
     menuEl.classList.remove('hidden');
     document.body.classList.remove('playing');
     save();
@@ -1006,7 +988,6 @@
 
   canvas.addEventListener('mousedown', e => {
     if (!playing || invOpen) return;
-    lock();
     if (e.button === 0) { breakBlock(); held.break = true; }
     if (e.button === 2) { placeBlock(); held.place = true; }
     holdTimer = 0.3;
@@ -1016,13 +997,10 @@
     if (e.button === 2) held.place = false;
   });
   window.addEventListener('contextmenu', e => e.preventDefault());
-  // Mexer o mouse vira a tela, igual às setas
+  // O mouse não gira a câmera: só escolhe o bloco que vai quebrar/colocar
   window.addEventListener('mousemove', e => {
     pointer.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
     hasPointer = true;
-    if (!playing || invOpen || isTouch) return;
-    look(e.movementX, e.movementY, 0.0025);
-    if (e.movementY) pitchByKeys = false;
   });
   document.addEventListener('mouseleave', () => { hasPointer = false; });
   window.addEventListener('wheel', e => {

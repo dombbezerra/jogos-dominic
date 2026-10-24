@@ -71,7 +71,6 @@
       pointer-events: none; z-index: 10; mix-blend-mode: difference;
     }
     body.mouse #crosshair { display: none; }
-    body.mouse.locked #crosshair { display: block; }
     body.mouse.playing canvas { cursor: crosshair; }
     #crosshair::before, #crosshair::after {
       content: ''; position: absolute; background: #fff;
@@ -245,6 +244,6 @@
   </div>
 
   <script src="three.min.js"></script>
-  <script src="game.js?v=7"></script>
+  <script src="game.js?v=8"></script>
 </body>
 </html>
