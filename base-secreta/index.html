@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0a0a1a">
+  <title>Base Secreta</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #0a0a1a;
+      color: white;
+    }
+    body {
+      background:
+        radial-gradient(ellipse at top, #1a1a3e 0%, #0a0a1a 60%),
+        radial-gradient(ellipse at bottom, #2a0a3e 0%, transparent 60%);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .hidden { display: none !important; }
+    button { font: inherit; cursor: pointer; border: none; }
+
+    /* Login */
+    #login {
+      min-height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      width: 100%;
+      max-width: 360px;
+      background: rgba(20, 20, 40, 0.85);
+      border: 2px solid rgba(78, 205, 196, 0.3);
+      border-radius: 16px;
+      padding: 28px 24px;
+      text-align: center;
+    }
+    .card .icon { font-size: 54px; margin-bottom: 8px; }
+    .card h1 { font-size: 24px; letter-spacing: 3px; color: #4ecdc4; margin-bottom: 20px; }
+    .card input {
+      width: 100%;
+      padding: 13px 14px;
+      margin-bottom: 12px;
+      border-radius: 10px;
+      border: 2px solid rgba(255, 255, 255, 0.12);
+      background: rgba(0, 0, 0, 0.35);
+      color: white;
+      font-size: 16px;
+      outline: none;
+    }
+    .card input:focus { border-color: #4ecdc4; }
+    .card button {
+      width: 100%;
+      padding: 13px;
+      border-radius: 30px;
+      background: #4ecdc4;
+      color: #0a0a1a;
+      font-weight: bold;
+      letter-spacing: 2px;
+      font-size: 15px;
+    }
+    .card button:disabled { opacity: 0.6; }
+    .error { color: #ff6b6b; font-size: 14px; min-height: 20px; margin-top: 12px; }
+    .back { display: inline-block; margin-top: 16px; color: rgba(255,255,255,0.5); font-size: 13px; text-decoration: none; }
+
+    /* Chat */
+    #chat {
+      height: 100%;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    .top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      padding-top: max(12px, env(safe-area-inset-top));
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(10, 10, 26, 0.85);
+    }
+    .top .title { flex: 1; min-width: 0; }
+    .top .title b { color: #4ecdc4; letter-spacing: 2px; display: block; }
+    .top .title small { opacity: 0.6; font-size: 12px; }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #4ade80; margin-right: 5px; }
+    .dot.off { background: #ff6b6b; }
+    .icon-btn {
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+      border-radius: 10px;
+      padding: 8px 11px;
+      font-size: 15px;
+    }
+    .icon-btn:active { transform: scale(0.94); }
+
+    #msgs {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overscroll-behavior: contain;
+    }
+    .empty { margin: auto; opacity: 0.5; text-align: center; font-size: 14px; }
+    .day {
+      align-self: center;
+      font-size: 12px;
+      opacity: 0.55;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 3px 10px;
+      border-radius: 10px;
+      margin: 8px 0 4px;
+    }
+    .msg {
+      max-width: 80%;
+      padding: 8px 12px 6px;
+      border-radius: 16px;
+      line-height: 1.35;
+      font-size: 15px;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+      align-self: flex-start;
+      background: rgba(143, 182, 255, 0.16);
+      border-bottom-left-radius: 4px;
+    }
+    .msg.mine {
+      align-self: flex-end;
+      background: #1f7a74;
+      border-bottom-left-radius: 16px;
+      border-bottom-right-radius: 4px;
+    }
+    .msg .meta { display: block; text-align: right; font-size: 11px; opacity: 0.6; margin-top: 2px; }
+    .msg.pending { opacity: 0.55; }
+
+    .composer {
+      display: flex;
+      gap: 8px;
+      padding: 10px 12px;
+      padding-bottom: max(10px, env(safe-area-inset-bottom));
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(10, 10, 26, 0.9);
+    }
+    .composer textarea {
+      flex: 1;
+      resize: none;
+      max-height: 120px;
+      padding: 11px 14px;
+      border-radius: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.12);
+      background: rgba(0, 0, 0, 0.35);
+      color: white;
+      font: inherit;
+      font-size: 16px;
+      outline: none;
+    }
+    .composer textarea:focus { border-color: #4ecdc4; }
+    .send {
+      background: #4ecdc4;
+      color: #0a0a1a;
+      border-radius: 50%;
+      width: 46px;
+      height: 46px;
+      flex: none;
+      font-size: 20px;
+      font-weight: bold;
+      align-self: flex-end;
+    }
+    .send:disabled { opacity: 0.5; }
+  </style>
+</head>
+<body>
+  <div id="login">
+    <form class="card" id="loginForm" autocomplete="off">
+      <div class="icon">🛰️</div>
+      <h1>BASE SECRETA</h1>
+      <input id="name" placeholder="Nome" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+      <input id="pass" type="password" placeholder="Senha" required>
+      <button id="loginBtn" type="submit">ENTRAR</button>
+      <div class="error" id="loginErr"></div>
+      <a class="back" href="../">← Menu</a>
+    </form>
+  </div>
+
+  <div id="chat" class="hidden">
+    <div class="top">
+      <a class="icon-btn" href="../" title="Menu">←</a>
+      <div class="title">
+        <b>BASE SECRETA</b>
+        <small><span class="dot" id="dot"></span><span id="status">conectado como …</span></small>
+      </div>
+      <button class="icon-btn" id="refresh" title="Atualizar">↻</button>
+      <button class="icon-btn" id="logout" title="Sair">⏻</button>
+    </div>
+    <div id="msgs"><div class="empty">Nenhuma mensagem ainda.<br>Mande a primeira! 👋</div></div>
+    <form class="composer" id="sendForm">
+      <textarea id="text" rows="1" placeholder="Mensagem" maxlength="2000"></textarea>
+      <button class="send" id="sendBtn" type="submit" title="Enviar">➤</button>
+    </form>
+  </div>
+
+  <script>
+    const API = '/api/chat/';
+    const POLL_VISIBLE = 2000;
+    const POLL_HIDDEN = 15000;
+
+    const $ = (id) => document.getElementById(id);
+    const store = {
+      get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+      set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+      del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+    };
+
+    let token = store.get('bs_token');
+    let me = store.get('bs_name') || '';
+    let last = 0;
+    let lastDay = '';
+    let pollTimer = null;
+    let polling = false;
+    let unread = 0;
+    const seen = new Set();
+
+    async function api(method, body, query) {
+      const r = await fetch(API + (query || ''), {
+        method,
+        headers: Object.assign(
+          { 'Content-Type': 'application/json' },
+          token ? { Authorization: 'Bearer ' + token } : {}
+        ),
+        body: body ? JSON.stringify(body) : undefined,
+        cache: 'no-store',
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        const err = new Error(data.error || 'Erro ' + r.status);
+        err.status = r.status;
+        throw err;
+      }
+      return data;
+    }
+
+    // ---------- Login ----------
+    $('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      $('loginErr').textContent = '';
+      $('loginBtn').disabled = true;
+      try {
+        token = null;
+        const data = await api('POST', { action: 'login', name: $('name').value, password: $('pass').value });
+        token = data.token;
+        me = data.name;
+        store.set('bs_token', token);
+        store.set('bs_name', me);
+        $('pass').value = '';
+        openChat();
+      } catch (err) {
+        $('loginErr').textContent = err.message;
+      } finally {
+        $('loginBtn').disabled = false;
+      }
+    });
+
+    function logout() {
+      token = null;
+      store.del('bs_token');
+      store.del('bs_name');
+      clearTimeout(pollTimer);
+      last = 0;
+      lastDay = '';
+      seen.clear();
+      $('msgs').innerHTML = '<div class="empty">Nenhuma mensagem ainda.<br>Mande a primeira! 👋</div>';
+      $('chat').classList.add('hidden');
+      $('login').classList.remove('hidden');
+    }
+    $('logout').addEventListener('click', logout);
+
+    function openChat() {
+      $('login').classList.add('hidden');
+      $('chat').classList.remove('hidden');
+      $('status').textContent = 'conectado como ' + me;
+      poll();
+    }
+
+    // ---------- Mensagens ----------
+    const fmtTime = (ts) => new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    function fmtDay(ts) {
+      const d = new Date(ts);
+      const today = new Date();
+      const yest = new Date(Date.now() - 864e5);
+      if (d.toDateString() === today.toDateString()) return 'Hoje';
+      if (d.toDateString() === yest.toDateString()) return 'Ontem';
+      return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function nearBottom() {
+      const box = $('msgs');
+      return box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+    }
+
+    function addMessage(m, pendingEl) {
+      if (seen.has(m.id)) { if (pendingEl) pendingEl.remove(); return false; }
+      seen.add(m.id);
+      const box = $('msgs');
+      const empty = box.querySelector('.empty');
+      if (empty) empty.remove();
+
+      const day = fmtDay(m.ts);
+      if (day !== lastDay) {
+        const d = document.createElement('div');
+        d.className = 'day';
+        d.textContent = day;
+        box.appendChild(d);
+        lastDay = day;
+      }
+
+      const el = pendingEl || document.createElement('div');
+      el.className = 'msg' + (m.from === me ? ' mine' : '');
+      el.textContent = m.text;
+      const meta = document.createElement('span');
+      meta.className = 'meta';
+      meta.textContent = (m.from === me ? '' : m.from + ' · ') + fmtTime(m.ts);
+      el.appendChild(meta);
+      box.appendChild(el);
+      return true;
+    }
+
+    function setOnline(ok) {
+      $('dot').classList.toggle('off', !ok);
+      $('status').textContent = ok ? 'conectado como ' + me : 'sem conexão… tentando de novo';
+    }
+
+    async function poll(manual) {
+      if (!token || polling) return;
+      polling = true;
+      clearTimeout(pollTimer);
+      if (manual) $('refresh').textContent = '…';
+      try {
+        const data = await api('GET', null, '?since=' + last);
+        const stick = nearBottom() || last === 0;
+        let fromOther = 0;
+        for (const m of data.messages) {
+          if (addMessage(m) && m.from !== me && last !== 0) fromOther++;
+        }
+        const firstLoad = last === 0;
+        last = Math.max(last, data.last || 0);
+        if (stick || firstLoad) $('msgs').scrollTop = $('msgs').scrollHeight;
+        if (fromOther && document.hidden) {
+          unread += fromOther;
+          document.title = '(' + unread + ') Base Secreta';
+        }
+        setOnline(true);
+      } catch (err) {
+        if (err.status === 401) { logout(); $('loginErr').textContent = err.message; polling = false; return; }
+        setOnline(false);
+      } finally {
+        polling = false;
+        if (manual) $('refresh').textContent = '↻';
+      }
+      if (token) pollTimer = setTimeout(poll, document.hidden ? POLL_HIDDEN : POLL_VISIBLE);
+    }
+    $('refresh').addEventListener('click', () => poll(true));
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        unread = 0;
+        document.title = 'Base Secreta';
+        poll();
+      }
+    });
+
+    // ---------- Enviar ----------
+    const textEl = $('text');
+    function autoGrow() {
+      textEl.style.height = 'auto';
+      textEl.style.height = Math.min(textEl.scrollHeight, 120) + 'px';
+    }
+    textEl.addEventListener('input', autoGrow);
+    textEl.addEventListener('keydown', (e) => {
+      // Enter envia no computador; Shift+Enter quebra linha
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && matchMedia('(hover: hover)').matches) {
+        e.preventDefault();
+        $('sendForm').requestSubmit();
+      }
+    });
+
+    $('sendForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = textEl.value.trim();
+      if (!text) return;
+      textEl.value = '';
+      autoGrow();
+      textEl.focus();
+
+      const pending = document.createElement('div');
+      pending.className = 'msg mine pending';
+      pending.textContent = text;
+      $('msgs').querySelector('.empty')?.remove();
+      $('msgs').appendChild(pending);
+      $('msgs').scrollTop = $('msgs').scrollHeight;
+
+      try {
+        const data = await api('POST', { action: 'send', text });
+        addMessage(data.message, pending);
+        $('msgs').scrollTop = $('msgs').scrollHeight;
+      } catch (err) {
+        if (err.status === 401) { logout(); $('loginErr').textContent = err.message; return; }
+        pending.remove();
+        textEl.value = text;
+        autoGrow();
+        alert('Não deu pra enviar: ' + err.message);
+      }
+    });
+
+    if (token) openChat();
+  </script>
+</body>
+</html>
