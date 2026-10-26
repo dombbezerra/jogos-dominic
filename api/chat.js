@@ -71,13 +71,13 @@ module.exports = async (req, res) => {
     if (action === 'login') {
       const failKey = 'chat:fail:' + ip;
       const [fails] = await redis(['GET', failKey]);
-      if (Number(fails) >= 8) {
-        return res.status(429).json({ error: 'Muitas tentativas. Espere 15 minutos.' });
+      if (Number(fails) >= 10) {
+        return res.status(429).json({ error: 'Muitas tentativas. Espere 3 minutos.' });
       }
       const key = String(body.name || '').trim().toLowerCase();
       const u = USERS[key];
       if (!u || !u.hash || !safeEqual(sha256(String(body.password || '')), u.hash)) {
-        await redis(['INCR', failKey], ['EXPIRE', failKey, 900]);
+        await redis(['INCR', failKey], ['EXPIRE', failKey, 180]);
         return res.status(401).json({ error: 'Nome ou senha errados.' });
       }
       await redis(['DEL', failKey]);
