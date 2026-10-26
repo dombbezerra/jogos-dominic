@@ -1,4 +1,4 @@
-// Base Secreta — API do chat entre Felipe e Dominique.
+// Base Secreta — API do chat entre Felipe e Dominic.
 // Guarda as mensagens num Redis (Upstash) conectado ao projeto no Vercel.
 const crypto = require('crypto');
 
@@ -16,7 +16,7 @@ const sha256 = (s) => crypto.createHash('sha256').update(s).digest('hex');
 const hashEnv = (k) => (process.env[k] ? sha256(process.env[k]) : '');
 const USERS = {
   felipe: { name: 'Felipe', hash: hashEnv('CHAT_SENHA_FELIPE') },
-  dominique: { name: 'Dominique', hash: hashEnv('CHAT_SENHA_DOMINIQUE') },
+  dominique: { name: 'Dominic', hash: hashEnv('CHAT_SENHA_DOMINIQUE') },
 };
 USERS.dominic = USERS.dominique;
 
@@ -104,7 +104,10 @@ module.exports = async (req, res) => {
       const last = Number(seq || 0);
       if (last <= since) return res.status(200).json({ messages: [], last, me });
       const [raw] = await redis(['LRANGE', 'chat:msgs', 0, -1]);
-      const messages = raw.map((s) => JSON.parse(s)).filter((m) => m.id > since);
+      const messages = raw
+        .map((s) => JSON.parse(s))
+        .filter((m) => m.id > since)
+        .map((m) => (m.from === 'Dominique' ? { ...m, from: 'Dominic' } : m));
       return res.status(200).json({ messages, last, me });
     }
 

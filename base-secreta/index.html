@@ -343,6 +343,7 @@
       if (manual) $('refresh').textContent = '…';
       try {
         const data = await api('GET', null, '?since=' + last);
+        if (data.me && data.me !== me) { me = data.me; store.set('bs_name', me); }
         const stick = nearBottom() || last === 0;
         let fromOther = 0;
         for (const m of data.messages) {
