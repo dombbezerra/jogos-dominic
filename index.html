@@ -201,6 +201,22 @@
       font-size: 13px;
       z-index: 1;
     }
+    .secret-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      margin-left: 8px;
+      vertical-align: middle;
+      border: 1.5px solid currentColor;
+      border-radius: 8px;
+      color: inherit;
+      opacity: 0.8;
+      transition: opacity 0.2s ease, color 0.2s ease;
+    }
+    .secret-btn:hover { opacity: 1; color: #4ecdc4; }
+    .secret-btn:active { transform: scale(0.92); }
     .secret { text-decoration: none; color: inherit; cursor: default; }
   </style>
 </head>
@@ -209,7 +225,12 @@
 
   <header>
     <h1>JOGOS DO DOMINIC</h1>
-    <div class="subtitle">Escolha um jogo para começar</div>
+    <div class="subtitle">
+      Escolha um jogo para começar
+      <a href="base-secreta/" class="secret-btn" aria-label="Entrar">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      </a>
+    </div>
   </header>
 
   <div class="games">
