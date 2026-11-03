@@ -48,7 +48,7 @@
       font-weight: bold;
       text-decoration: none;
       border-radius: 4px;
-      z-index: 30;
+      z-index: 50;
     }
     #sound-btn {
       position: fixed;
@@ -60,7 +60,7 @@
       padding: 5px 9px;
       font-size: 14px;
       border-radius: 4px;
-      z-index: 30;
+      z-index: 50;
       cursor: pointer;
     }
 
@@ -88,16 +88,95 @@
       right: calc(env(safe-area-inset-right) + 24px); bottom: calc(env(safe-area-inset-bottom) + 30px);
       width: 96px; height: 96px; background: #ffcc33; font-size: 15px;
     }
+    #menu-btn {
+      position: fixed;
+      top: calc(env(safe-area-inset-top) + 8px);
+      right: calc(env(safe-area-inset-right) + 52px);
+      background: rgba(0, 0, 0, 0.8);
+      color: #ffcc33;
+      border: 2px solid #ffcc33;
+      padding: 5px 9px;
+      font-size: 14px;
+      border-radius: 4px;
+      z-index: 30;
+      cursor: pointer;
+    }
+    body.in-menu #menu-btn, body.in-menu #touch { display: none; }
+
+    /* ── Menu (igual ao da Luta Elemental) ── */
+    #menu {
+      position: fixed; inset: 0; z-index: 40; display: none;
+      align-items: center; justify-content: center; padding: 12px;
+      background: rgba(10, 12, 26, 0.92);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    body.in-menu #menu { display: flex; }
+    .panel {
+      position: relative; width: min(720px, 100%); max-height: 100%; overflow-y: auto;
+      padding: 18px 16px 16px; text-align: center;
+      border: 3px solid #f5c518; border-radius: 10px;
+      background: radial-gradient(ellipse at center, #3b2a7a 0%, #241a52 55%, #160f36 100%);
+      box-shadow: 0 0 40px rgba(245, 197, 24, 0.15);
+    }
+    .wallet { position: absolute; top: 10px; right: 14px; font-size: 16px; font-weight: bold; }
+    .wallet .coin { color: #f5c518; }
+    .user-tag { position: absolute; top: 12px; left: 14px; font-size: 12px; color: #c9b8ff; max-width: 45%; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .page { display: none; }
+    .page.on { display: block; }
+    h1 { margin: 14px 0 6px; line-height: 1; }
+    h1 .t1 { display: block; color: #f5c518; font-size: clamp(30px, 8vw, 52px); font-weight: 900; }
+    h1 .t2 { display: block; color: #ff6ad5; font-size: clamp(34px, 9vw, 60px); font-weight: 900; }
+    h2 { color: #f5c518; font-size: 26px; margin: 8px 0 14px; }
+    #hero { width: 96px; height: 96px; image-rendering: pixelated; display: block; margin: 8px auto 0; }
+    .hero-shadow { width: 70px; height: 12px; margin: -8px auto 0; border-radius: 50%; background: rgba(0, 0, 0, 0.45); }
+    .hero-name { font-weight: bold; font-size: 18px; margin-top: 6px; }
+    .hero-sub { font-size: 12px; color: #c9c3e6; margin-top: 2px; }
+    .row { display: flex; gap: 8px; justify-content: center; align-items: stretch; margin-top: 16px; flex-wrap: wrap; }
+    .mbtn {
+      border: 3px solid rgba(0, 0, 0, 0.35); border-radius: 4px; padding: 12px 10px; min-width: 120px;
+      font-weight: bold; font-size: 13px; color: #10101a; cursor: pointer; font-family: inherit;
+      box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.2);
+    }
+    .mbtn:active { transform: translateY(2px); }
+    .mbtn.big { font-size: 20px; min-width: 140px; }
+    .cyan { background: #5ccfff; } .orange { background: #ff9a2e; } .green { background: #2fd15a; color: #fff; }
+    .purple { background: #b06cff; color: #fff; } .yellow { background: #f5c518; }
+    .back { margin-top: 14px; min-width: 140px; }
+    .link { margin-top: 12px; background: none; border: none; color: #c9c3e6; text-decoration: underline; font-size: 13px; cursor: pointer; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+    .card {
+      background: rgba(20, 14, 50, 0.85); border: 2px solid #4a3a8a; border-radius: 8px; padding: 10px 6px;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .card.sel { border-color: #5ccfff; box-shadow: 0 0 0 2px #5ccfff; }
+    .card canvas { width: 64px; height: 64px; image-rendering: pixelated; }
+    .card .icon { font-size: 34px; line-height: 64px; height: 64px; }
+    .card b { font-size: 14px; }
+    .card small { font-size: 11px; color: #c9c3e6; min-height: 28px; }
+    .card button { width: 100%; padding: 6px; border-radius: 4px; border: 2px solid rgba(0,0,0,0.35); font-weight: bold; cursor: pointer; font-family: inherit; }
+    .card button:disabled { opacity: 0.45; cursor: default; }
+    .pips { letter-spacing: 2px; color: #f5c518; font-size: 12px; }
+    #user-form { display: flex; flex-direction: column; gap: 12px; max-width: 360px; margin: 0 auto; text-align: left; }
+    #user-form label { display: flex; flex-direction: column; gap: 4px; font-weight: bold; font-size: 14px; }
+    #user-form input {
+      padding: 12px; border-radius: 6px; border: 2px solid #4a3a8a; background: #120c30; color: #fff; font-size: 16px; outline: none;
+    }
+    #user-form input:focus { border-color: #5ccfff; }
+    #u-msg { min-height: 18px; font-size: 13px; text-align: center; }
+    #u-msg.err { color: #ff6a6a; } #u-msg.ok { color: #2fd15a; }
+
     #btn-swap {
       right: calc(env(safe-area-inset-right) + 132px); bottom: calc(env(safe-area-inset-bottom) + 24px);
       width: 66px; height: 66px; background: #66ccff; font-size: 12px;
     }
   </style>
 </head>
-<body>
+<body class="in-menu">
   <a href="../index.html" id="back-link">← Menu</a>
   <button id="sound-btn" title="Som">🔊</button>
   <canvas id="game" width="320" height="208"></canvas>
+
+  <button id="menu-btn" title="Menu">☰</button>
 
   <div id="touch">
     <div id="stick-zone"><div id="stick"><div id="stick-knob"></div></div></div>
@@ -105,6 +184,52 @@
     <button class="tbtn" id="btn-attack">ATACAR</button>
   </div>
 
-  <script src="game.js?v=2"></script>
+  <!-- Tela inicial no estilo da Luta Elemental -->
+  <div id="menu">
+    <div class="panel">
+      <div class="wallet"><span class="coin">●</span> <b id="m-coins">0</b></div>
+      <div id="m-user" class="user-tag"></div>
+
+      <div class="page" id="page-main">
+        <h1><span class="t1">AVENTURA</span><span class="t2">ELEMENTAL</span></h1>
+        <canvas id="hero" width="32" height="32"></canvas>
+        <div class="hero-shadow"></div>
+        <div class="hero-name" id="m-skin">EXPLORADOR</div>
+        <div class="hero-sub" id="m-progress">Nova aventura</div>
+        <div class="row">
+          <button class="mbtn cyan" data-go="skins">PERSONAGENS</button>
+          <button class="mbtn orange" data-go="shop">LOJA</button>
+          <button class="mbtn green big" id="m-play">JOGAR</button>
+          <button class="mbtn purple" data-go="user">USUÁRIO</button>
+        </div>
+        <button class="link" id="m-new">Novo jogo</button>
+      </div>
+
+      <div class="page" id="page-skins">
+        <h2>PERSONAGENS</h2>
+        <div class="grid" id="skin-grid"></div>
+        <button class="mbtn yellow back" data-go="main">◀ VOLTAR</button>
+      </div>
+
+      <div class="page" id="page-shop">
+        <h2>LOJA</h2>
+        <div class="grid" id="shop-grid"></div>
+        <button class="mbtn yellow back" data-go="main">◀ VOLTAR</button>
+      </div>
+
+      <div class="page" id="page-user">
+        <h2>USUÁRIO</h2>
+        <form id="user-form" autocomplete="on">
+          <label>E-mail<input id="u-email" type="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="seu@email.com" required></label>
+          <label>Nome como quer ficar<input id="u-name" type="text" placeholder="Seu nome no jogo" required></label>
+          <div id="u-msg"></div>
+          <button class="mbtn green" type="submit">SALVAR</button>
+        </form>
+        <button class="mbtn yellow back" data-go="main">◀ VOLTAR</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js?v=3"></script>
 </body>
 </html>

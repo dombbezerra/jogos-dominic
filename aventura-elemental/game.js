@@ -149,10 +149,59 @@
   let enemies = [], shots = [], pickups = [], parts = [];
   let boss = null, bossDead = false;
   let mods = {};   // mudanças no mapa (arbusto queimado, água congelada...) por sala
-  let state = 'title';   // title, play, dead, win
+  let state = 'title';   // title (menu), play, dead, win
+  let started = false;    // já tem uma aventura rodando (o JOGAR do menu só continua)
+  function setState(s) {
+    state = s;
+    document.body.classList.toggle('in-menu', s === 'title');
+    if (s === 'title') { for (const k in keys) keys[k] = false; renderMenu(); }
+  }
   let stateTimer = 0, frame = 0;
   let toast = '', toastTimer = 0;
   let roomTitleTimer = 0;
+
+  // ── Conta: moedas, personagens, melhorias e usuário (continuam mesmo num jogo novo) ──
+  const META_KEY = 'aventuraConta';
+  const SKINS = [
+    { id: 'explorador', name: 'Explorador', price: 0,   hair: '#5a3214', skin: '#f2c18d', pants: '#3a2a5a' },
+    { id: 'ninja',      name: 'Ninja',      price: 15,  hair: '#1a1a1a', skin: '#f2c18d', pants: '#1a1a1a', mask: '#1a1a1a' },
+    { id: 'cavaleiro',  name: 'Cavaleiro',  price: 25,  hair: '#9aa0ad', skin: '#e8b98a', pants: '#5d5f6a', helmet: '#b8bcc8' },
+    { id: 'mago',       name: 'Mago',       price: 40,  hair: '#e8e8e8', skin: '#f2c18d', pants: '#3a1f5c', hat: '#5a2a9a' },
+    { id: 'pirata',     name: 'Pirata',     price: 60,  hair: '#2a1a0a', skin: '#d9a070', pants: '#6b4423', bandana: '#d62828' },
+    { id: 'robo',       name: 'Robô',       price: 100, hair: '#7d8a99', skin: '#b8c4d0', pants: '#4a5566', robot: true },
+  ];
+  const UPGRADES = [
+    { id: 'vida',   name: '+1 Coração',    icon: '❤️', desc: 'Começa com mais vida',     prices: [15, 30, 45] },
+    { id: 'forca',  name: 'Tiro Forte',    icon: '💥', desc: '+1 de dano em todo tiro',  prices: [30, 60] },
+    { id: 'rapido', name: 'Tiro Rápido',   icon: '⚡', desc: 'Atira mais vezes',          prices: [20, 40] },
+    { id: 'veloz',  name: 'Botas Velozes', icon: '👟', desc: 'Anda mais rápido',          prices: [20, 40] },
+  ];
+  const meta = { coins: 0, skins: ['explorador'], skin: 'explorador', up: { vida: 0, forca: 0, rapido: 0, veloz: 0 }, user: null };
+  let chestHearts = 0;   // corações ganhos nos baús desta aventura
+  function loadMeta() {
+    let m = null;
+    try { m = JSON.parse(localStorage.getItem(META_KEY)); } catch (e) { m = null; }
+    if (!m) {
+      // Quem já jogava antes da loja traz as moedas do save antigo
+      loadSave();
+      if (save && save.coins) meta.coins = save.coins;
+      return;
+    }
+    meta.coins = m.coins || 0;
+    meta.skins = Array.isArray(m.skins) && m.skins.length ? m.skins : ['explorador'];
+    meta.skin = SKINS.some(s => s.id === m.skin) ? m.skin : 'explorador';
+    for (const u of UPGRADES) meta.up[u.id] = Math.min(u.prices.length, (m.up && m.up[u.id]) || 0);
+    meta.user = m.user || null;
+  }
+  function writeMeta() {
+    try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch (e) { /* sem salvar */ }
+  }
+  const skinOf = id => SKINS.find(s => s.id === id) || SKINS[0];
+  // Vida máxima, dano, recarga e velocidade com as melhorias da loja
+  const maxHpNow = () => 5 + chestHearts + meta.up.vida;
+  const dmgOf = elem => ELEMS[elem].dmg + meta.up.forca;
+  const cdOf = elem => Math.round(ELEMS[elem].cd * (1 - 0.2 * meta.up.rapido));
+  const walkSpeed = () => 1.35 * (1 + 0.12 * meta.up.veloz);
 
   function loadSave() {
     try { save = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { save = null; }
@@ -160,10 +209,11 @@
   function writeSave() {
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify({
-        owned: player.owned, elem: player.elem, maxHp: player.maxHp, coins: player.coins,
+        owned: player.owned, elem: player.elem, chestHearts,
         mods, bossDead, room: roomKey === 'boss' ? '1,0' : roomKey,
       }));
     } catch (e) { /* sem salvar */ }
+    writeMeta();
   }
   function setTile(x, y, ch) {
     cur.grid[y][x] = ch;
@@ -182,19 +232,20 @@
     if (cont && save) {
       player.owned = save.owned || ['agua'];
       player.elem = save.elem || 'agua';
-      player.maxHp = save.maxHp || 5;
-      player.coins = save.coins || 0;
+      chestHearts = save.chestHearts != null ? save.chestHearts : Math.max(0, (save.maxHp || 5) - 5);
       mods = save.mods || {};
       bossDead = !!save.bossDead;
       roomKey = ROOMS[save.room] ? save.room : '1,2';
     } else {
-      player.owned = ['agua']; player.elem = 'agua'; player.maxHp = 5; player.coins = 0;
+      player.owned = ['agua']; player.elem = 'agua'; chestHearts = 0;
       mods = {}; bossDead = false; roomKey = '1,2';
     }
     applyMods();
+    player.maxHp = maxHpNow();
     player.hp = player.maxHp;
     enterRoom(roomKey, 'center');
-    state = 'play';
+    started = true;
+    setState('play');
     if (!cont || !save) say('Ache os 3 orbes elementais! Os arbustos ao norte precisam de FOGO.');
     writeSave();
   }
@@ -342,7 +393,7 @@
   function fire() {
     if (player.cd > 0) return;
     const el = ELEMS[player.elem];
-    player.cd = el.cd;
+    player.cd = cdOf(player.elem);
     shots.push({
       x: player.x + player.dx * 8, y: player.y + player.dy * 8,
       vx: player.dx * el.speed, vy: player.dy * el.speed, elem: player.elem, life: 70,
@@ -362,7 +413,7 @@
           if (Math.abs(e.x - s.x) < 8 && Math.abs(e.y - s.y) < 8) { damageEnemy(e, s); s.life = 0; break; }
         }
         if (boss && s.life > 0 && Math.abs(boss.x - s.x) < 16 && Math.abs(boss.y - s.y) < 16) {
-          boss.hp -= ELEMS[s.elem].dmg; boss.hurt = 8; s.life = 0;
+          boss.hp -= dmgOf(s.elem); boss.hurt = 8; s.life = 0;
           if (s.elem === 'gelo') boss.stun = 20;
           burst(s.x, s.y, ELEMS[s.elem].color, 6);
           beep(220, 0.05, 'square');
@@ -413,7 +464,7 @@
 
   function damageEnemy(e, s) {
     const el = ELEMS[s.elem];
-    e.hp -= el.dmg; e.hurt = 8;
+    e.hp -= dmgOf(s.elem); e.hurt = 8;
     if (s.elem === 'gelo') e.stun = 120;
     else { e.x += Math.sign(s.vx) * 4; e.y += Math.sign(s.vy) * 4; }
     burst(e.x, e.y, el.color, 6);
@@ -442,10 +493,10 @@
     setTile(tx, ty, 'o');
     burst(tx * T + 8, ty * T + 8, '#ffd23a', 16);
     if (what === 'vida') {
-      player.maxHp++; player.hp = player.maxHp;
+      chestHearts++; player.maxHp = maxHpNow(); player.hp = player.maxHp;
       say('Baú: +1 coração! Agora você tem ' + player.maxHp + ' corações.');
     } else {
-      player.coins += 10;
+      meta.coins += 10;
       say('Baú: +10 moedas!');
     }
     beep(660, 0.1, 'triangle'); setTimeout(() => beep(880, 0.15, 'triangle'), 110);
@@ -492,7 +543,7 @@
       else { player.dx = 0; player.dy = Math.sign(my); }
       player.walk++;
     } else { mx = my = 0; }
-    const speed = 1.35;
+    const speed = walkSpeed();
     const hit = moveBox(player, mx * speed + player.kx, my * speed + player.ky, 5, false);
     player.kx *= 0.8; player.ky *= 0.8;
     if (hit) bump(hit.tx, hit.ty);
@@ -520,7 +571,7 @@
       if (Math.abs(p.x - player.x) < 10 && Math.abs(p.y - player.y) < 10) {
         p.life = 0;
         if (p.type === 'heart') player.hp = Math.min(player.maxHp, player.hp + 1);
-        else player.coins++;
+        else meta.coins++;
         beep(p.type === 'heart' ? 700 : 990, 0.06, 'triangle');
       }
     }
@@ -573,6 +624,8 @@
   // ── Loop ──────────────────────────────────────────────────
   function update() {
     frame++;
+    // No menu, a prévia do herói vai girando
+    if (state === 'title' && menuPage === 'main' && frame % 45 === 0) { heroTurn++; heroCanvas($('hero'), meta.skin, player.elem, HERO_DIRS[heroTurn % 4]); }
     if (toastTimer > 0) toastTimer--;
     if (roomTitleTimer > 0) roomTitleTimer--;
     for (const p of parts) { p.x += p.vx; p.y += p.vy; p.vx *= 0.92; p.vy *= 0.92; p.life--; }
@@ -680,23 +733,38 @@
     }
   }
 
+  // Herói com o visual escolhido; a roupa tem a cor do elemento que está usando.
+  // Também desenha a prévia do menu (g é o contexto do canvas que vai receber o desenho)
+  function drawHero(g, x, y, skinId, elem, dx, dy, step) {
+    const s = skinOf(skinId), el = ELEMS[elem];
+    const p = (a, b, w, h, c) => { g.fillStyle = c; g.fillRect(a, b, w, h); };
+    p(x - 5, y + 6, 10, 2, 'rgba(0,0,0,0.25)');
+    p(x - 4, y + 3, 3, 4 - step, s.pants); p(x + 1, y + 3, 3, 3 + step, s.pants);   // pernas
+    p(x - 5, y - 3, 10, 7, el.color); p(x - 5, y + 2, 10, 1, el.dark);             // roupa
+    if (s.robot) { p(x - 5, y - 3, 10, 2, s.hair); p(x - 1, y - 1, 2, 2, '#ff3030'); }
+    p(x - 4, y - 9, 8, 6, s.skin);                                                  // rosto
+    p(x - 5, y - 10, 10, 3, s.hair);                                                // cabelo
+    if (s.helmet) { p(x - 5, y - 11, 10, 4, s.helmet); p(x - 5, y - 9, 1, 4, s.helmet); p(x + 4, y - 9, 1, 4, s.helmet); }
+    if (s.hat) { p(x - 6, y - 11, 12, 2, s.hat); p(x - 3, y - 15, 6, 4, s.hat); p(x - 1, y - 17, 3, 2, s.hat); p(x + 2, y - 14, 1, 1, '#ffd23a'); }
+    if (s.bandana) { p(x - 5, y - 10, 10, 2, s.bandana); p(dx < 0 ? x + 5 : x - 7, y - 9, 2, 3, s.bandana); }
+    if (s.robot) { p(x - 1, y - 13, 2, 3, s.hair); p(x - 2, y - 14, 4, 1, '#ff3030'); }
+    if (dy < 0) p(x - 4, y - 9, 8, 4, s.hair);
+    else {
+      const eye = s.robot ? '#5ccfff' : '#000';
+      if (dx > 0) { p(x + 1, y - 7, 1, 2, eye); p(x + 3, y - 7, 1, 2, eye); }
+      else if (dx < 0) { p(x - 4, y - 7, 1, 2, eye); p(x - 2, y - 7, 1, 2, eye); }
+      else { p(x - 3, y - 7, 1, 2, eye); p(x + 2, y - 7, 1, 2, eye); }
+      if (s.mask) p(x - 4, y - 5, 8, 2, s.mask);   // máscara do ninja
+    }
+    // Cajado com a ponta da cor do elemento
+    const sx = x + (dx < 0 ? -7 : 6), sy = y - 2;
+    p(sx, sy - 6, 1, 10, '#8a5a2a'); p(sx - 1, sy - 8, 3, 3, el.color);
+  }
+
   function drawPlayer() {
     if (player.inv > 0 && Math.floor(player.inv / 4) % 2 === 0) return;
-    const x = Math.round(player.x), y = Math.round(player.y) + HUD;
-    const el = ELEMS[player.elem];
     const step = player.walk % 20 < 10 ? 0 : 1;
-    px(x - 5, y + 6, 10, 2, 'rgba(0,0,0,0.25)');
-    px(x - 4, y + 3, 3, 4 - step, '#3a2a5a'); px(x + 1, y + 3, 3, 3 + step, '#3a2a5a');   // pernas
-    px(x - 5, y - 3, 10, 7, el.color); px(x - 5, y + 2, 10, 1, el.dark);                     // roupa
-    px(x - 4, y - 9, 8, 6, '#f2c18d');                                                      // rosto
-    px(x - 5, y - 10, 10, 3, '#5a3214');                                                    // cabelo
-    if (player.dy < 0) px(x - 4, y - 9, 8, 4, '#5a3214');
-    else if (player.dx > 0) { px(x + 1, y - 7, 1, 2, '#000'); px(x + 3, y - 7, 1, 2, '#000'); }
-    else if (player.dx < 0) { px(x - 4, y - 7, 1, 2, '#000'); px(x - 2, y - 7, 1, 2, '#000'); }
-    else { px(x - 3, y - 7, 1, 2, '#000'); px(x + 2, y - 7, 1, 2, '#000'); }
-    // Cajado com a ponta da cor do elemento
-    const sx = x + (player.dx || (player.dy ? 5 : 5)), sy = y - 2;
-    px(sx, sy - 6, 1, 10, '#8a5a2a'); px(sx - 1, sy - 8, 3, 3, el.color);
+    drawHero(ctx, Math.round(player.x), Math.round(player.y) + HUD, meta.skin, player.elem, player.dx, player.dy, step);
   }
 
   function drawEnemy(e) {
@@ -767,7 +835,7 @@
     const cx = 4 + player.maxHp * 9 + 6;
     px(cx, 5, 6, 6, '#ffd23a'); px(cx + 2, 6, 2, 4, '#c9a000');
     ctx.fillStyle = '#fff'; ctx.font = '8px monospace'; ctx.textBaseline = 'top';
-    ctx.fillText('x' + player.coins, cx + 8, 4);
+    ctx.fillText('x' + meta.coins, cx + 8, 4);
     // Elementos: o que você tem e o que está usando
     ELEM_ORDER.forEach((k, i) => {
       const x = W - 4 - (4 - i) * 16, have = player.owned.includes(k), on = player.elem === k;
@@ -799,31 +867,137 @@
     return lines;
   }
 
-  const titleButtons = [];
-  function drawTitle() {
-    ctx.fillStyle = '#10141f'; ctx.fillRect(0, 0, W, H);
-    for (let i = 0; i < 40; i++) px((i * 97 + frame / 3) % W, (i * 53) % H, 1, 1, i % 3 ? '#3a4366' : '#fff');
-    drawText('AVENTURA', 46, '#ffd23a', 22);
-    drawText('ELEMENTAL', 70, '#6cc8ff', 22);
-    ELEM_ORDER.forEach((k, i) => {
-      const x = W / 2 - 34 + i * 18, y = 92 + Math.round(Math.sin(frame / 15 + i) * 2);
-      px(x, y, 10, 10, ELEMS[k].dark); px(x + 1, y + 1, 8, 8, ELEMS[k].color); px(x + 2, y + 2, 3, 2, '#fff');
-    });
-    titleButtons.length = 0;
-    loadSave();
-    const opts = save ? [['CONTINUAR', () => newGame(true)], ['NOVO JOGO', () => newGame(false)]] : [['COMEÇAR', () => newGame(false)]];
-    opts.forEach(([label, fn], i) => {
-      const bw = 110, bh = 20, bx = W / 2 - bw / 2, by = 122 + i * 26;
-      px(bx, by, bw, bh, '#000'); px(bx + 2, by + 2, bw - 4, bh - 4, i === 0 ? '#ffd23a' : '#3a4366');
-      ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = i === 0 ? '#000' : '#fff'; ctx.fillText(label, W / 2, by + bh / 2 + 1); ctx.textAlign = 'left';
-      titleButtons.push({ x: bx, y: by, w: bw, h: bh, fn });
-    });
-    drawText(isTouch ? 'Analógico na esquerda · ATACAR e TROCAR na direita' : 'Setas/WASD andar · ESPAÇO atacar · Q trocar elemento', 186, '#8a93b8', 7);
+  // ── Menu: tela inicial, personagens, loja e usuário ───────
+  const $ = id => document.getElementById(id);
+  let menuPage = 'main', heroTurn = 0;
+  const HERO_DIRS = [[0, 1], [1, 0], [0, -1], [-1, 0]];   // a prévia do herói vai girando
+
+  function showPage(name) {
+    menuPage = name;
+    document.querySelectorAll('#menu .page').forEach(p => p.classList.toggle('on', p.id === 'page-' + name));
+    renderMenu();
+  }
+  document.querySelectorAll('#menu [data-go]').forEach(b => b.addEventListener('click', () => showPage(b.dataset.go)));
+
+  function heroCanvas(c, skinId, elem, dir) {
+    const g = c.getContext('2d');
+    g.clearRect(0, 0, c.width, c.height);
+    const [dx, dy] = dir || [0, 1];
+    drawHero(g, 16, 20, skinId, elem, dx, dy, 0);
   }
 
+  function renderMenu() {
+    $('m-coins').textContent = meta.coins;
+    $('m-user').textContent = meta.user ? '👤 ' + meta.user.nome : '';
+    if (menuPage === 'main') {
+      heroCanvas($('hero'), meta.skin, player.elem, HERO_DIRS[heroTurn % 4]);
+      $('m-skin').textContent = skinOf(meta.skin).name.toUpperCase();
+      loadSave();
+      const run = started ? { owned: player.owned, bossDead } : save;
+      $('m-progress').textContent = !run ? 'Nova aventura'
+        : run.bossDead ? 'Reino salvo! 👑' : `Orbes: ${(run.owned || ['agua']).length - 1} de 3`;
+      $('m-play').textContent = started ? 'CONTINUAR' : 'JOGAR';
+      $('m-new').style.display = run ? '' : 'none';
+    } else if (menuPage === 'skins') renderSkins();
+    else if (menuPage === 'shop') renderShop();
+    else if (menuPage === 'user') renderUser();
+  }
+
+  function card(sel) {
+    const d = document.createElement('div');
+    d.className = 'card' + (sel ? ' sel' : '');
+    return d;
+  }
+  function el(tag, text, cls) {
+    const e = document.createElement(tag);
+    if (text != null) e.textContent = text;
+    if (cls) e.className = cls;
+    return e;
+  }
+
+  function renderSkins() {
+    const grid = $('skin-grid');
+    grid.innerHTML = '';
+    for (const s of SKINS) {
+      const have = meta.skins.includes(s.id), on = meta.skin === s.id;
+      const c = el('canvas'); c.width = c.height = 32;
+      heroCanvas(c, s.id, player.elem);
+      const btn = el('button', on ? 'USANDO' : have ? 'USAR' : '● ' + s.price, on ? 'cyan' : have ? 'green' : 'orange');
+      btn.disabled = on || (!have && meta.coins < s.price);
+      btn.addEventListener('click', () => {
+        if (!have) { meta.coins -= s.price; meta.skins.push(s.id); }
+        meta.skin = s.id;
+        writeMeta(); renderMenu();
+      });
+      const d = card(on);
+      d.append(c, el('b', s.name), el('small', have ? 'Seu' : 'Custa ' + s.price + ' moedas'), btn);
+      grid.appendChild(d);
+    }
+  }
+
+  function renderShop() {
+    const grid = $('shop-grid');
+    grid.innerHTML = '';
+    for (const u of UPGRADES) {
+      const lvl = meta.up[u.id], max = u.prices.length, price = u.prices[lvl];
+      const btn = el('button', lvl >= max ? 'MÁXIMO' : 'COMPRAR ● ' + price, lvl >= max ? 'cyan' : 'orange');
+      btn.disabled = lvl >= max || meta.coins < price;
+      btn.addEventListener('click', () => {
+        meta.coins -= price; meta.up[u.id]++;
+        if (u.id === 'vida' && started) { player.maxHp = maxHpNow(); player.hp++; }
+        writeMeta(); renderMenu();
+      });
+      const d = card(false);
+      d.append(el('div', u.icon, 'icon'), el('b', u.name), el('small', u.desc),
+        el('div', '●'.repeat(lvl) + '○'.repeat(max - lvl), 'pips'), btn);
+      grid.appendChild(d);
+    }
+  }
+
+  // Usuário: e-mail e nome, guardados neste aparelho e no servidor do site
+  const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  function renderUser() {
+    $('u-email').value = meta.user ? meta.user.email : '';
+    $('u-name').value = meta.user ? meta.user.nome : '';
+    $('u-msg').textContent = ''; $('u-msg').className = '';
+  }
+  $('user-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const email = $('u-email').value.trim().toLowerCase(), nome = $('u-name').value.trim().slice(0, 40);
+    const msg = $('u-msg');
+    if (!EMAIL_OK.test(email)) { msg.textContent = 'Esse e-mail não parece certo. Confira o @ e o final (ex: gmail.com).'; msg.className = 'err'; return; }
+    if (!nome) { msg.textContent = 'Escreva o nome como você quer ficar.'; msg.className = 'err'; return; }
+    msg.textContent = 'Salvando...'; msg.className = '';
+    meta.user = { email, nome };
+    writeMeta();
+    try {
+      const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, nome }) });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || 'erro');
+      msg.textContent = 'Pronto, ' + nome + '! Você está online. 👋'; msg.className = 'ok';
+    } catch (err) {
+      msg.textContent = 'Salvo neste aparelho. O servidor não respondeu agora; tenta de novo mais tarde.'; msg.className = 'err';
+    }
+    $('m-user').textContent = '👤 ' + nome;
+  });
+
+  $('m-play').addEventListener('click', () => {
+    if (started) setState('play');
+    else { loadSave(); newGame(!!save); }
+  });
+  $('m-new').addEventListener('click', () => {
+    if (confirm('Começar uma aventura nova? Os orbes e os baús voltam pro começo, mas suas moedas, personagens e melhorias continuam.')) newGame(false);
+  });
+  $('menu-btn').addEventListener('click', () => {
+    if (state !== 'play' && state !== 'win') return;
+    if (state === 'win') state = 'play';
+    writeSave();
+    showPage('main');
+    setState('title');
+  });
+
   function draw() {
-    if (state === 'title') { drawTitle(); return; }
+    if (state === 'title') { px(0, 0, W, H, '#10141f'); return; }
     for (let ty = 0; ty < ROWS; ty++) for (let tx = 0; tx < COLS; tx++) drawTile(cur.grid[ty][tx], tx, ty);
     for (const p of pickups) {
       if (p.life < 120 && p.life % 10 < 5) continue;
@@ -865,8 +1039,9 @@
     Space: 'attack', KeyJ: 'attack', KeyK: 'attack', KeyZ: 'attack',
   };
   addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;   // digitando no e-mail ou no nome
+    if (state === 'title') { if (menuPage === 'main' && (e.code === 'Enter' || e.code === 'Space')) { e.preventDefault(); $('m-play').click(); } return; }
     if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = true; e.preventDefault(); }
-    if (state === 'title' && (e.code === 'Enter' || e.code === 'Space')) { titleButtons[0] && titleButtons[0].fn(); keys.attack = false; return; }
     if (state === 'win' && stateTimer > 90 && (e.code === 'Space' || e.code === 'Enter')) { state = 'play'; keys.attack = false; return; }
     if (state !== 'play' || e.repeat) return;
     if (e.code === 'KeyQ' || e.code === 'KeyE' || e.code === 'KeyX' || e.code === 'ShiftLeft') swapElem();
@@ -876,18 +1051,8 @@
   addEventListener('keyup', e => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = false; });
   addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 
-  // Clique/toque nos botões da tela inicial e na tela de vitória
-  function canvasPoint(e) {
-    const r = canvas.getBoundingClientRect();
-    return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
-  }
-  canvas.addEventListener('pointerdown', e => {
-    if (state === 'title') {
-      const p = canvasPoint(e);
-      const b = titleButtons.find(b => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h);
-      if (b) b.fn();
-    } else if (state === 'win' && stateTimer > 90) state = 'play';
-  });
+  // Clique/toque na tela de vitória continua explorando
+  canvas.addEventListener('pointerdown', () => { if (state === 'win' && stateTimer > 90) state = 'play'; });
 
   // Celular: analógico que aparece onde você encosta o dedo
   const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -896,7 +1061,7 @@
   const stickZone = document.getElementById('stick-zone'), stickEl = document.getElementById('stick'), knob = document.getElementById('stick-knob');
   stickZone.addEventListener('touchstart', e => {
     e.preventDefault();
-    if (state === 'title' || (state === 'win' && stateTimer > 90)) { canvas.dispatchEvent(new PointerEvent('pointerdown', { clientX: e.changedTouches[0].clientX, clientY: e.changedTouches[0].clientY })); return; }
+    if (state === 'win' && stateTimer > 90) { state = 'play'; return; }
     const t = e.changedTouches[0];
     stick.active = true; stick.id = t.identifier; stick.ox = t.clientX; stick.oy = t.clientY; stick.x = stick.y = 0;
     stickEl.style.display = 'block'; stickEl.style.left = t.clientX + 'px'; stickEl.style.top = t.clientY + 'px';
@@ -924,7 +1089,6 @@
   const btnAttack = document.getElementById('btn-attack'), btnSwap = document.getElementById('btn-swap');
   btnAttack.addEventListener('touchstart', e => {
     e.preventDefault(); btnAttack.classList.add('on');
-    if (state === 'title') { titleButtons[0] && titleButtons[0].fn(); return; }
     if (state === 'win' && stateTimer > 90) { state = 'play'; return; }
     keys.attack = true;
   }, { passive: false });
@@ -944,6 +1108,10 @@
   }
   requestAnimationFrame(loop);
 
+  loadMeta();
+  showPage('main');
+  setState('title');
+
   // Só pra testar pelo console: abrir com #debug
-  if (location.hash === '#debug') window.av = { player, get room() { return roomKey; }, get state() { return state; }, get enemies() { return enemies; }, get boss() { return boss; }, enterRoom, newGame, keys, tileAt, update, swapElem, fire };
+  if (location.hash === '#debug') window.av = { player, meta, showPage, setState, get room() { return roomKey; }, get state() { return state; }, get enemies() { return enemies; }, get boss() { return boss; }, enterRoom, newGame, keys, tileAt, update, swapElem, fire };
 })();
