@@ -897,7 +897,6 @@
       $('m-progress').textContent = !run ? 'Nova aventura'
         : run.bossDead ? 'Reino salvo! 👑' : `Orbes: ${(run.owned || ['agua']).length - 1} de 3`;
       $('m-play').textContent = started ? 'CONTINUAR' : 'JOGAR';
-      $('m-new').style.display = run ? '' : 'none';
     } else if (menuPage === 'skins') renderSkins();
     else if (menuPage === 'shop') renderShop();
     else if (menuPage === 'user') renderUser();
@@ -984,9 +983,6 @@
   $('m-play').addEventListener('click', () => {
     if (started) setState('play');
     else { loadSave(); newGame(!!save); }
-  });
-  $('m-new').addEventListener('click', () => {
-    if (confirm('Começar uma aventura nova? Os orbes e os baús voltam pro começo, mas suas moedas, personagens e melhorias continuam.')) newGame(false);
   });
   $('menu-btn').addEventListener('click', () => {
     if (state !== 'play' && state !== 'win') return;
