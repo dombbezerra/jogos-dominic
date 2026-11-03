@@ -87,9 +87,20 @@
       $('loginBtn').disabled = false;
     });
 
+    // Confirma com um segundo clique (a janelinha do confirm() não aparece em alguns navegadores)
+    let armed = false, armTimer = null;
     $('sendForm').addEventListener('submit', async e => {
       e.preventDefault();
-      if (!confirm('Mandar esse aviso pra todo mundo?')) return;
+      if (!armed) {
+        armed = true;
+        $('sendBtn').textContent = 'CLIQUE DE NOVO PRA CONFIRMAR';
+        $('sendMsg').textContent = 'Vai mandar pra todo mundo que ligou os avisos.';
+        clearTimeout(armTimer);
+        armTimer = setTimeout(() => { armed = false; $('sendBtn').textContent = 'ENVIAR PRA TODOS'; $('sendMsg').textContent = ''; }, 6000);
+        return;
+      }
+      armed = false; clearTimeout(armTimer);
+      $('sendBtn').textContent = 'ENVIAR PRA TODOS';
       $('sendBtn').disabled = true; $('sendMsg').textContent = 'Enviando...';
       try {
         const r = await fetch('/api/push/', { method: 'POST',
