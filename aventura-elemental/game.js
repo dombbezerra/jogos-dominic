@@ -210,11 +210,16 @@
     { id: 'rapido', name: 'Tiro Rápido',   icon: '⚡', desc: 'Atira mais vezes',          prices: [20, 40] },
     { id: 'veloz',  name: 'Botas Velozes', icon: '👟', desc: 'Anda mais rápido',          prices: [20, 40] },
   ];
-  // Moeda Elemental: moeda especial, comprada com moedas normais (e o chefão dá algumas)
+  // Recursos Elementais: Moeda Elemental comprada com Gemas, e Gemas compradas com Moeda Elemental
   const GEM_PACKS = [
     { gems: 10,  price: 50,  tag: '' },
     { gems: 30,  price: 120, tag: 'OFERTA!' },
     { gems: 100, price: 350, tag: 'MEGA!' },
+  ];
+  const COIN_PACKS = [
+    { coins: 40,  price: 10,  tag: '' },
+    { coins: 130, price: 30,  tag: 'OFERTA!' },
+    { coins: 450, price: 100, tag: 'MEGA!' },
   ];
   const BOSS_GEMS = 20;
   // Cores do nome de usuário, compradas com Moeda Elemental
@@ -230,6 +235,7 @@
     { id: 'arcoiris', name: 'Arco-íris',  color: 'rainbow', price: 60 },
   ];
   const colorOf = id => NAME_COLORS.find(c => c.id === id) || NAME_COLORS[0];
+  // meta.coins = Gemas Elementais (ganhas jogando); meta.gems = Moedas Elementais (especiais)
   const meta = { coins: 0, gems: 0, skins: FREE_SKINS.slice(), skin: 'gotinha', up: { vida: 0, forca: 0, rapido: 0, veloz: 0 },
     colors: ['branco'], nameColor: 'branco', user: null };
   let chestHearts = 0;   // corações ganhos nos baús desta aventura
@@ -581,7 +587,7 @@
       say('Baú: +1 coração! Agora você tem ' + player.maxHp + ' corações.');
     } else {
       meta.coins += 10;
-      say('Baú: +10 moedas!');
+      say('Baú: +10 Gemas Elementais!');
     }
     beep(660, 0.1, 'triangle'); setTimeout(() => beep(880, 0.15, 'triangle'), 110);
     writeSave();
@@ -924,6 +930,11 @@
     if (frame % 2) parts.push({ x: s.x, y: s.y, vx: 0, vy: 0, life: 8, color: el.color });
   }
 
+  // Gema Elemental em pixel: topo reto e ponta embaixo
+  function gemPx(x, y) {
+    px(x + 1, y, 5, 1, '#fff3a0'); px(x, y + 1, 7, 2, '#ffd23a'); px(x + 1, y + 3, 5, 1, '#e0a000');
+    px(x + 2, y + 4, 3, 1, '#c98a00'); px(x + 3, y + 5, 1, 1, '#a86a00'); px(x + 2, y + 1, 1, 1, '#fff');
+  }
   function heart(x, y, full) {
     const c = full ? '#ff3a4a' : '#3a1a20';
     px(x + 1, y, 2, 1, c); px(x + 4, y, 2, 1, c); px(x, y + 1, 7, 2, c); px(x + 1, y + 3, 5, 1, c); px(x + 2, y + 4, 3, 1, c); px(x + 3, y + 5, 1, 1, c);
@@ -933,9 +944,9 @@
     px(0, 0, W, HUD, '#10141f');
     px(0, HUD - 1, W, 1, '#2a3350');
     for (let i = 0; i < player.maxHp; i++) heart(4 + i * 9, 5, i < player.hp);
-    // Moedas
+    // Gemas Elementais
     const cx = 4 + player.maxHp * 9 + 6;
-    px(cx, 5, 6, 6, '#ffd23a'); px(cx + 2, 6, 2, 4, '#c9a000');
+    gemPx(cx, 4);
     ctx.fillStyle = '#fff'; ctx.font = '8px monospace'; ctx.textBaseline = 'top';
     ctx.fillText('x' + meta.coins, cx + 8, 4);
     // Elementos: o que você tem e o que está usando
@@ -989,7 +1000,7 @@
   }
 
   function renderMenu() {
-    $('m-coins').textContent = meta.coins;
+    $('m-coins').textContent = meta.coins;   // Gemas Elementais
     $('m-gems').textContent = meta.gems;
     paintName($('m-user'), meta.user ? meta.user.nome : '', '👤 ');
     renderFriends();
@@ -1011,6 +1022,12 @@
     d.className = 'card' + (sel ? ' sel' : '');
     return d;
   }
+  // Ícone de Gema (gema) ou de Moeda Elemental (moeda) com o valor do lado
+  const ICON = kind => `<i class="ic ic-${kind}"></i>`;
+  function priced(node, label, kind, n) {
+    node.innerHTML = (label ? label + ' ' : '') + ICON(kind) + ' ' + n;
+    return node;
+  }
   function el(tag, text, cls) {
     const e = document.createElement(tag);
     if (text != null) e.textContent = text;
@@ -1023,13 +1040,15 @@
     grid.innerHTML = '';
     for (const r of Object.keys(RARITY)) {
       const R = RARITY[r];
-      const head = el('div', R.name + (R.price ? ' · ● ' + R.price : ' · GRÁTIS'), 'rar-head rar-' + r);
+      const head = el('div', R.name + ' · GRÁTIS', 'rar-head rar-' + r);
+      if (R.price) priced(head, R.name + ' ·', 'gema', R.price);
       grid.appendChild(head);
       for (const s of SKINS.filter(c => c.rar === r)) {
         const have = meta.skins.includes(s.id), on = meta.skin === s.id, price = priceOf(s);
         const c = el('canvas'); c.width = c.height = 32;
         heroCanvas(c, s.id, s.elem === 'all' ? player.elem : s.elem);
-        const btn = el('button', on ? 'USANDO' : have ? 'USAR' : '● ' + price, on ? 'cyan' : have ? 'green' : 'orange');
+        const btn = el('button', on ? 'USANDO' : 'USAR', on ? 'cyan' : have ? 'green' : 'orange');
+        if (!on && !have) priced(btn, '', 'gema', price);
         btn.disabled = on || (!have && meta.coins < price);
         btn.addEventListener('click', () => {
           if (!have) { meta.coins -= price; meta.skins.push(s.id); }
@@ -1047,9 +1066,9 @@
     }
   }
 
-  // Loja com 3 abas: melhorias do personagem, Moeda Elemental e cor do nome
+  // Loja com 3 abas: melhorias do personagem, recursos elementais e cor do nome
   let shopTab = 'melhorias';
-  const SHOP_TABS = [['melhorias', 'MELHORIAS'], ['gemas', 'MOEDA ELEMENTAL'], ['cores', 'COR DO NOME']];
+  const SHOP_TABS = [['melhorias', 'MELHORIAS'], ['gemas', 'RECURSOS ELEMENTAIS'], ['cores', 'COR DO NOME']];
   function renderShop() {
     const tabs = $('shop-tabs');
     tabs.innerHTML = '';
@@ -1068,7 +1087,8 @@
   function shopUpgrades(grid) {
     for (const u of UPGRADES) {
       const lvl = meta.up[u.id], max = u.prices.length, price = u.prices[lvl];
-      const btn = el('button', lvl >= max ? 'MÁXIMO' : 'COMPRAR ● ' + price, lvl >= max ? 'cyan' : 'orange');
+      const btn = el('button', 'MÁXIMO', lvl >= max ? 'cyan' : 'orange');
+      if (lvl < max) priced(btn, 'COMPRAR', 'gema', price);
       btn.disabled = lvl >= max || meta.coins < price;
       btn.addEventListener('click', () => {
         meta.coins -= price; meta.up[u.id]++;
@@ -1083,25 +1103,36 @@
   }
 
   function shopGems(grid) {
-    for (const pk of GEM_PACKS) {
-      const btn = el('button', 'COMPRAR ● ' + pk.price, 'orange');
-      btn.disabled = meta.coins < pk.price;
-      btn.addEventListener('click', () => {
-        meta.coins -= pk.price; meta.gems += pk.gems;
-        writeMeta(); renderMenu();
-      });
-      const d = card(false);
-      if (pk.tag) d.appendChild(el('span', pk.tag, 'deal'));
-      d.append(el('div', '◆', 'icon gem-big'), el('b', pk.gems + ' Moedas Elementais'),
-        el('small', 'O chefão também dá ' + BOSS_GEMS + ' quando você vence'), btn);
-      grid.appendChild(d);
-    }
+    const group = (title, packs, give, pay) => {
+      grid.appendChild(el('div', title, 'rar-head shop-head'));
+      for (const pk of packs) {
+        const amount = pk[give === 'moeda' ? 'gems' : 'coins'];
+        const wallet = pay === 'gema' ? meta.coins : meta.gems;
+        const btn = priced(el('button', null, 'orange'), 'COMPRAR', pay, pk.price);
+        btn.disabled = wallet < pk.price;
+        btn.addEventListener('click', () => {
+          if (pay === 'gema') { meta.coins -= pk.price; meta.gems += amount; }
+          else { meta.gems -= pk.price; meta.coins += amount; }
+          writeMeta(); renderMenu();
+        });
+        const d = card(false);
+        if (pk.tag) d.appendChild(el('span', pk.tag, 'deal'));
+        const big = el('div', null, 'icon');
+        big.innerHTML = `<i class="ic ic-${give} big"></i>`;
+        d.append(big, el('b', amount + (give === 'moeda' ? ' Moedas Elementais' : ' Gemas Elementais')), btn);
+        grid.appendChild(d);
+      }
+    };
+    group('MOEDA ELEMENTAL', GEM_PACKS, 'moeda', 'gema');
+    group('GEMA ELEMENTAL', COIN_PACKS, 'gema', 'moeda');
+    grid.appendChild(el('small', 'O chefão dá ' + BOSS_GEMS + ' Moedas Elementais quando você vence.', 'shop-note'));
   }
 
   function shopColors(grid) {
     for (const c of NAME_COLORS) {
       const have = meta.colors.includes(c.id), on = meta.nameColor === c.id;
-      const btn = el('button', on ? 'USANDO' : have ? 'USAR' : '◆ ' + c.price, on ? 'cyan' : have ? 'green' : 'purple');
+      const btn = el('button', on ? 'USANDO' : 'USAR', on ? 'cyan' : have ? 'green' : 'purple');
+      if (!on && !have) priced(btn, '', 'moeda', c.price);
       btn.disabled = on || (!have && meta.gems < c.price);
       btn.addEventListener('click', () => {
         if (!have) { meta.gems -= c.price; meta.colors.push(c.id); }
@@ -1201,7 +1232,7 @@
       if (p.life < 120 && p.life % 10 < 5) continue;
       const x = Math.round(p.x), y = Math.round(p.y) + HUD + Math.round(Math.sin(frame / 10) * 1.5);
       if (p.type === 'heart') heart(x - 3, y - 3, true);
-      else { px(x - 3, y - 3, 6, 6, '#ffd23a'); px(x - 1, y - 2, 2, 4, '#c9a000'); }
+      else gemPx(x - 3, y - 3);
     }
     const things = [...enemies.map(e => ({ y: e.y, d: () => drawEnemy(e) })), { y: player.y, d: drawPlayer }];
     things.sort((a, b) => a.y - b.y).forEach(t => t.d());
