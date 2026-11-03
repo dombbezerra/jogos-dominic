@@ -656,7 +656,7 @@
     for (const c of chunks.values()) if (c.saveDirty) stash(c);
     try {
       localStorage.setItem(worldKey(current.id), JSON.stringify({
-        v: 3, settings, time, slot, hotbar, armor, chunks: store.chunks,
+        v: 3, settings, time, slot, hotbar, counts, armor, chunks: store.chunks,
         mobs: mobs.filter(m => m.kept && !m.dead).map(m => [m.type, +m.pos.x.toFixed(2), +m.pos.y.toFixed(2), +m.pos.z.toFixed(2)]),
         p: [player.pos.x, player.pos.y, player.pos.z, player.yaw, player.fly],
       }));
@@ -1350,6 +1350,10 @@
     yaw: 0, pitch: 0, onGround: false, fly: false, walk: 0,
   };
   let hotbar = Array(9).fill(null);   // começa vazia: você escolhe no inventário
+  let counts = Array(9).fill(0);      // quantos tem em cada espaço (só conta no Sobrevivência)
+  const survival = () => settings && settings.mode === 'survival';
+  const STACK = 64;
+  const stackMax = id => (BLOCKS[id] ? STACK : 1);   // blocos empilham até 64; arma e ovo, um por espaço
   let armor = [-1, -1, -1, -1];      // material de cada peça (-1 = nada)
   let slot = 0;
   let thirdPerson = false;
@@ -1690,6 +1694,7 @@
     blasts.length = 0;
     for (const b of snowballs) { scene.remove(b.mesh); b.mesh.geometry.dispose(); }
     snowballs.length = 0;
+    while (drops.length) removeDrop(drops.length - 1);
     villagesAwake.clear();
   }
   // Monstros aparecem de noite no mundo normal. No Criativo só andam por aí;
@@ -1778,6 +1783,58 @@
         scene.remove(b.mesh); b.mesh.geometry.dispose();
         snowballs.splice(i, 1);
       }
+    }
+  }
+  // Itens no chão (Sobrevivência): o bloco quebrado cai girando e você pega passando perto
+  const drops = [];
+  const dropGeo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+  const dropMats = new Map();
+  function dropMat(id) {
+    if (!dropMats.has(id)) {
+      const tex = new THREE.CanvasTexture(makeIcon({ id }));
+      tex.magFilter = tex.minFilter = THREE.NearestFilter;
+      const m = litMat(0xffffff);
+      m.map = tex;
+      dropMats.set(id, m);
+    }
+    return dropMats.get(id);
+  }
+  function dropItem(id, x, y, z) {
+    const mesh = new THREE.Mesh(dropGeo, dropMat(id));
+    scene.add(mesh);
+    drops.push({
+      id, mesh, pos: new THREE.Vector3(x, y, z), hw: 0.15, hh: 0.3, age: 0,
+      vel: new THREE.Vector3((Math.random() - 0.5) * 2, 4, (Math.random() - 0.5) * 2),
+    });
+  }
+  function removeDrop(i) {
+    scene.remove(drops[i].mesh);
+    drops.splice(i, 1);
+  }
+  function updateDrops(dt) {
+    for (let i = drops.length - 1; i >= 0; i--) {
+      const d = drops[i];
+      d.age += dt;
+      if (d.age > 300) { removeDrop(i); continue; }   // depois de 5 minutos some
+      const to = new THREE.Vector3(player.pos.x - d.pos.x, player.pos.y + 0.6 - d.pos.y, player.pos.z - d.pos.z);
+      const dist = to.length();
+      const canTake = d.age > 0.5 && fits(d.id);
+      if (canTake && dist < 0.9) { addItem(d.id); removeDrop(i); continue; }
+      if (canTake && dist < 2.5) {
+        // Perto de você, ele vem voando pra sua mão
+        d.pos.addScaledVector(to.normalize(), 7 * dt);
+        d.vel.set(0, 0, 0);
+      } else {
+        d.vel.y = Math.max(d.vel.y - GRAVITY * dt, -20);
+        moveBody(d, 'x', d.vel.x * dt);
+        moveBody(d, 'z', d.vel.z * dt);
+        if (moveBody(d, 'y', d.vel.y * dt)) {
+          if (d.vel.y < 0) { d.vel.x *= 0.5; d.vel.z *= 0.5; }
+          d.vel.y = 0;
+        }
+      }
+      d.mesh.position.set(d.pos.x, d.pos.y + 0.2 + Math.sin(d.age * 3) * 0.05, d.pos.z);
+      d.mesh.rotation.y = d.age * 2;
     }
   }
   // Quando você chega perto de uma vila, os aldeões e o golem de ferro aparecem
@@ -1892,6 +1949,7 @@
     updateArrows(dt);
     updateBlasts(dt);
     updateSnowballs(dt);
+    updateDrops(dt);
     for (let i = mobs.length - 1; i >= 0; i--) {
       const m = mobs[i], def = MOBS[m.type];
       if (m.dead) { removeMob(i); toast(`${def.name} derrotado! 💪`); continue; }
@@ -2142,6 +2200,11 @@
     if (!target) return;
     const { x, y, z } = target, id = getBlock(x, y, z);
     if (id === BEDROCK) return;
+    if (survival()) {
+      // A parte de cima da porta, da cama e do poste vira o item inteiro
+      const item = id === DOOR_TOP ? DOOR : id === BED_HEAD ? BED : id === LAMP_POST_TOP ? LAMP_POST : id;
+      if (item !== WATER && validItem(item) != null) dropItem(item, x + 0.5, y + 0.2, z + 0.5);
+    }
     setBlock(x, y, z, AIR);
     // A porta tem duas partes: some as duas juntas
     if (id === DOOR && getBlock(x, y + 1, z) === DOOR_TOP) setBlock(x, y + 1, z, AIR);
@@ -2283,7 +2346,7 @@
       return;
     }
     const id = hotbar[slot];
-    if (id == null) { toast('Escolha um bloco no 🎒'); return; }
+    if (id == null) { toast(survival() ? 'Quebre blocos pra pegar mais' : 'Escolha um bloco no 🎒'); return; }
     if (isTool(id)) return;   // arma não se coloca no chão
     if (isEgg(id)) {
       const type = eggType(id);
@@ -2292,6 +2355,7 @@
       m.kept = true;
       m.yaw = Math.atan2(player.pos.x - m.pos.x, player.pos.z - m.pos.z);
       swingHand();
+      useHeld();
       saveSoon();
       return;
     }
@@ -2318,6 +2382,7 @@
       setBlock(x, y, z, id, id === CAKE || id === NOTE ? 0 : m);
       if (id === PUMPKIN) buildGolem(x, y, z);
     }
+    useHeld();
     updateTarget();
   }
   // Abóbora em cima de 2 blocos de neve vira golem de neve; em cima de um T de bloco de ferro, golem de ferro
@@ -2475,6 +2540,12 @@
       el.classList.toggle('sel', i === slot);
       el.innerHTML = '';
       if (hotbar[i] != null) el.appendChild(makeIcon({ id: hotbar[i] }));
+      if (survival() && hotbar[i] != null && counts[i] > 1) {
+        const n = document.createElement('b');
+        n.className = 'count';
+        n.textContent = counts[i];
+        el.appendChild(n);
+      }
       const num = document.createElement('span');
       num.textContent = i + 1;
       el.appendChild(num);
@@ -2529,7 +2600,12 @@
   }
 
   function renderInventory() {
-    [...invTabs.children].forEach((b, i) => b.classList.toggle('on', i === invCat));
+    // No Sobrevivência os blocos vêm de quebrar: a mochila só tem armadura, espada e picareta
+    if (survival() && !CATEGORIES[invCat].armor) invCat = CATEGORIES.findIndex(cat => cat.armor);
+    [...invTabs.children].forEach((b, i) => {
+      b.classList.toggle('on', i === invCat);
+      b.style.display = survival() && !CATEGORIES[i].armor ? 'none' : '';
+    });
     const cat = CATEGORIES[invCat];
     invGrid.innerHTML = '';
     armorSide.style.display = cat.armor ? '' : 'none';
@@ -2576,11 +2652,39 @@
     }
   }
 
+  // Sobrevivência: o item vai pra barra completando as pilhas iguais e depois os espaços vazios
+  const fits = id => hotbar.some((h, i) => h == null || (h === id && counts[i] < stackMax(id)));
+  function addItem(id, n = 1) {
+    for (let i = 0; i < 9 && n > 0; i++) {
+      if (hotbar[i] !== id || counts[i] >= stackMax(id)) continue;
+      const k = Math.min(n, stackMax(id) - counts[i]);
+      counts[i] += k; n -= k;
+    }
+    for (let i = 0; i < 9 && n > 0; i++) {
+      if (hotbar[i] != null) continue;
+      hotbar[i] = id; counts[i] = Math.min(n, stackMax(id)); n -= counts[i];
+    }
+    renderHotbar();
+    saveSoon();
+    return n;   // o que não coube
+  }
+  // Sobrevivência: colocou o bloco, gasta um da mão
+  function useHeld() {
+    if (!survival()) return;
+    if (--counts[slot] <= 0) { hotbar[slot] = null; counts[slot] = 0; }
+    renderHotbar();
+    saveSoon();
+  }
+
   // Coloca o bloco na barra: no espaço escolhido se estiver vazio, senão no primeiro vazio
   function giveItem(id) {
+    if (survival()) {
+      toast(addItem(id) > 0 ? 'A barra está cheia' : itemName(id));
+      return;
+    }
     let i = hotbar[slot] == null ? slot : hotbar.indexOf(null);
     if (i < 0) i = slot;
-    hotbar[i] = id;
+    hotbar[i] = id; counts[i] = 1;
     slot = i;
     renderHotbar();
     toast(itemName(id));
@@ -2592,14 +2696,17 @@
     invEl.classList.toggle('hidden', !invOpen);
     if (!invOpen && document.activeElement && document.activeElement.blur) document.activeElement.blur();
     keys.clear();
-    if (invOpen) { renderInventory(); invName.textContent = 'Clique num item pra colocar na barra'; }
+    if (invOpen) {
+      renderInventory();
+      invName.textContent = survival() ? 'Blocos você consegue quebrando. Aqui tem armadura e armas' : 'Clique num item pra colocar na barra';
+    }
     // No controle com mouse, solta o cursor pra clicar nos itens e prende de novo ao fechar
     if (invOpen && locked()) document.exitPointerLock();
     if (!invOpen && playing) lockMouse();
   }
   $('inv-close').addEventListener('click', () => toggleInventory(false));
   $('inv-clear').addEventListener('click', () => {
-    hotbar = Array(9).fill(null);
+    hotbar = Array(9).fill(null); counts = Array(9).fill(0);
     renderHotbar();
     saveSoon();
   });
@@ -2747,7 +2854,7 @@
     settings = o; seed = o.seed;
     store = { chunks: {} };
     time = 0.05;
-    hotbar = Array(9).fill(null); armor = [-1, -1, -1, -1]; slot = 0;
+    hotbar = Array(9).fill(null); counts = Array(9).fill(0); armor = [-1, -1, -1, -1]; slot = 0;
     player.fly = false; player.yaw = 0;
     const [x, z] = findSpawnXZ();
     player.pos.set(x, H, z);
@@ -2768,6 +2875,9 @@
     time = typeof data.time === 'number' ? data.time : 0.05;
     hotbar = Array.isArray(data.hotbar) ? data.hotbar.slice(0, 9).map(validItem) : Array(9).fill(null);
     while (hotbar.length < 9) hotbar.push(null);
+    // Mundo salvo antes das pilhas: o que já estava na barra vem com a pilha cheia
+    const savedCounts = Array.isArray(data.counts) ? data.counts : [];
+    counts = hotbar.map((id, i) => (id == null ? 0 : Math.max(1, Math.min(stackMax(id), savedCounts[i] || stackMax(id)))));
     armor = Array.isArray(data.armor) ? data.armor.slice(0, 4).map(m => (ARMOR_MATS[m] ? m : -1)) : [-1, -1, -1, -1];
     slot = data.slot || 0;
     player.pos.set(data.p[0], data.p[1], data.p[2]);
@@ -3208,7 +3318,7 @@
 
   // Só pra testar: abrindo a página com #debug no endereço dá pra espiar o jogo pelo console
   if (location.hash === '#debug') {
-    window.mbDebug = { mobs, player, arrows, keys, setTime: t => { time = t; }, villagesNear, getBlock, setBlock, buildGolem, give: id => { hotbar[slot] = id; renderHotbar(); }, place: () => placeBlock(), look: (y, p) => { player.yaw = y; player.pitch = p; }, step: (n = 20) => { for (let i = 0; i < n; i++) update(0.05); } };
+    window.mbDebug = { mobs, player, arrows, keys, setTime: t => { time = t; }, villagesNear, getBlock, setBlock, buildGolem, give: id => { hotbar[slot] = id; counts[slot] = 1; renderHotbar(); }, inv: () => ({ hotbar: [...hotbar], counts: [...counts], drops: drops.length }), addItem, breakBlock, place: () => placeBlock(), look: (y, p) => { player.yaw = y; player.pitch = p; }, step: (n = 20) => { for (let i = 0; i < n; i++) update(0.05); } };
   }
 
   // ── Início ────────────────────────────────────────────────
