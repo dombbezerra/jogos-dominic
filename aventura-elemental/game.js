@@ -162,21 +162,55 @@
 
   // ── Conta: moedas, personagens, melhorias e usuário (continuam mesmo num jogo novo) ──
   const META_KEY = 'aventuraConta';
+  // Personagens de elemento, por raridade. O bônus de elemento vale pros tiros daquele elemento
+  const RARITY = {
+    raro:   { name: 'RARO',         color: '#7ddf64', price: 0 },
+    super:  { name: 'SUPER RARO',   color: '#5ccfff', price: 50 },
+    lenda:  { name: 'LENDÁRIO',     color: '#ffb02e', price: 100 },
+    divino: { name: 'DIVINO',       color: '#ff6ad5', price: 500 },
+    ultra:  { name: 'ULTRA DIVINO', color: '#ffffff', price: 1000 },
+  };
   const SKINS = [
-    { id: 'explorador', name: 'Explorador', price: 0,   hair: '#5a3214', skin: '#f2c18d', pants: '#3a2a5a' },
-    { id: 'ninja',      name: 'Ninja',      price: 15,  hair: '#1a1a1a', skin: '#f2c18d', pants: '#1a1a1a', mask: '#1a1a1a' },
-    { id: 'cavaleiro',  name: 'Cavaleiro',  price: 25,  hair: '#9aa0ad', skin: '#e8b98a', pants: '#5d5f6a', helmet: '#b8bcc8' },
-    { id: 'mago',       name: 'Mago',       price: 40,  hair: '#e8e8e8', skin: '#f2c18d', pants: '#3a1f5c', hat: '#5a2a9a' },
-    { id: 'pirata',     name: 'Pirata',     price: 60,  hair: '#2a1a0a', skin: '#d9a070', pants: '#6b4423', bandana: '#d62828' },
-    { id: 'robo',       name: 'Robô',       price: 100, hair: '#7d8a99', skin: '#b8c4d0', pants: '#4a5566', robot: true },
+    { id: 'gotinha',    name: 'Gotinha',        rar: 'raro',   elem: 'agua', hair: '#2a7fd6', skin: '#f2c18d', pants: '#1a4f80', b: { dmgElem: 1 } },
+    { id: 'faisca',     name: 'Faísca',         rar: 'raro',   elem: 'fogo', hair: '#d64a1a', skin: '#f2c18d', pants: '#6b2a10', b: { dmgElem: 1 } },
+    { id: 'floco',      name: 'Floco',          rar: 'raro',   elem: 'gelo', hair: '#dff6ff', skin: '#f6d2b0', pants: '#3a7fa0', b: { dmgElem: 1 } },
+    { id: 'mare',       name: 'Maré',           rar: 'super',  elem: 'agua', hair: '#1a5fb0', skin: '#e8b98a', pants: '#123a66', b: { dmgElem: 1, hp: 1 } },
+    { id: 'chama',      name: 'Chama',          rar: 'super',  elem: 'fogo', hair: '#ff3a1a', skin: '#e8b98a', pants: '#4a1a0a', b: { dmgElem: 1, hp: 1 } },
+    { id: 'trovao',     name: 'Trovão',         rar: 'super',  elem: 'raio', hair: '#f5d000', skin: '#f2c18d', pants: '#3a3a5a', b: { dmgElem: 1, hp: 1 } },
+    { id: 'tsunami',    name: 'Tsunami',        rar: 'lenda',  elem: 'agua', hair: '#0f4fa0', skin: '#d9a070', pants: '#0a2a50', b: { dmgElem: 2, hp: 1, speed: 0.1 } },
+    { id: 'vulcao',     name: 'Vulcão',         rar: 'lenda',  elem: 'fogo', hair: '#2a1a1a', skin: '#d9a070', pants: '#5a1a0a', b: { dmgElem: 2, hp: 1, speed: 0.1 } },
+    { id: 'nevasca',    name: 'Nevasca',        rar: 'lenda',  elem: 'gelo', hair: '#ffffff', skin: '#f6d2b0', pants: '#2a5f80', b: { dmgElem: 2, hp: 1, speed: 0.1 } },
+    { id: 'tempestade', name: 'Tempestade',     rar: 'lenda',  elem: 'raio', hair: '#4a4a6a', skin: '#e8b98a', pants: '#2a2a40', b: { dmgElem: 2, hp: 1, speed: 0.1 } },
+    { id: 'reimar',     name: 'Rei dos Mares',  rar: 'divino', elem: 'agua', hair: '#9fe0ff', skin: '#f2c18d', pants: '#0a3a80', b: { dmgAll: 2, hp: 2, speed: 0.2, rate: 0.25, pierce: true } },
+    { id: 'fenix',      name: 'Fênix',          rar: 'divino', elem: 'fogo', hair: '#ffb02e', skin: '#f2c18d', pants: '#8a1a0a', b: { dmgAll: 2, hp: 2, speed: 0.2, rate: 0.25, pierce: true } },
+    { id: 'dragaogelo', name: 'Dragão de Gelo', rar: 'divino', elem: 'gelo', hair: '#5fb6d6', skin: '#dff6ff', pants: '#1a4a6a', b: { dmgAll: 2, hp: 2, speed: 0.2, rate: 0.25, pierce: true } },
+    { id: 'zeus',       name: 'Zeus',           rar: 'divino', elem: 'raio', hair: '#f0f0f0', skin: '#e8b98a', pants: '#5a4a00', b: { dmgAll: 2, hp: 2, speed: 0.2, rate: 0.25, pierce: true } },
+    { id: 'supremo',    name: 'Supremo Elemental', rar: 'ultra', elem: 'all', hair: '#ffffff', skin: '#f2c18d', pants: '#2a1a4a', b: { dmgAll: 3, hp: 3, speed: 0.25, rate: 0.4, pierce: true, triple: true } },
   ];
+  // Visuais antigos (Ninja, Cavaleiro...) foram trocados: quem comprou recebe as moedas de volta
+  const OLD_SKINS = { ninja: 15, cavaleiro: 25, mago: 40, pirata: 60, robo: 100 };
+  const FREE_SKINS = SKINS.filter(s => RARITY[s.rar].price === 0).map(s => s.id);
+  const priceOf = s => RARITY[s.rar].price;
+  const ELEM_NAME = { agua: 'ÁGUA', fogo: 'FOGO', gelo: 'GELO', raio: 'RAIO', all: 'TODOS' };
+  // Lista dos poderes pra mostrar no cartão do personagem
+  function perks(s) {
+    const b = s.b, out = [];
+    if (b.dmgElem) out.push(`+${b.dmgElem} dano de ${ELEM_NAME[s.elem]}`);
+    if (b.dmgAll) out.push(`+${b.dmgAll} dano em tudo`);
+    if (b.hp) out.push(`+${b.hp} ❤`);
+    if (b.speed) out.push(`+${Math.round(b.speed * 100)}% velocidade`);
+    if (b.rate) out.push(`Atira ${Math.round(b.rate * 100)}% mais rápido`);
+    if (b.pierce) out.push('Tiro atravessa inimigos');
+    if (b.triple) out.push('Tiro triplo');
+    return out;
+  }
   const UPGRADES = [
     { id: 'vida',   name: '+1 Coração',    icon: '❤️', desc: 'Começa com mais vida',     prices: [15, 30, 45] },
     { id: 'forca',  name: 'Tiro Forte',    icon: '💥', desc: '+1 de dano em todo tiro',  prices: [30, 60] },
     { id: 'rapido', name: 'Tiro Rápido',   icon: '⚡', desc: 'Atira mais vezes',          prices: [20, 40] },
     { id: 'veloz',  name: 'Botas Velozes', icon: '👟', desc: 'Anda mais rápido',          prices: [20, 40] },
   ];
-  const meta = { coins: 0, skins: ['explorador'], skin: 'explorador', up: { vida: 0, forca: 0, rapido: 0, veloz: 0 }, user: null };
+  const meta = { coins: 0, skins: FREE_SKINS.slice(), skin: 'gotinha', up: { vida: 0, forca: 0, rapido: 0, veloz: 0 }, user: null };
   let chestHearts = 0;   // corações ganhos nos baús desta aventura
   function loadMeta() {
     let m = null;
@@ -188,20 +222,30 @@
       return;
     }
     meta.coins = m.coins || 0;
-    meta.skins = Array.isArray(m.skins) && m.skins.length ? m.skins : ['explorador'];
-    meta.skin = SKINS.some(s => s.id === m.skin) ? m.skin : 'explorador';
+    const owned = Array.isArray(m.skins) ? m.skins : [];
+    let refund = 0;
+    for (const id of owned) if (OLD_SKINS[id]) refund += OLD_SKINS[id];
+    meta.coins += refund;
+    meta.skins = [...new Set([...FREE_SKINS, ...owned.filter(id => SKINS.some(s => s.id === id))])];
+    meta.skin = SKINS.some(s => s.id === m.skin) ? m.skin : 'gotinha';
     for (const u of UPGRADES) meta.up[u.id] = Math.min(u.prices.length, (m.up && m.up[u.id]) || 0);
     meta.user = m.user || null;
+    if (refund) writeMeta();   // devolve uma vez só
   }
   function writeMeta() {
     try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch (e) { /* sem salvar */ }
   }
   const skinOf = id => SKINS.find(s => s.id === id) || SKINS[0];
   // Vida máxima, dano, recarga e velocidade com as melhorias da loja
-  const maxHpNow = () => 5 + chestHearts + meta.up.vida;
-  const dmgOf = elem => ELEMS[elem].dmg + meta.up.forca;
-  const cdOf = elem => Math.round(ELEMS[elem].cd * (1 - 0.2 * meta.up.rapido));
-  const walkSpeed = () => 1.35 * (1 + 0.12 * meta.up.veloz);
+  const charB = () => skinOf(meta.skin).b;
+  const maxHpNow = () => 5 + chestHearts + meta.up.vida + (charB().hp || 0);
+  const dmgOf = elem => {
+    const c = skinOf(meta.skin), b = c.b;
+    const own = b.dmgElem && (c.elem === elem || c.elem === 'all') ? b.dmgElem : 0;
+    return ELEMS[elem].dmg + meta.up.forca + (b.dmgAll || 0) + own;
+  };
+  const cdOf = elem => Math.max(6, Math.round(ELEMS[elem].cd * (1 - 0.2 * meta.up.rapido) * (1 - (charB().rate || 0))));
+  const walkSpeed = () => 1.35 * (1 + 0.12 * meta.up.veloz) * (1 + (charB().speed || 0));
 
   function loadSave() {
     try { save = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { save = null; }
@@ -394,10 +438,16 @@
     if (player.cd > 0) return;
     const el = ELEMS[player.elem];
     player.cd = cdOf(player.elem);
-    shots.push({
-      x: player.x + player.dx * 8, y: player.y + player.dy * 8,
-      vx: player.dx * el.speed, vy: player.dy * el.speed, elem: player.elem, life: 70,
-    });
+    const b = charB();
+    // Tiro triplo do Ultra Divino: um reto e dois abertos
+    for (const ang of b.triple ? [0, -0.28, 0.28] : [0]) {
+      const c = Math.cos(ang), sn = Math.sin(ang);
+      const vx = player.dx * c - player.dy * sn, vy = player.dx * sn + player.dy * c;
+      shots.push({
+        x: player.x + player.dx * 8, y: player.y + player.dy * 8,
+        vx: vx * el.speed, vy: vy * el.speed, elem: player.elem, life: 70, pierce: !!b.pierce,
+      });
+    }
     beep({ agua: 520, fogo: 300, gelo: 880, raio: 1200 }[player.elem], 0.06, player.elem === 'raio' ? 'square' : 'triangle');
   }
 
@@ -410,7 +460,16 @@
         if (s.elem === 'gelo' && ch === '~') { freeze(tx, ty); s.life = 0; continue; }
         if (SHOT_WALL.has(ch)) { hitTile(s, tx, ty, ch); s.life = 0; continue; }
         for (const e of enemies) {
-          if (Math.abs(e.x - s.x) < 8 && Math.abs(e.y - s.y) < 8) { damageEnemy(e, s); s.life = 0; break; }
+          if (e.dead || Math.abs(e.x - s.x) >= 8 || Math.abs(e.y - s.y) >= 8) continue;
+          // Tiro que atravessa acerta cada inimigo uma vez só e segue em frente
+          if (s.pierce) {
+            s.hits = s.hits || new Set();
+            if (s.hits.has(e)) continue;
+            s.hits.add(e);
+            damageEnemy(e, s);
+            continue;
+          }
+          damageEnemy(e, s); s.life = 0; break;
         }
         if (boss && s.life > 0 && Math.abs(boss.x - s.x) < 16 && Math.abs(boss.y - s.y) < 16) {
           boss.hp -= dmgOf(s.elem); boss.hurt = 8; s.life = 0;
@@ -735,26 +794,44 @@
 
   // Herói com o visual escolhido; a roupa tem a cor do elemento que está usando.
   // Também desenha a prévia do menu (g é o contexto do canvas que vai receber o desenho)
+  const RAINBOW = ['#ff4a4a', '#ffb02e', '#ffe94a', '#7ddf64', '#5ccfff', '#b06cff'];
+  const rainbow = k => RAINBOW[(Math.floor(frame / 6) + k) % RAINBOW.length];
   function drawHero(g, x, y, skinId, elem, dx, dy, step) {
-    const s = skinOf(skinId), el = ELEMS[elem];
+    const s = skinOf(skinId), el = ELEMS[elem], rar = s.rar;
     const p = (a, b, w, h, c) => { g.fillStyle = c; g.fillRect(a, b, w, h); };
+    const ultra = rar === 'ultra';
+    const mine = ultra ? null : ELEMS[s.elem];           // cor do elemento do personagem
+    const hair = ultra ? rainbow(0) : s.hair;
     p(x - 5, y + 6, 10, 2, 'rgba(0,0,0,0.25)');
+    // Capa (lendário pra cima), atrás do corpo
+    if (rar === 'lenda' || rar === 'divino' || ultra) {
+      const cape = ultra ? rainbow(2) : rar === 'divino' ? '#ffd23a' : mine.dark;
+      p(x - 6, y - 3, 12, 9, cape);
+      if (dy < 0) p(x - 5, y - 3, 10, 9, cape);
+    }
     p(x - 4, y + 3, 3, 4 - step, s.pants); p(x + 1, y + 3, 3, 3 + step, s.pants);   // pernas
-    p(x - 5, y - 3, 10, 7, el.color); p(x - 5, y + 2, 10, 1, el.dark);             // roupa
-    if (s.robot) { p(x - 5, y - 3, 10, 2, s.hair); p(x - 1, y - 1, 2, 2, '#ff3030'); }
+    if (dy >= 0 || !(rar === 'lenda' || rar === 'divino' || ultra)) {
+      p(x - 5, y - 3, 10, 7, el.color); p(x - 5, y + 2, 10, 1, el.dark);           // roupa da cor do tiro
+    }
     p(x - 4, y - 9, 8, 6, s.skin);                                                  // rosto
-    p(x - 5, y - 10, 10, 3, s.hair);                                                // cabelo
-    if (s.helmet) { p(x - 5, y - 11, 10, 4, s.helmet); p(x - 5, y - 9, 1, 4, s.helmet); p(x + 4, y - 9, 1, 4, s.helmet); }
-    if (s.hat) { p(x - 6, y - 11, 12, 2, s.hat); p(x - 3, y - 15, 6, 4, s.hat); p(x - 1, y - 17, 3, 2, s.hat); p(x + 2, y - 14, 1, 1, '#ffd23a'); }
-    if (s.bandana) { p(x - 5, y - 10, 10, 2, s.bandana); p(dx < 0 ? x + 5 : x - 7, y - 9, 2, 3, s.bandana); }
-    if (s.robot) { p(x - 1, y - 13, 2, 3, s.hair); p(x - 2, y - 14, 4, 1, '#ff3030'); }
-    if (dy < 0) p(x - 4, y - 9, 8, 4, s.hair);
+    p(x - 5, y - 10, 10, 3, hair);                                                  // cabelo
+    if (dy < 0) p(x - 4, y - 9, 8, 4, hair);
     else {
-      const eye = s.robot ? '#5ccfff' : '#000';
-      if (dx > 0) { p(x + 1, y - 7, 1, 2, eye); p(x + 3, y - 7, 1, 2, eye); }
-      else if (dx < 0) { p(x - 4, y - 7, 1, 2, eye); p(x - 2, y - 7, 1, 2, eye); }
-      else { p(x - 3, y - 7, 1, 2, eye); p(x + 2, y - 7, 1, 2, eye); }
-      if (s.mask) p(x - 4, y - 5, 8, 2, s.mask);   // máscara do ninja
+      if (dx > 0) { p(x + 1, y - 7, 1, 2, '#000'); p(x + 3, y - 7, 1, 2, '#000'); }
+      else if (dx < 0) { p(x - 4, y - 7, 1, 2, '#000'); p(x - 2, y - 7, 1, 2, '#000'); }
+      else { p(x - 3, y - 7, 1, 2, '#000'); p(x + 2, y - 7, 1, 2, '#000'); }
+    }
+    // Faixa na testa (super raro e lendário)
+    if (rar === 'super' || rar === 'lenda') p(x - 5, y - 9, 10, 1, mine.color);
+    // Auréola (divino dourada, ultra divino arco-íris)
+    if (rar === 'divino' || ultra) {
+      const halo = ultra ? rainbow(4) : '#ffe94a';
+      p(x - 4, y - 14, 8, 1, halo); p(x - 5, y - 13, 1, 1, halo); p(x + 4, y - 13, 1, 1, halo);
+    }
+    // Brilhinhos em volta do ultra divino
+    if (ultra) for (let i = 0; i < 3; i++) {
+      const a = frame / 12 + i * 2.1;
+      p(Math.round(x + Math.cos(a) * 9), Math.round(y - 3 + Math.sin(a) * 9), 1, 1, rainbow(i * 2));
     }
     // Cajado com a ponta da cor do elemento
     const sx = x + (dx < 0 ? -7 : 6), sy = y - 2;
@@ -917,20 +994,29 @@
   function renderSkins() {
     const grid = $('skin-grid');
     grid.innerHTML = '';
-    for (const s of SKINS) {
-      const have = meta.skins.includes(s.id), on = meta.skin === s.id;
-      const c = el('canvas'); c.width = c.height = 32;
-      heroCanvas(c, s.id, player.elem);
-      const btn = el('button', on ? 'USANDO' : have ? 'USAR' : '● ' + s.price, on ? 'cyan' : have ? 'green' : 'orange');
-      btn.disabled = on || (!have && meta.coins < s.price);
-      btn.addEventListener('click', () => {
-        if (!have) { meta.coins -= s.price; meta.skins.push(s.id); }
-        meta.skin = s.id;
-        writeMeta(); renderMenu();
-      });
-      const d = card(on);
-      d.append(c, el('b', s.name), el('small', have ? 'Seu' : 'Custa ' + s.price + ' moedas'), btn);
-      grid.appendChild(d);
+    for (const r of Object.keys(RARITY)) {
+      const R = RARITY[r];
+      const head = el('div', R.name + (R.price ? ' · ● ' + R.price : ' · GRÁTIS'), 'rar-head rar-' + r);
+      grid.appendChild(head);
+      for (const s of SKINS.filter(c => c.rar === r)) {
+        const have = meta.skins.includes(s.id), on = meta.skin === s.id, price = priceOf(s);
+        const c = el('canvas'); c.width = c.height = 32;
+        heroCanvas(c, s.id, s.elem === 'all' ? player.elem : s.elem);
+        const btn = el('button', on ? 'USANDO' : have ? 'USAR' : '● ' + price, on ? 'cyan' : have ? 'green' : 'orange');
+        btn.disabled = on || (!have && meta.coins < price);
+        btn.addEventListener('click', () => {
+          if (!have) { meta.coins -= price; meta.skins.push(s.id); }
+          meta.skin = s.id;
+          if (started) { player.maxHp = maxHpNow(); player.hp = Math.min(player.hp, player.maxHp); }
+          writeMeta(); renderMenu();
+        });
+        const d = card(on);
+        d.classList.add('rar-' + r);
+        const list = el('ul', null, 'perks');
+        for (const t of perks(s)) list.appendChild(el('li', t));
+        d.append(el('span', R.name, 'rar-tag'), c, el('b', s.name), el('small', 'Elemento: ' + ELEM_NAME[s.elem]), list, btn);
+        grid.appendChild(d);
+      }
     }
   }
 
@@ -1109,5 +1195,5 @@
   setState('title');
 
   // Só pra testar pelo console: abrir com #debug
-  if (location.hash === '#debug') window.av = { player, meta, showPage, setState, get room() { return roomKey; }, get state() { return state; }, get enemies() { return enemies; }, get boss() { return boss; }, enterRoom, newGame, keys, tileAt, update, swapElem, fire };
+  if (location.hash === '#debug') window.av = { player, meta, showPage, setState, get room() { return roomKey; }, get state() { return state; }, get enemies() { return enemies; }, get boss() { return boss; }, get shots() { return shots; }, enterRoom, newGame, keys, tileAt, update, swapElem, fire };
 })();
