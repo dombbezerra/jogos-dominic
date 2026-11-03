@@ -67,16 +67,22 @@
     /* ── Controles de toque ── */
     #touch { position: fixed; inset: 0; pointer-events: none; z-index: 20; display: none; }
     body.touch #touch { display: block; }
-    #stick-zone { position: absolute; left: 0; top: 0; bottom: 0; width: 50%; pointer-events: auto; }
-    #stick {
-      position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px;
-      border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.35); background: rgba(0, 0, 0, 0.25);
-      display: none;
+    .tbtn.arrow {
+      bottom: calc(env(safe-area-inset-bottom) + 28px); width: 78px; height: 78px;
+      background: rgba(255, 255, 255, 0.55); font-size: 30px; border-radius: 18px;
     }
-    #stick-knob {
-      position: absolute; left: 50%; top: 50%; width: 50px; height: 50px; margin: -25px 0 0 -25px;
-      border-radius: 50%; background: rgba(255, 255, 255, 0.55);
+    #btn-left { left: calc(env(safe-area-inset-left) + 18px); }
+    #btn-right { left: calc(env(safe-area-inset-left) + 108px); }
+    #keys-help {
+      position: fixed; left: calc(env(safe-area-inset-left) + 8px); bottom: calc(env(safe-area-inset-bottom) + 8px); z-index: 30;
+      background: rgba(0, 0, 0, 0.7); border: 2px solid #ffcc33; border-radius: 6px; padding: 6px 9px;
+      font-size: 12px; line-height: 1.7; color: #fff; pointer-events: none;
     }
+    #keys-help kbd {
+      display: inline-block; min-width: 20px; padding: 0 5px; margin-right: 4px; border: 2px solid #ffcc33; border-bottom-width: 3px;
+      border-radius: 4px; background: #241a52; font-family: inherit; font-size: 11px; text-align: center; color: #ffcc33;
+    }
+    body.in-menu #keys-help, body.touch #keys-help { display: none; }
     .tbtn {
       position: absolute; pointer-events: auto; border-radius: 50%;
       border: 4px solid #000; font-family: inherit; font-weight: bold; color: #000;
@@ -84,9 +90,13 @@
       box-shadow: 0 4px 0 rgba(0, 0, 0, 0.5);
     }
     .tbtn.on { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5); filter: brightness(1.3); }
+    #btn-jump {
+      right: calc(env(safe-area-inset-right) + 20px); bottom: calc(env(safe-area-inset-bottom) + 28px);
+      width: 96px; height: 96px; background: #2fd15a; color: #fff; font-size: 15px;
+    }
     #btn-attack {
-      right: calc(env(safe-area-inset-right) + 24px); bottom: calc(env(safe-area-inset-bottom) + 30px);
-      width: 96px; height: 96px; background: #ffcc33; font-size: 15px;
+      right: calc(env(safe-area-inset-right) + 126px); bottom: calc(env(safe-area-inset-bottom) + 20px);
+      width: 78px; height: 78px; background: #ffcc33; font-size: 13px;
     }
     #menu-btn {
       position: fixed;
@@ -167,6 +177,17 @@
       .friends { position: static; width: auto; margin: 22px 0 4px; }
       #friends-list { min-height: 28px; max-height: 80px; }
     }
+    .help-btn { margin-top: 12px; min-width: 160px; padding: 9px 10px; }
+    .help { display: flex; flex-direction: column; gap: 10px; text-align: left; margin-bottom: 14px; }
+    .help-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+    .help-box { background: rgba(20, 14, 50, 0.85); border: 2px solid #4a3a8a; border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.5; }
+    .help-box h3 { color: #f5c518; font-size: 15px; margin-bottom: 4px; }
+    .help-box ul { list-style: none; }
+    .help-box li { margin: 3px 0; }
+    kbd { display: inline-block; min-width: 18px; padding: 0 5px; border: 2px solid #8a7ab0; border-bottom-width: 3px; border-radius: 4px; background: #241a52; font-family: inherit; font-size: 11px; text-align: center; }
+    .dot { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 11px; font-weight: bold; color: #10101a; }
+    .dot.green { background: #2fd15a; color: #fff; } .dot.yellow { background: #ffcc33; } .dot.blue { background: #66ccff; } .dot.white { background: #fff; }
+    .c-agua { color: #3cb4ff; } .c-fogo { color: #ff6a2a; } .c-gelo { color: #bff2ff; } .c-raio { color: #ffe94a; }
     .page { display: none; }
     .page.on { display: block; }
     h1 { margin: 14px 0 6px; line-height: 1; }
@@ -231,8 +252,8 @@
     #u-msg.err { color: #ff6a6a; } #u-msg.ok { color: #2fd15a; }
 
     #btn-swap {
-      right: calc(env(safe-area-inset-right) + 132px); bottom: calc(env(safe-area-inset-bottom) + 24px);
-      width: 66px; height: 66px; background: #66ccff; font-size: 12px;
+      right: calc(env(safe-area-inset-right) + 132px); bottom: calc(env(safe-area-inset-bottom) + 110px);
+      width: 62px; height: 62px; background: #66ccff; font-size: 11px;
     }
   </style>
 </head>
@@ -243,10 +264,21 @@
 
   <button id="menu-btn" title="Menu">☰</button>
 
+  <!-- Quadrinho com os controles no canto (computador) -->
+  <div id="keys-help">
+    <div><kbd>←</kbd> pra trás</div>
+    <div><kbd>→</kbd> pra frente</div>
+    <div><kbd>Espaço</kbd> pular</div>
+    <div><kbd>J</kbd> atirar</div>
+    <div><kbd>Q</kbd> trocar elemento</div>
+  </div>
+
   <div id="touch">
-    <div id="stick-zone"><div id="stick"><div id="stick-knob"></div></div></div>
+    <button class="tbtn arrow" id="btn-left">◀</button>
+    <button class="tbtn arrow" id="btn-right">▶</button>
     <button class="tbtn" id="btn-swap">TROCAR</button>
     <button class="tbtn" id="btn-attack">ATACAR</button>
+    <button class="tbtn" id="btn-jump">PULAR</button>
   </div>
 
   <!-- Tela inicial no estilo da Luta Elemental -->
@@ -272,6 +304,7 @@
           <button class="mbtn green big" id="m-play">JOGAR</button>
           <button class="mbtn purple" data-go="user">USUÁRIO</button>
         </div>
+        <button class="mbtn yellow help-btn" data-go="help">❓ COMO JOGAR</button>
       </div>
 
       <div class="page" id="page-skins">
@@ -287,6 +320,56 @@
         <button class="mbtn yellow back" data-go="main">◀ VOLTAR</button>
       </div>
 
+      <div class="page" id="page-help">
+        <h2>COMO JOGAR</h2>
+        <div class="help">
+          <div class="help-box">
+            <h3>🎯 O objetivo</h3>
+            <p>Atravesse as <b>5 fases</b> até a <b>bandeira verde</b> do final. Em cada fase você ganha um <b>orbe</b> com um poder novo. Na última, derrote o <b>Rei Sombrio</b>!</p>
+          </div>
+          <div class="help-cols">
+            <div class="help-box">
+              <h3>💻 No computador</h3>
+              <ul>
+                <li><kbd>←</kbd> <kbd>→</kbd> ou <kbd>A</kbd> <kbd>D</kbd> — andar</li>
+                <li><kbd>Espaço</kbd> ou <kbd>↑</kbd> — pular (segure pra pular mais alto)</li>
+                <li><kbd>J</kbd> ou clique do mouse — atirar</li>
+                <li><kbd>Q</kbd> — trocar o elemento</li>
+                <li><kbd>☰</kbd> no canto — voltar pro menu</li>
+              </ul>
+            </div>
+            <div class="help-box">
+              <h3>📱 No celular</h3>
+              <ul>
+                <li><span class="dot white">◀</span> <span class="dot white">▶</span> — andar pra trás e pra frente</li>
+                <li><span class="dot green">PULAR</span> — pular</li>
+                <li><span class="dot yellow">ATACAR</span> — atirar (pode segurar)</li>
+                <li><span class="dot blue">TROCAR</span> — trocar o elemento</li>
+              </ul>
+            </div>
+          </div>
+          <div class="help-box">
+            <h3>✨ Os elementos</h3>
+            <ul>
+              <li><b class="c-agua">💧 ÁGUA</b> — o tiro normal, você já começa com ele</li>
+              <li><b class="c-fogo">🔥 FOGO</b> — queima os <b>arbustos</b> que fecham o caminho</li>
+              <li><b class="c-gelo">❄️ GELO</b> — a bola cai num arco: jogue na <b>água</b> pra fazer uma ponte de gelo</li>
+              <li><b class="c-raio">⚡ RAIO</b> — quebra as <b>pedras rachadas</b></li>
+            </ul>
+          </div>
+          <div class="help-box">
+            <h3>💡 Dicas</h3>
+            <ul>
+              <li><b>Pule na cabeça</b> dos inimigos pra derrotar</li>
+              <li>Bata a cabeça nos blocos <b>?</b> pra ganhar Gemas, e no bloco de <b>coração</b> pra ganhar +1 coração</li>
+              <li>A <b>bandeirinha vermelha</b> no meio da fase é o checkpoint: se cair, volta dali</li>
+              <li>Com as Gemas você compra <b>personagens</b> e <b>melhorias</b> na loja</li>
+            </ul>
+          </div>
+        </div>
+        <button class="mbtn green" id="help-ok">ENTENDI!</button>
+      </div>
+
       <div class="page" id="page-user">
         <h2>USUÁRIO</h2>
         <form id="user-form" autocomplete="on" novalidate>
@@ -300,6 +383,6 @@
     </div>
   </div>
 
-  <script src="game.js?v=9"></script>
+  <script src="game.js?v=12"></script>
 </body>
 </html>
