@@ -966,6 +966,7 @@
   function renderMenu() {
     $('m-coins').textContent = meta.coins;
     $('m-user').textContent = meta.user ? '👤 ' + meta.user.nome : '';
+    renderFriends();
     if (menuPage === 'main') {
       heroCanvas($('hero'), meta.skin, player.elem, HERO_DIRS[heroTurn % 4]);
       $('m-skin').textContent = skinOf(meta.skin).name.toUpperCase();
@@ -1041,10 +1042,16 @@
 
   // Usuário: e-mail e nome, guardados neste aparelho e no servidor do site
   const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  let playAfterUser = false;   // veio do JOGAR sem usuário: depois de salvar, já começa
   function renderUser() {
     $('u-email').value = meta.user ? meta.user.email : '';
     $('u-name').value = meta.user ? meta.user.nome : '';
-    $('u-msg').textContent = ''; $('u-msg').className = '';
+    $('u-msg').textContent = playAfterUser ? 'Coloque seu usuário pra ficar online e jogar!' : '';
+    $('u-msg').className = '';
+  }
+  function startPlaying() {
+    if (started) setState('play');
+    else { loadSave(); newGame(!!save); }
   }
   $('user-form').addEventListener('submit', async e => {
     e.preventDefault();
@@ -1064,12 +1071,29 @@
       msg.textContent = 'Salvo neste aparelho. O servidor não respondeu agora; tenta de novo mais tarde.'; msg.className = 'err';
     }
     $('m-user').textContent = '👤 ' + nome;
+    renderFriends();
+    if (playAfterUser) {
+      playAfterUser = false;
+      setTimeout(() => { showPage('main'); startPlaying(); }, 1200);
+    }
   });
 
+  // Sem usuário não fica online: o JOGAR leva antes pra tela de usuário
   $('m-play').addEventListener('click', () => {
-    if (started) setState('play');
-    else { loadSave(); newGame(!!save); }
+    if (!meta.user) { playAfterUser = true; showPage('user'); return; }
+    startPlaying();
   });
+
+  // Caixa de amigos: por enquanto só avisa quem ainda não tem usuário
+  function renderFriends() {
+    const list = $('friends-list');
+    list.innerHTML = '';
+    if (!meta.user) {
+      const li = el('li', 'Coloque seu usuário pra ficar online', 'friends-hint');
+      li.addEventListener('click', () => showPage('user'));
+      list.appendChild(li);
+    }
+  }
   $('menu-btn').addEventListener('click', () => {
     if (state !== 'play' && state !== 'win') return;
     if (state === 'win') state = 'play';
