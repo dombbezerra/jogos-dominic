@@ -1292,7 +1292,7 @@
   });
 
   // Código secreto de presente: cada código vale uma vez por aparelho
-  const GIFT_CODES = { DOMINIC1000: { gems: 1000, coins: 100 } };
+  const GIFT_CODES = { DOMINIC100: { gems: 100, coins: 100 } };
   $('code-form').addEventListener('submit', e => {
     e.preventDefault();
     const code = $('code').value.trim().toUpperCase().replace(/\s+/g, ''), msg = $('code-msg');
