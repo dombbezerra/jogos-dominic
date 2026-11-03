@@ -1668,6 +1668,8 @@
       hw: def.hw, hh: def.hh, hp: def.hp, yaw: Math.random() * Math.PI * 2,
       timer: Math.random() * 2, walking: false, walk: 0, hurt: 0, flee: 0, onGround: false,
     };
+    // Bicho largo (como o golem) pode nascer encostado num degrau e ficar preso: sobe até ficar livre
+    for (let k = 0; k < 4 && collides(m.pos, m.hw, m.hh); k++) m.pos.y += 1;
     m.group.position.copy(m.pos);
     scene.add(m.group);
     mobs.push(m);
@@ -1961,6 +1963,22 @@
             if (d < best) { best = d; foe = o; }
           }
           m.attack = (m.attack || 0) - dt;
+          // Golem da vila bravo: esquece os monstros e vem atrás de você
+          if (m.angry > 0) {
+            m.angry -= dt;
+            const pdx = player.pos.x - m.pos.x, pdz = player.pos.z - m.pos.z, dist = Math.hypot(pdx, pdz);
+            if (dist > 24 || !monstersAttack()) m.angry = 0;
+            else {
+              foe = null;
+              m.yaw = Math.atan2(pdx, pdz);
+              sp = dist > 1.8 ? def.speed * 1.8 : 0;
+              if (dist < 2.4 && Math.abs(player.pos.y - m.pos.y) < 2.5 && m.attack <= 0) {
+                m.attack = 1.2; m.swing = 0.35;
+                hurtPlayer(14, m.pos);
+                if (!player.fly) player.vel.y = 11;   // o golem joga você pro alto
+              }
+            }
+          }
           if (foe) {
             m.yaw = Math.atan2(foe.pos.x - m.pos.x, foe.pos.z - m.pos.z);
             if (def.guard === 'iron') {
@@ -2107,6 +2125,12 @@
     m.yaw = Math.atan2(away.x, away.z);
     if (!def.fly) m.vel.y = 5;
     if (def.hostile) { m.flee = 0; m.angry = true; m.fuse = 0; }   // monstro não foge; enderman fica bravo
+    if (def.guard) m.flee = 0;   // golem não foge
+    // Bateu no golem da vila ou num aldeão: o golem da vila fica bravo com você.
+    // O golem que você construiu nunca te ataca.
+    if (m.home && (m.type === 'golem' || m.type === 'aldeao')) {
+      for (const g of mobs) if (g.type === 'golem' && g.home === m.home) g.angry = 30;
+    }
     if (m.hp <= 0) { removeMob(i); toast(def.hostile ? `${def.name} derrotado! 💪` : `${def.name} sumiu! 💨`); }
     return true;
   }
