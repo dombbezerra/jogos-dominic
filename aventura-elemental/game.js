@@ -1050,7 +1050,7 @@
     e.preventDefault();
     const email = $('u-email').value.trim().toLowerCase(), nome = $('u-name').value.trim().slice(0, 40);
     const msg = $('u-msg');
-    if (!EMAIL_OK.test(email)) { msg.textContent = 'Esse e-mail não parece certo. Confira o @ e o final (ex: gmail.com).'; msg.className = 'err'; return; }
+    if (!EMAIL_OK.test(email)) { msg.textContent = 'E-mail errado. O @ fica no meio, assim: seunome@gmail.com'; msg.className = 'err'; return; }
     if (!nome) { msg.textContent = 'Escreva o nome como você quer ficar.'; msg.className = 'err'; return; }
     msg.textContent = 'Salvando...'; msg.className = '';
     meta.user = { email, nome };
