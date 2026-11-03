@@ -210,16 +210,6 @@
       max-width: 240px; background: rgba(20, 20, 40, 0.95); border: 2px solid #ffcc00; border-radius: 10px;
       padding: 8px 12px; font-size: 13px; display: none;
     }
-    .notify {
-      z-index: 1; margin-top: 36px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
-    }
-    .notify button {
-      background: linear-gradient(90deg, #ffcc00, #ff9a2e); color: #0a0a1a; border: none; border-radius: 30px;
-      padding: 12px 22px; font-weight: bold; font-size: 15px; letter-spacing: 1px; cursor: pointer;
-      box-shadow: 0 6px 20px rgba(255, 204, 0, 0.3);
-    }
-    .notify button:disabled { opacity: 0.7; cursor: default; }
-    .notify p { font-size: 13px; opacity: 0.75; max-width: 420px; line-height: 1.5; }
     footer {
       margin-top: 50px;
       opacity: 0.5;
@@ -322,11 +312,6 @@
     </a>
   </div>
 
-  <div class="notify" id="notify">
-    <button id="notify-btn">🔔 Avisar de jogos novos</button>
-    <p id="notify-msg">Toque e aperte <b>Permitir</b> pra receber uma notificação no celular quando sair jogo novo. (Este botão só liga o recebimento; o aviso chega quando sair jogo novo.)</p>
-  </div>
-
   <footer>
     feito com <a href="base-secreta/" class="secret">❤️</a> por Dominic
   </footer>
@@ -372,59 +357,8 @@
       } catch (err) { showToast('Não deu pra mandar agora. Tenta de novo.'); }
     });
 
-    // ── Notificações de jogos novos ──
-    const notifyBtn = document.getElementById('notify-btn'), notifyMsg = document.getElementById('notify-msg');
-    const ua = navigator.userAgent;
-    const isIOS = /iPhone|iPad|iPod/.test(ua);
-    const isAndroid = /Android/.test(ua);
-    // App do Google, Instagram, Facebook etc. abrem o site num navegador interno que não aceita notificações
-    const inApp = /GSA\/|FBAN|FBAV|Instagram|Line\/|; wv\)/.test(ua);
-    const chromeLink = 'intent://' + location.host + location.pathname + '#Intent;scheme=https;package=com.android.chrome;end';
-    const openChromeMsg = 'Você está no <b>app do Google</b> (ou em outro app), que não deixa ligar notificações. <a href="' + chromeLink + '" style="color:#ffcc00;font-weight:bold">Toque aqui pra abrir no Chrome</a> e depois toque no botão de novo.';
-    const isApp = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-    const pushOk = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
-    function notifyState(text, done) {
-      notifyMsg.innerHTML = text;
-      if (done) { notifyBtn.textContent = '✅ Avisos ligados'; notifyBtn.disabled = true; }
-    }
-    // Converte a chave do servidor pro formato que o navegador pede
-    function keyBytes(b64) {
-      const pad = '='.repeat((4 - b64.length % 4) % 4);
-      const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
-      return Uint8Array.from(raw, c => c.charCodeAt(0));
-    }
-    if (pushOk) navigator.serviceWorker.register('/sw.js').catch(() => {});
-    if (pushOk && Notification.permission === 'granted') notifyState('Você vai receber um aviso quando sair jogo novo. 🎉', true);
-    if (isAndroid && inApp) notifyState(openChromeMsg);
-    if (isIOS && !isApp) notifyState('No iPhone: toque em <b>Compartilhar</b> (o quadradinho com a seta) → <b>Adicionar à Tela de Início</b>. Depois abra os jogos pelo ícone novo e toque aqui de novo.');
-    notifyBtn.addEventListener('click', async () => {
-      if (isAndroid && inApp) { notifyState(openChromeMsg); location.href = chromeLink; return; }
-      if (!pushOk) {
-        notifyState(isIOS ? 'No iPhone: toque em <b>Compartilhar</b> → <b>Adicionar à Tela de Início</b>, abra pelo ícone novo e toque aqui de novo.' : 'Este navegador não aceita notificações. Tente pelo Chrome.');
-        return;
-      }
-      notifyBtn.disabled = true;
-      try {
-        const perm = await Notification.requestPermission();
-        if (perm !== 'granted') {
-          notifyBtn.disabled = false;
-          notifyState(isAndroid
-            ? 'As notificações estão bloqueadas pra este site. No Chrome: toque no ícone do lado esquerdo do endereço → <b>Permissões</b> → <b>Notificações</b> → <b>Permitir</b>. Se estiver no app do Google, <a href="' + chromeLink + '" style="color:#ffcc00;font-weight:bold">abra no Chrome</a>.'
-            : 'As notificações estão bloqueadas pra este site. Libere nas configurações do navegador e toque de novo.');
-          return;
-        }
-        const reg = await navigator.serviceWorker.register('/sw.js');
-        await navigator.serviceWorker.ready;
-        const { chave } = await (await fetch('/api/push/?chave=1')).json();
-        const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(chave) });
-        const r = await fetch('/api/push/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'inscrever', sub }) });
-        if (!r.ok) throw new Error('servidor');
-        notifyState('Pronto! Você vai receber um aviso quando sair jogo novo. 🎉', true);
-      } catch (e) {
-        notifyBtn.disabled = false;
-        notifyState('Não deu pra ligar agora. Tente de novo daqui a pouco.');
-      }
-    });
+    // Mantém o service worker de quem já ligou os avisos (a notificação continua chegando)
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
   </script>
 </body>
 </html>
