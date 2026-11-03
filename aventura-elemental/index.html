@@ -120,6 +120,27 @@
     }
     .wallet { position: absolute; top: 10px; right: 14px; font-size: 16px; font-weight: bold; }
     .wallet .coin { color: #f5c518; }
+    .wallet .gem, .gem-big {
+      background: linear-gradient(135deg, #3cb4ff, #ff6a2a, #bff2ff, #ffe94a);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .wallet .gem { margin-left: 8px; }
+    .gem-big { font-size: 40px !important; }
+    .tabs { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
+    .tabs .tab {
+      padding: 8px 12px; border-radius: 4px; border: 2px solid #4a3a8a; background: #1a1240; color: #c9c3e6;
+      font-weight: bold; font-size: 12px; cursor: pointer; font-family: inherit;
+    }
+    .tabs .tab.on { background: #f5c518; border-color: #f5c518; color: #10101a; }
+    .card { position: relative; }
+    .deal { position: absolute; top: -8px; right: -6px; background: #ff3a4a; color: #fff; font-size: 10px; font-weight: 900; padding: 2px 6px; border-radius: 3px; }
+    .name-sample { font-weight: 900; font-size: 16px; min-height: 64px; display: flex; align-items: center; justify-content: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+    .rainbow-name {
+      background: linear-gradient(90deg, #ff4a4a, #ffb02e, #ffe94a, #7ddf64, #5ccfff, #b06cff, #ff4a4a);
+      background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent !important;
+      animation: rainbow-move 3s linear infinite;
+    }
+    @keyframes rainbow-move { from { background-position: 0% 0; } to { background-position: 200% 0; } }
     .user-tag { position: absolute; top: 12px; left: 14px; font-size: 12px; color: #c9b8ff; max-width: 45%; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .friends {
       position: absolute; top: 36px; right: 14px; width: 130px; text-align: left;
@@ -222,7 +243,7 @@
   <!-- Tela inicial no estilo da Luta Elemental -->
   <div id="menu">
     <div class="panel">
-      <div class="wallet"><span class="coin">●</span> <b id="m-coins">0</b></div>
+      <div class="wallet"><span class="coin">●</span> <b id="m-coins">0</b> <span class="gem" title="Moeda Elemental">◆</span> <b id="m-gems">0</b></div>
       <div id="m-user" class="user-tag"></div>
       <!-- Amigos online (a lista vai ser preenchida quando tiver o sistema de amigos) -->
       <div class="friends">
@@ -252,6 +273,7 @@
 
       <div class="page" id="page-shop">
         <h2>LOJA</h2>
+        <div class="tabs" id="shop-tabs"></div>
         <div class="grid" id="shop-grid"></div>
         <button class="mbtn yellow back" data-go="main">◀ VOLTAR</button>
       </div>
@@ -269,6 +291,6 @@
     </div>
   </div>
 
-  <script src="game.js?v=7"></script>
+  <script src="game.js?v=8"></script>
 </body>
 </html>

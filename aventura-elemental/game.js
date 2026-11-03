@@ -210,7 +210,28 @@
     { id: 'rapido', name: 'Tiro Rápido',   icon: '⚡', desc: 'Atira mais vezes',          prices: [20, 40] },
     { id: 'veloz',  name: 'Botas Velozes', icon: '👟', desc: 'Anda mais rápido',          prices: [20, 40] },
   ];
-  const meta = { coins: 0, skins: FREE_SKINS.slice(), skin: 'gotinha', up: { vida: 0, forca: 0, rapido: 0, veloz: 0 }, user: null };
+  // Moeda Elemental: moeda especial, comprada com moedas normais (e o chefão dá algumas)
+  const GEM_PACKS = [
+    { gems: 10,  price: 50,  tag: '' },
+    { gems: 30,  price: 120, tag: 'OFERTA!' },
+    { gems: 100, price: 350, tag: 'MEGA!' },
+  ];
+  const BOSS_GEMS = 20;
+  // Cores do nome de usuário, compradas com Moeda Elemental
+  const NAME_COLORS = [
+    { id: 'branco',   name: 'Branco',     color: '#ffffff', price: 0 },
+    { id: 'verde',    name: 'Verde',      color: '#5df07a', price: 5 },
+    { id: 'azul',     name: 'Azul',       color: '#5ccfff', price: 5 },
+    { id: 'vermelho', name: 'Vermelho',   color: '#ff5a5a', price: 10 },
+    { id: 'laranja',  name: 'Laranja',    color: '#ff9a2e', price: 10 },
+    { id: 'roxo',     name: 'Roxo',       color: '#b06cff', price: 15 },
+    { id: 'rosa',     name: 'Rosa',       color: '#ff6ad5', price: 15 },
+    { id: 'dourado',  name: 'Dourado',    color: '#ffd23a', price: 30 },
+    { id: 'arcoiris', name: 'Arco-íris',  color: 'rainbow', price: 60 },
+  ];
+  const colorOf = id => NAME_COLORS.find(c => c.id === id) || NAME_COLORS[0];
+  const meta = { coins: 0, gems: 0, skins: FREE_SKINS.slice(), skin: 'gotinha', up: { vida: 0, forca: 0, rapido: 0, veloz: 0 },
+    colors: ['branco'], nameColor: 'branco', user: null };
   let chestHearts = 0;   // corações ganhos nos baús desta aventura
   function loadMeta() {
     let m = null;
@@ -230,6 +251,9 @@
     meta.skin = SKINS.some(s => s.id === m.skin) ? m.skin : 'gotinha';
     for (const u of UPGRADES) meta.up[u.id] = Math.min(u.prices.length, (m.up && m.up[u.id]) || 0);
     meta.user = m.user || null;
+    meta.gems = m.gems || 0;
+    meta.colors = Array.isArray(m.colors) ? [...new Set(['branco', ...m.colors.filter(id => NAME_COLORS.some(c => c.id === id))])] : ['branco'];
+    meta.nameColor = meta.colors.includes(m.nameColor) ? m.nameColor : 'branco';
     if (refund) writeMeta();   // devolve uma vez só
   }
   function writeMeta() {
@@ -541,6 +565,7 @@
   function bossDefeated() {
     burst(boss.x, boss.y, '#b06cff', 40); burst(boss.x, boss.y, '#ffd23a', 30);
     boss = null; bossDead = true; enemies = []; shots = [];
+    meta.gems += BOSS_GEMS;   // prêmio do chefão em Moeda Elemental
     setTileRaw(9, ROWS - 1, 's'); setTileRaw(10, ROWS - 1, 's');
     state = 'win'; stateTimer = 0;
     beep(523, 0.15, 'triangle'); setTimeout(() => beep(659, 0.15, 'triangle'), 150); setTimeout(() => beep(784, 0.3, 'triangle'), 300);
@@ -965,7 +990,8 @@
 
   function renderMenu() {
     $('m-coins').textContent = meta.coins;
-    $('m-user').textContent = meta.user ? '👤 ' + meta.user.nome : '';
+    $('m-gems').textContent = meta.gems;
+    paintName($('m-user'), meta.user ? meta.user.nome : '', '👤 ');
     renderFriends();
     if (menuPage === 'main') {
       heroCanvas($('hero'), meta.skin, player.elem, HERO_DIRS[heroTurn % 4]);
@@ -1021,9 +1047,25 @@
     }
   }
 
+  // Loja com 3 abas: melhorias do personagem, Moeda Elemental e cor do nome
+  let shopTab = 'melhorias';
+  const SHOP_TABS = [['melhorias', 'MELHORIAS'], ['gemas', 'MOEDA ELEMENTAL'], ['cores', 'COR DO NOME']];
   function renderShop() {
+    const tabs = $('shop-tabs');
+    tabs.innerHTML = '';
+    for (const [id, label] of SHOP_TABS) {
+      const b = el('button', label, 'tab' + (shopTab === id ? ' on' : ''));
+      b.addEventListener('click', () => { shopTab = id; renderShop(); });
+      tabs.appendChild(b);
+    }
     const grid = $('shop-grid');
     grid.innerHTML = '';
+    if (shopTab === 'melhorias') shopUpgrades(grid);
+    else if (shopTab === 'gemas') shopGems(grid);
+    else shopColors(grid);
+  }
+
+  function shopUpgrades(grid) {
     for (const u of UPGRADES) {
       const lvl = meta.up[u.id], max = u.prices.length, price = u.prices[lvl];
       const btn = el('button', lvl >= max ? 'MÁXIMO' : 'COMPRAR ● ' + price, lvl >= max ? 'cyan' : 'orange');
@@ -1038,6 +1080,56 @@
         el('div', '●'.repeat(lvl) + '○'.repeat(max - lvl), 'pips'), btn);
       grid.appendChild(d);
     }
+  }
+
+  function shopGems(grid) {
+    for (const pk of GEM_PACKS) {
+      const btn = el('button', 'COMPRAR ● ' + pk.price, 'orange');
+      btn.disabled = meta.coins < pk.price;
+      btn.addEventListener('click', () => {
+        meta.coins -= pk.price; meta.gems += pk.gems;
+        writeMeta(); renderMenu();
+      });
+      const d = card(false);
+      if (pk.tag) d.appendChild(el('span', pk.tag, 'deal'));
+      d.append(el('div', '◆', 'icon gem-big'), el('b', pk.gems + ' Moedas Elementais'),
+        el('small', 'O chefão também dá ' + BOSS_GEMS + ' quando você vence'), btn);
+      grid.appendChild(d);
+    }
+  }
+
+  function shopColors(grid) {
+    for (const c of NAME_COLORS) {
+      const have = meta.colors.includes(c.id), on = meta.nameColor === c.id;
+      const btn = el('button', on ? 'USANDO' : have ? 'USAR' : '◆ ' + c.price, on ? 'cyan' : have ? 'green' : 'purple');
+      btn.disabled = on || (!have && meta.gems < c.price);
+      btn.addEventListener('click', () => {
+        if (!have) { meta.gems -= c.price; meta.colors.push(c.id); }
+        meta.nameColor = c.id;
+        writeMeta(); renderMenu();
+        syncUser();
+      });
+      const d = card(on);
+      const sample = el('div', null, 'name-sample');
+      paintName(sample, meta.user ? meta.user.nome : 'Seu nome', '', c.id);
+      d.append(sample, el('b', c.name), el('small', have ? 'Sua' : 'Custa ' + c.price + ' Moedas Elementais'), btn);
+      grid.appendChild(d);
+    }
+  }
+
+  // Escreve um nome com a cor escolhida (o arco-íris é animado pelo CSS)
+  function paintName(node, nome, prefix, colorId) {
+    const c = colorOf(colorId || meta.nameColor);
+    node.textContent = nome ? (prefix || '') + nome : '';
+    node.classList.toggle('rainbow-name', c.color === 'rainbow');
+    node.style.color = c.color === 'rainbow' ? '' : c.color;
+  }
+
+  // Atualiza o usuário no servidor (por exemplo depois de trocar a cor do nome)
+  function syncUser() {
+    if (!meta.user) return;
+    fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: meta.user.email, nome: meta.user.nome, cor: meta.nameColor }) }).catch(() => {});
   }
 
   // Usuário: e-mail e nome, guardados neste aparelho e no servidor do site
@@ -1063,14 +1155,14 @@
     meta.user = { email, nome };
     writeMeta();
     try {
-      const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, nome }) });
+      const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, nome, cor: meta.nameColor }) });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || 'erro');
       msg.textContent = 'Pronto, ' + nome + '! Você está online. 👋'; msg.className = 'ok';
     } catch (err) {
       msg.textContent = 'Salvo neste aparelho. O servidor não respondeu agora; tenta de novo mais tarde.'; msg.className = 'err';
     }
-    $('m-user').textContent = '👤 ' + nome;
+    paintName($('m-user'), nome, '👤 ');
     renderFriends();
     if (playAfterUser) {
       playAfterUser = false;
@@ -1133,6 +1225,7 @@
       drawText('VOCÊ VENCEU!', H / 2 - 30, '#ffd23a', 20);
       drawText('O Rei Sombrio foi derrotado', H / 2, '#fff', 9);
       drawText('e o Reino Elemental está salvo!', H / 2 + 14, '#fff', 9);
+      drawText('+' + BOSS_GEMS + ' Moedas Elementais!', H / 2 + 28, '#9fe0ff', 8);
       if (stateTimer > 90) drawText(isTouch ? 'Toque pra continuar explorando' : 'Aperte ESPAÇO pra continuar explorando', H / 2 + 40, '#8a93b8', 8);
     }
   }
