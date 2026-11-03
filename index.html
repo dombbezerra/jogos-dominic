@@ -205,6 +205,11 @@
       width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
       background: rgba(20, 20, 40, 0.9); border: 2px solid #ffcc00; font-size: 22px; text-decoration: none;
     }
+    .send-toast {
+      position: fixed; top: max(66px, calc(env(safe-area-inset-top) + 54px)); right: max(12px, env(safe-area-inset-right)); z-index: 10;
+      max-width: 240px; background: rgba(20, 20, 40, 0.95); border: 2px solid #ffcc00; border-radius: 10px;
+      padding: 8px 12px; font-size: 13px; display: none;
+    }
     .notify {
       z-index: 1; margin-top: 36px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
     }
@@ -242,7 +247,8 @@
 </head>
 <body>
   <div class="stars" id="stars"></div>
-  <a href="avisos/" class="send-notice" title="Mandar aviso de jogo novo">📣</a>
+  <a href="avisos/" class="send-notice" id="send-notice" title="Mandar aviso de jogo novo">📣</a>
+  <div class="send-toast" id="send-toast"></div>
 
   <header>
     <h1>JOGOS DO DOMINIC</h1>
@@ -337,6 +343,34 @@
       star.style.opacity = Math.random() * 0.8 + 0.2;
       starsContainer.appendChild(star);
     }
+
+    // ── 📣 no canto: quem já entrou na página de avisos neste aparelho manda com 1 toque ──
+    const sendBtn = document.getElementById('send-notice'), sendToast = document.getElementById('send-toast');
+    const showToast = (msg, ms) => {
+      sendToast.textContent = msg; sendToast.style.display = 'block';
+      clearTimeout(showToast.t); showToast.t = setTimeout(() => { sendToast.style.display = 'none'; }, ms || 4000);
+    };
+    sendBtn.addEventListener('click', async e => {
+      let token = null;
+      try { token = localStorage.getItem('avisos_token'); } catch (err) { token = null; }
+      if (!token) return;   // sem login: abre a página de avisos normalmente
+      e.preventDefault();
+      let last = 0;
+      try { last = +localStorage.getItem('avisos_ultimo') || 0; } catch (err) { last = 0; }
+      const wait = Math.ceil((last + 60000 - Date.now()) / 1000);
+      if (wait > 0) { showToast('Espera ' + wait + 's pra mandar de novo.'); return; }
+      showToast('Mandando aviso...', 10000);
+      try {
+        const r = await fetch('/api/push/', { method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ action: 'enviar', titulo: 'Jogo novo! 🎮', texto: 'Tem jogo novo nos Jogos do Dominic! Vem jogar!', url: '/' }) });
+        const data = await r.json().catch(() => ({}));
+        if (r.status === 401) { try { localStorage.removeItem('avisos_token'); } catch (err) {} location.href = 'avisos/'; return; }
+        if (!r.ok) throw new Error(data.error || 'erro');
+        try { localStorage.setItem('avisos_ultimo', String(Date.now())); } catch (err) {}
+        showToast(data.total ? '📣 Aviso mandado pra ' + data.enviados + ' de ' + data.total + ' celulares!' : 'Ninguém ligou os avisos ainda.');
+      } catch (err) { showToast('Não deu pra mandar agora. Tenta de novo.'); }
+    });
 
     // ── Notificações de jogos novos ──
     const notifyBtn = document.getElementById('notify-btn'), notifyMsg = document.getElementById('notify-msg');
