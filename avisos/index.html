@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0a0a1a">
+  <title>Avisos</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif; color: #fff;
+      background: radial-gradient(ellipse at top, #1a1a3e 0%, #0a0a1a 60%) #0a0a1a;
+      display: flex; align-items: center; justify-content: center; padding: 20px; min-height: 100vh;
+    }
+    .card {
+      width: 100%; max-width: 420px; background: rgba(20, 20, 40, 0.9); border: 2px solid rgba(255, 204, 0, 0.4);
+      border-radius: 16px; padding: 24px 20px; display: flex; flex-direction: column; gap: 12px;
+    }
+    h1 { color: #ffcc00; font-size: 22px; text-align: center; }
+    p { font-size: 13px; opacity: 0.75; text-align: center; line-height: 1.5; }
+    input, textarea {
+      width: 100%; padding: 12px; border-radius: 10px; border: 2px solid rgba(255, 255, 255, 0.15);
+      background: rgba(0, 0, 0, 0.35); color: #fff; font: inherit; font-size: 16px; outline: none; resize: none;
+    }
+    input:focus, textarea:focus { border-color: #ffcc00; }
+    button {
+      padding: 13px; border: none; border-radius: 30px; background: #ffcc00; color: #0a0a1a;
+      font-weight: bold; font-size: 15px; letter-spacing: 1px; cursor: pointer;
+    }
+    button:disabled { opacity: 0.6; }
+    .msg { min-height: 20px; font-size: 14px; text-align: center; }
+    .hidden { display: none !important; }
+    a { color: rgba(255, 255, 255, 0.5); font-size: 13px; text-align: center; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <!-- Página escondida: manda o aviso de jogo novo pra todos que ligaram as notificações -->
+  <form class="card" id="loginForm" autocomplete="off">
+    <h1>📣 AVISOS</h1>
+    <p>Só pra quem tem o login da Base Secreta.</p>
+    <input id="name" placeholder="Nome" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+    <input id="pass" type="password" placeholder="Senha" required>
+    <button type="submit" id="loginBtn">ENTRAR</button>
+    <div class="msg" id="loginMsg"></div>
+    <a href="../">← Menu</a>
+  </form>
+
+  <form class="card hidden" id="sendForm">
+    <h1>📣 AVISO DE JOGO NOVO</h1>
+    <p>Vai como notificação no celular de todo mundo que tocou em <b>"Avisar de jogos novos"</b> no menu.</p>
+    <input id="title" maxlength="60" value="Jogo novo! 🎮">
+    <textarea id="text" rows="3" maxlength="200">Tem jogo novo nos Jogos do Dominic! Vem jogar!</textarea>
+    <button type="submit" id="sendBtn">ENVIAR PRA TODOS</button>
+    <div class="msg" id="sendMsg"></div>
+    <a href="#" id="logout">Sair</a>
+  </form>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const store = {
+      get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+      set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+      del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+    };
+    let token = store.get('avisos_token');
+    const show = logged => {
+      $('loginForm').classList.toggle('hidden', logged);
+      $('sendForm').classList.toggle('hidden', !logged);
+    };
+    show(!!token);
+
+    // Entra com o mesmo nome e senha da Base Secreta
+    $('loginForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      $('loginBtn').disabled = true; $('loginMsg').textContent = '';
+      try {
+        const r = await fetch('/api/chat/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'login', name: $('name').value, password: $('pass').value }) });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.error || 'Erro ' + r.status);
+        token = data.token; store.set('avisos_token', token);
+        $('pass').value = '';
+        show(true);
+      } catch (err) { $('loginMsg').textContent = err.message; }
+      $('loginBtn').disabled = false;
+    });
+
+    $('sendForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      if (!confirm('Mandar esse aviso pra todo mundo?')) return;
+      $('sendBtn').disabled = true; $('sendMsg').textContent = 'Enviando...';
+      try {
+        const r = await fetch('/api/push/', { method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ action: 'enviar', titulo: $('title').value, texto: $('text').value, url: '/' }) });
+        const data = await r.json().catch(() => ({}));
+        if (r.status === 401) { token = null; store.del('avisos_token'); show(false); throw new Error(data.error || 'Entre de novo.'); }
+        if (!r.ok) throw new Error(data.error || 'Erro ' + r.status);
+        $('sendMsg').textContent = data.total ? `Enviado pra ${data.enviados} de ${data.total} aparelhos ✅` : 'Ninguém ligou os avisos ainda.';
+      } catch (err) { $('sendMsg').textContent = 'Não deu: ' + err.message; }
+      $('sendBtn').disabled = false;
+    });
+
+    $('logout').addEventListener('click', e => { e.preventDefault(); token = null; store.del('avisos_token'); show(false); });
+  </script>
+</body>
+</html>

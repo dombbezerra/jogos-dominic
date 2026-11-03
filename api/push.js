@@ -2,7 +2,7 @@
 // GET  ?chave=1          → chave pública pro navegador se inscrever
 // GET  ?ultima=1         → última mensagem (o service worker busca quando chega o aviso)
 // POST {action:'inscrever', sub}            → guarda o aparelho que permitiu
-// POST {action:'enviar', titulo, texto, url} → manda pra todos (só Felipe e Dominic, com o login da Base Secreta)
+// POST {action:'enviar', titulo, texto, url} → manda pra todos (pela página /avisos/, com o login da Base Secreta)
 const crypto = require('crypto');
 
 const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
