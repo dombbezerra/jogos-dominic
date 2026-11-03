@@ -1,6 +1,7 @@
 // Notificações de "jogo novo" no celular (Web Push).
 // GET  ?chave=1          → chave pública pro navegador se inscrever
 // GET  ?ultima=1         → última mensagem (o service worker busca quando chega o aviso)
+// GET  ?status=1         → quantos aparelhos ligaram os avisos (só o número)
 // POST {action:'inscrever', sub}            → guarda o aparelho que permitiu
 // POST {action:'enviar', titulo, texto, url} → manda pra todos (pela página /avisos/, com o login da Base Secreta)
 const crypto = require('crypto');
@@ -71,6 +72,7 @@ module.exports = async (req, res) => {
   try {
     if (req.method === 'GET') {
       if (req.query && req.query.chave) return res.status(200).json({ chave: vapidKeys().pub });
+      if (req.query && req.query.status) { const [n] = await redis(['SCARD', SUBS_KEY]); return res.status(200).json({ aparelhos: n || 0 }); }
       const [last] = await redis(['GET', LAST_KEY]);
       return res.status(200).json(last ? JSON.parse(last) : { titulo: 'Jogos do Dominic', texto: 'Tem novidade nos jogos!', url: '/' });
     }
