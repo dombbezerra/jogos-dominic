@@ -199,6 +199,12 @@
       --card-bg: linear-gradient(135deg, #6b4a2b, #5f9f35);
     }
     /* Botão de notificações de jogos novos */
+    /* Botão fixo no canto: abre a página de mandar avisos (precisa do login da Base Secreta) */
+    .send-notice {
+      position: fixed; top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); z-index: 10;
+      width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      background: rgba(20, 20, 40, 0.9); border: 2px solid #ffcc00; font-size: 22px; text-decoration: none;
+    }
     .notify {
       z-index: 1; margin-top: 36px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
     }
@@ -236,6 +242,7 @@
 </head>
 <body>
   <div class="stars" id="stars"></div>
+  <a href="avisos/" class="send-notice" title="Mandar aviso de jogo novo">📣</a>
 
   <header>
     <h1>JOGOS DO DOMINIC</h1>
