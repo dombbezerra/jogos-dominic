@@ -6,6 +6,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#0a0a1a">
+  <meta name="apple-mobile-web-app-title" content="Jogos Dom">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon-192.png">
   <title>Jogos do Dominic 🎮</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -195,6 +198,17 @@
       --card-shadow: rgba(124, 207, 74, 0.4);
       --card-bg: linear-gradient(135deg, #6b4a2b, #5f9f35);
     }
+    /* Botão de notificações de jogos novos */
+    .notify {
+      z-index: 1; margin-top: 36px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+    }
+    .notify button {
+      background: linear-gradient(90deg, #ffcc00, #ff9a2e); color: #0a0a1a; border: none; border-radius: 30px;
+      padding: 12px 22px; font-weight: bold; font-size: 15px; letter-spacing: 1px; cursor: pointer;
+      box-shadow: 0 6px 20px rgba(255, 204, 0, 0.3);
+    }
+    .notify button:disabled { opacity: 0.7; cursor: default; }
+    .notify p { font-size: 13px; opacity: 0.75; max-width: 420px; line-height: 1.5; }
     footer {
       margin-top: 50px;
       opacity: 0.5;
@@ -295,6 +309,11 @@
     </a>
   </div>
 
+  <div class="notify" id="notify">
+    <button id="notify-btn">🔔 Avisar de jogos novos</button>
+    <p id="notify-msg">Toque e aperte <b>Permitir</b> pra receber uma notificação no celular quando sair jogo novo.</p>
+  </div>
+
   <footer>
     feito com <a href="base-secreta/" class="secret">❤️</a> por Dominic
   </footer>
@@ -311,6 +330,50 @@
       star.style.opacity = Math.random() * 0.8 + 0.2;
       starsContainer.appendChild(star);
     }
+
+    // ── Notificações de jogos novos ──
+    const notifyBtn = document.getElementById('notify-btn'), notifyMsg = document.getElementById('notify-msg');
+    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    const isApp = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    const pushOk = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+    function notifyState(text, done) {
+      notifyMsg.innerHTML = text;
+      if (done) { notifyBtn.textContent = '✅ Avisos ligados'; notifyBtn.disabled = true; }
+    }
+    // Converte a chave do servidor pro formato que o navegador pede
+    function keyBytes(b64) {
+      const pad = '='.repeat((4 - b64.length % 4) % 4);
+      const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+      return Uint8Array.from(raw, c => c.charCodeAt(0));
+    }
+    if (pushOk) navigator.serviceWorker.register('/sw.js').catch(() => {});
+    if (pushOk && Notification.permission === 'granted') notifyState('Você vai receber um aviso quando sair jogo novo. 🎉', true);
+    if (isIOS && !isApp) notifyState('No iPhone: toque em <b>Compartilhar</b> (o quadradinho com a seta) → <b>Adicionar à Tela de Início</b>. Depois abra os jogos pelo ícone novo e toque aqui de novo.');
+    notifyBtn.addEventListener('click', async () => {
+      if (!pushOk) {
+        notifyState(isIOS ? 'No iPhone: toque em <b>Compartilhar</b> → <b>Adicionar à Tela de Início</b>, abra pelo ícone novo e toque aqui de novo.' : 'Este navegador não aceita notificações. Tente pelo Chrome.');
+        return;
+      }
+      notifyBtn.disabled = true;
+      try {
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') {
+          notifyBtn.disabled = false;
+          notifyState('As notificações ficaram bloqueadas. Pra ligar, libere nas configurações do navegador pra este site.');
+          return;
+        }
+        const reg = await navigator.serviceWorker.register('/sw.js');
+        await navigator.serviceWorker.ready;
+        const { chave } = await (await fetch('/api/push/?chave=1')).json();
+        const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(chave) });
+        const r = await fetch('/api/push/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'inscrever', sub }) });
+        if (!r.ok) throw new Error('servidor');
+        notifyState('Pronto! Você vai receber um aviso quando sair jogo novo. 🎉', true);
+      } catch (e) {
+        notifyBtn.disabled = false;
+        notifyState('Não deu pra ligar agora. Tente de novo daqui a pouco.');
+      }
+    });
   </script>
 </body>
 </html>

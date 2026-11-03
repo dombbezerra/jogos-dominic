@@ -186,6 +186,18 @@
       align-self: flex-end;
     }
     .emoji-btn.on { border-color: #4ecdc4; background: rgba(78, 205, 196, 0.15); }
+    .announce {
+      display: flex; flex-direction: column; gap: 6px; padding: 10px 14px;
+      background: rgba(255, 204, 0, 0.08); border-bottom: 1px solid rgba(255, 204, 0, 0.3);
+    }
+    .announce small { opacity: 0.7; font-size: 12px; }
+    .announce input, .announce textarea {
+      padding: 9px 11px; border-radius: 10px; border: 2px solid rgba(255, 255, 255, 0.15);
+      background: rgba(0, 0, 0, 0.35); color: white; font: inherit; font-size: 15px; resize: none; outline: none;
+    }
+    .an-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .an-send { background: #ffcc00; color: #0a0a1a; border-radius: 20px; padding: 9px 16px; font-weight: bold; }
+    #an-msg { font-size: 13px; }
     .emoji-panel {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
@@ -225,9 +237,18 @@
         <b>BASE SECRETA</b>
         <small><span class="dot" id="dot"></span><span id="status">conectado como …</span></small>
       </div>
+      <button class="icon-btn" id="announce" title="Enviar aviso de jogo novo">📣</button>
       <button class="icon-btn" id="refresh" title="Atualizar">↻</button>
       <button class="icon-btn" id="logout" title="Sair">Sair</button>
     </div>
+    <!-- Aviso de jogo novo: vai como notificação pra todos que permitiram -->
+    <form class="announce hidden" id="announceForm">
+      <b>📣 Aviso de jogo novo</b>
+      <small>Vai como notificação no celular de todo mundo que tocou em "Avisar de jogos novos".</small>
+      <input id="an-title" maxlength="60" value="Jogo novo! 🎮">
+      <textarea id="an-text" rows="2" maxlength="200">Tem jogo novo nos Jogos do Dominic! Vem jogar!</textarea>
+      <div class="an-row"><button type="submit" class="an-send">ENVIAR PRA TODOS</button><span id="an-msg"></span></div>
+    </form>
     <div id="msgs"><div class="empty">Nenhuma mensagem ainda.<br>Mande a primeira! 👋</div></div>
     <div class="emoji-panel hidden" id="emojiPanel"></div>
     <form class="composer" id="sendForm">
@@ -419,6 +440,29 @@
       if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && matchMedia('(hover: hover)').matches) {
         e.preventDefault();
         $('sendForm').requestSubmit();
+      }
+    });
+
+    // ---------- Aviso de jogo novo ----------
+    $('announce').addEventListener('click', () => {
+      $('announceForm').classList.toggle('hidden');
+      $('an-msg').textContent = '';
+    });
+    $('announceForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = $('an-msg');
+      msg.textContent = 'Enviando...';
+      try {
+        const r = await fetch('/api/push/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ action: 'enviar', titulo: $('an-title').value, texto: $('an-text').value, url: '/' }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.error || 'Erro ' + r.status);
+        msg.textContent = data.total ? `Enviado pra ${data.enviados} de ${data.total} aparelhos ✅` : 'Ninguém ligou os avisos ainda.';
+      } catch (err) {
+        msg.textContent = 'Não deu: ' + err.message;
       }
     });
 
