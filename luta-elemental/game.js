@@ -23,19 +23,19 @@ const MOEDAS_POR_KILL = 2;
 // ----- PERSONAGENS (brawlers) -----
 const PERSONAGENS = [
   { id: 'azul',     nome: 'ÁGUA',     cor: '#33ccff', vida: 5, velocidade: 4, dano: 1, municao: 3, custo: 0,   descricao: 'Fluido e equilibrado', tipo: 'agua' },
-  { id: 'roxo',     nome: 'VENENO',   cor: '#88ee22', vida: 8, velocidade: 3, dano: 1, municao: 3, custo: 50,  descricao: 'Tóxico, muita vida', tipo: 'veneno' },
-  { id: 'verde',    nome: 'RAIO',     cor: '#ffee00', vida: 3, velocidade: 6, dano: 1, municao: 4, custo: 100, descricao: 'Elétrico e veloz', tipo: 'raio' },
-  { id: 'vermelho', nome: 'FOGO',     cor: '#ff5511', vida: 4, velocidade: 4, dano: 2, municao: 2, custo: 200, descricao: 'Quente e poderoso', tipo: 'fogo' },
-  { id: 'gelo',     nome: 'GELO',     cor: '#aaeeff', vida: 4, velocidade: 4, dano: 1, municao: 5, custo: 150, descricao: 'Atira muito', tipo: 'gelo' },
-  { id: 'trovao',   nome: 'TROVÃO',   cor: '#9966ff', vida: 6, velocidade: 3, dano: 3, municao: 2, custo: 250, descricao: 'Dano explosivo', tipo: 'trovao' },
-  { id: 'magma',    nome: 'MAGMA',    cor: '#ff7733', vida: 7, velocidade: 3, dano: 2, municao: 3, custo: 175, descricao: 'Lava densa e durável', tipo: 'magma' },
-  { id: 'praga',    nome: 'PRAGA',    cor: '#6633aa', vida: 8, velocidade: 3, dano: 3, municao: 2, custo: 300, descricao: 'Veneno mortal', tipo: 'praga' },
-  { id: 'vento',    nome: 'VENTO',    cor: '#ccddee', vida: 3, velocidade: 7, dano: 1, municao: 4, custo: 175, descricao: 'Leve e velocíssimo', tipo: 'vento' },
-  { id: 'furacao',  nome: 'FURACÃO',  cor: '#5588aa', vida: 5, velocidade: 5, dano: 2, municao: 3, custo: 350, descricao: 'Tempestade rodopiante', tipo: 'furacao' },
-  { id: 'luz',      nome: 'LUZ',      cor: '#ffee44', vida: 6, velocidade: 5, dano: 2, municao: 3, custo: 275, descricao: 'Sol radiante', tipo: 'luz' },
-  { id: 'lua',      nome: 'LUA',      cor: '#e0e8ff', vida: 5, velocidade: 4, dano: 1, municao: 4, custo: 200, descricao: 'Calma e brilhante', tipo: 'lua' },
-  { id: 'lunar',    nome: 'LUNAR',    cor: '#aaaaff', vida: 7, velocidade: 4, dano: 2, municao: 3, custo: 350, descricao: 'Poder cósmico', tipo: 'lunar' },
-  { id: 'solar',    nome: 'SOLAR',    cor: '#ff6611', vida: 5, velocidade: 5, dano: 3, municao: 2, custo: 400, descricao: 'Sol explosivo', tipo: 'solar' },
+  { id: 'roxo',     nome: 'VENENO',   cor: '#88ee22', vida: 8, velocidade: 3, dano: 1, municao: 3, custo: 50,   descricao: 'Tóxico, muita vida', tipo: 'veneno' },
+  { id: 'verde',    nome: 'RAIO',     cor: '#ffee00', vida: 3, velocidade: 6, dano: 1, municao: 4, custo: 50,   descricao: 'Elétrico e veloz', tipo: 'raio' },
+  { id: 'vermelho', nome: 'FOGO',     cor: '#ff5511', vida: 4, velocidade: 4, dano: 2, municao: 2, custo: 50,   descricao: 'Quente e poderoso', tipo: 'fogo' },
+  { id: 'gelo',     nome: 'GELO',     cor: '#aaeeff', vida: 4, velocidade: 4, dano: 1, municao: 5, custo: 50,   descricao: 'Atira muito', tipo: 'gelo' },
+  { id: 'trovao',   nome: 'TROVÃO',   cor: '#9966ff', vida: 6, velocidade: 3, dano: 3, municao: 2, custo: 500,  descricao: 'Dano explosivo', tipo: 'trovao' },
+  { id: 'magma',    nome: 'MAGMA',    cor: '#ff7733', vida: 7, velocidade: 3, dano: 2, municao: 3, custo: 500,  descricao: 'Lava densa e durável', tipo: 'magma' },
+  { id: 'praga',    nome: 'PRAGA',    cor: '#6633aa', vida: 8, velocidade: 3, dano: 3, municao: 2, custo: 500,  descricao: 'Veneno mortal', tipo: 'praga' },
+  { id: 'vento',    nome: 'VENTO',    cor: '#ccddee', vida: 3, velocidade: 7, dano: 1, municao: 4, custo: 500,  descricao: 'Leve e velocíssimo', tipo: 'vento' },
+  { id: 'furacao',  nome: 'FURACÃO',  cor: '#5588aa', vida: 5, velocidade: 5, dano: 2, municao: 3, custo: 500,  descricao: 'Tempestade rodopiante', tipo: 'furacao' },
+  { id: 'luz',      nome: 'LUZ',      cor: '#ffee44', vida: 6, velocidade: 5, dano: 2, municao: 3, custo: 1000, descricao: 'Sol radiante', tipo: 'luz' },
+  { id: 'lua',      nome: 'LUA',      cor: '#e0e8ff', vida: 5, velocidade: 4, dano: 1, municao: 4, custo: 1000, descricao: 'Calma e brilhante', tipo: 'lua' },
+  { id: 'lunar',    nome: 'LUNAR',    cor: '#aaaaff', vida: 7, velocidade: 4, dano: 2, municao: 3, custo: 1000, descricao: 'Poder cósmico', tipo: 'lunar' },
+  { id: 'solar',    nome: 'SOLAR',    cor: '#ff6611', vida: 5, velocidade: 5, dano: 3, municao: 2, custo: 1000, descricao: 'Sol explosivo', tipo: 'solar' },
 ];
 
 // ----- MODOS DE JOGO (eventos) -----
@@ -102,6 +102,16 @@ if (!localStorage.getItem('desbloqueadosReset_v1')) {
   salvo.desbloqueados = ['azul', 'gelo'];
   if (!['azul', 'gelo'].includes(salvo.personagemAtual)) salvo.personagemAtual = 'azul';
   localStorage.setItem('desbloqueadosReset_v1', '1');
+  localStorage.setItem('jogoDominic', JSON.stringify(salvo));
+}
+// Reset único com os preços novos: zera moedas, gemas e melhorias, e volta só ÁGUA + GELO (os recordes ficam)
+if (!localStorage.getItem('resetPrecos_v2')) {
+  salvo.moedas = 0;
+  salvo.gemas = 0;
+  salvo.melhorias = { vidaExtra: 0, municaoExtra: 0, recargaRapida: 0 };
+  salvo.desbloqueados = ['azul', 'gelo'];
+  if (!['azul', 'gelo'].includes(salvo.personagemAtual)) salvo.personagemAtual = 'azul';
+  localStorage.setItem('resetPrecos_v2', '1');
   localStorage.setItem('jogoDominic', JSON.stringify(salvo));
 }
 
