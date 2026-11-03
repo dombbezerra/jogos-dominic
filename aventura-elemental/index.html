@@ -251,10 +251,6 @@
     #u-msg { min-height: 18px; font-size: 13px; text-align: center; }
     #u-msg.err { color: #ff6a6a; } #u-msg.ok { color: #2fd15a; }
 
-    #btn-swap {
-      right: calc(env(safe-area-inset-right) + 132px); bottom: calc(env(safe-area-inset-bottom) + 110px);
-      width: 62px; height: 62px; background: #66ccff; font-size: 11px;
-    }
   </style>
 </head>
 <body class="in-menu">
@@ -270,13 +266,11 @@
     <div><kbd>→</kbd> pra frente</div>
     <div><kbd>Espaço</kbd> pular</div>
     <div><kbd>J</kbd> atirar</div>
-    <div><kbd>Q</kbd> trocar elemento</div>
   </div>
 
   <div id="touch">
     <button class="tbtn arrow" id="btn-left">◀</button>
     <button class="tbtn arrow" id="btn-right">▶</button>
-    <button class="tbtn" id="btn-swap">TROCAR</button>
     <button class="tbtn" id="btn-attack">ATACAR</button>
     <button class="tbtn" id="btn-jump">PULAR</button>
   </div>
@@ -325,7 +319,7 @@
         <div class="help">
           <div class="help-box">
             <h3>🎯 O objetivo</h3>
-            <p>Atravesse as <b>5 fases</b> até a <b>bandeira verde</b> do final. Em cada fase você ganha um <b>orbe</b> com um poder novo. Na última, derrote o <b>Rei Sombrio</b>!</p>
+            <p>São <b>1000 fases de pedra</b>, uma depois da outra: chegue na <b>bandeira verde</b> do final pra liberar a próxima. Cada fase fica <b>mais difícil</b>, e a cada <b>10 fases</b> o <b>Rei Sombrio</b> volta mais forte. Será que alguém zera?</p>
           </div>
           <div class="help-cols">
             <div class="help-box">
@@ -334,7 +328,6 @@
                 <li><kbd>←</kbd> <kbd>→</kbd> ou <kbd>A</kbd> <kbd>D</kbd> — andar</li>
                 <li><kbd>Espaço</kbd> ou <kbd>↑</kbd> — pular (segure pra pular mais alto)</li>
                 <li><kbd>J</kbd> ou clique do mouse — atirar</li>
-                <li><kbd>Q</kbd> — trocar o elemento</li>
                 <li><kbd>☰</kbd> no canto — voltar pro menu</li>
               </ul>
             </div>
@@ -344,24 +337,20 @@
                 <li><span class="dot white">◀</span> <span class="dot white">▶</span> — andar pra trás e pra frente</li>
                 <li><span class="dot green">PULAR</span> — pular</li>
                 <li><span class="dot yellow">ATACAR</span> — atirar (pode segurar)</li>
-                <li><span class="dot blue">TROCAR</span> — trocar o elemento</li>
               </ul>
             </div>
           </div>
           <div class="help-box">
-            <h3>✨ Os elementos</h3>
-            <ul>
-              <li><b class="c-agua">💧 ÁGUA</b> — o tiro normal, você já começa com ele</li>
-              <li><b class="c-fogo">🔥 FOGO</b> — queima os <b>arbustos</b> que fecham o caminho</li>
-              <li><b class="c-gelo">❄️ GELO</b> — a bola cai num arco: jogue na <b>água</b> pra fazer uma ponte de gelo</li>
-              <li><b class="c-raio">⚡ RAIO</b> — quebra as <b>pedras rachadas</b></li>
-            </ul>
+            <h3>✨ Seu elemento</h3>
+            <p>O tiro é do elemento do <b>seu personagem</b>: a Gotinha atira <b class="c-agua">💧 Água</b>, a Faísca atira <b class="c-fogo">🔥 Fogo</b>, o Floco atira <b class="c-gelo">❄️ Gelo</b>... Troque de personagem em <b>PERSONAGENS</b>. O tiro de gelo congela os inimigos por um tempinho!</p>
           </div>
           <div class="help-box">
             <h3>💡 Dicas</h3>
             <ul>
               <li><b>Pule na cabeça</b> dos inimigos pra derrotar</li>
               <li>Bata a cabeça nos blocos <b>?</b> pra ganhar Gemas, e no bloco de <b>coração</b> pra ganhar +1 coração</li>
+              <li>Atire nas <b>pedras rachadas</b> pra abrir caminho</li>
+              <li>Cuidado com os <b>espinhos</b> e os <b>buracos</b></li>
               <li>A <b>bandeirinha vermelha</b> no meio da fase é o checkpoint: se cair, volta dali</li>
               <li>Com as Gemas você compra <b>personagens</b> e <b>melhorias</b> na loja</li>
             </ul>
@@ -383,6 +372,6 @@
     </div>
   </div>
 
-  <script src="game.js?v=12"></script>
+  <script src="game.js?v=13"></script>
 </body>
 </html>
