@@ -83,6 +83,7 @@
         token = data.token; store.set('avisos_token', token);
         $('pass').value = '';
         show(true);
+        $('sendMsg').textContent = '✅ Pronto! Agora o 📣 do menu manda o aviso com 1 toque, sem senha.';
       } catch (err) { $('loginMsg').textContent = err.message; }
       $('loginBtn').disabled = false;
     });
@@ -109,6 +110,7 @@
         const data = await r.json().catch(() => ({}));
         if (r.status === 401) { token = null; store.del('avisos_token'); show(false); throw new Error(data.error || 'Entre de novo.'); }
         if (!r.ok) throw new Error(data.error || 'Erro ' + r.status);
+        if (data.token) { token = data.token; store.set('avisos_token', token); }   // login renovado
         $('sendMsg').textContent = data.total ? `Enviado pra ${data.enviados} de ${data.total} aparelhos ✅` : 'Ninguém ligou os avisos ainda.';
       } catch (err) { $('sendMsg').textContent = 'Não deu: ' + err.message; }
       $('sendBtn').disabled = false;

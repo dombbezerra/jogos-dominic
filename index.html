@@ -352,7 +352,10 @@
         const data = await r.json().catch(() => ({}));
         if (r.status === 401) { try { localStorage.removeItem('avisos_token'); } catch (err) {} location.href = 'avisos/'; return; }
         if (!r.ok) throw new Error(data.error || 'erro');
-        try { localStorage.setItem('avisos_ultimo', String(Date.now())); } catch (err) {}
+        try {
+          localStorage.setItem('avisos_ultimo', String(Date.now()));
+          if (data.token) localStorage.setItem('avisos_token', data.token);   // login renovado: não pede senha de novo
+        } catch (err) {}
         showToast(data.total ? '📣 Aviso mandado pra ' + data.enviados + ' de ' + data.total + ' celulares!' : 'Ninguém ligou os avisos ainda.');
       } catch (err) { showToast('Não deu pra mandar agora. Tenta de novo.'); }
     });

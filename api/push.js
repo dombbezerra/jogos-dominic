@@ -27,7 +27,12 @@ function vapidKeys() {
   return { pub: b64url(pub), key };
 }
 
-// Login da Base Secreta (o mesmo token do chat)
+// Login da Base Secreta (o mesmo token do chat). Renova a cada envio, pra não pedir senha de novo
+function freshToken(userKey) {
+  const exp = Date.now() + 365 * 864e5;
+  const body = userKey + '.' + exp;
+  return body + '.' + hmac(body);
+}
 const CHAT_USERS = { felipe: 'Felipe', dominique: 'Dominic', dominic: 'Dominic' };
 function checkToken(token) {
   const parts = String(token || '').split('.');
@@ -91,6 +96,7 @@ module.exports = async (req, res) => {
       const auth = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
       const quem = checkToken(auth);
       if (!quem) return res.status(401).json({ error: 'Só o Felipe e o Dominic podem enviar avisos.' });
+      const token = freshToken(auth.split('.')[0]);
       const msg = {
         titulo: String(body.titulo || 'Jogos do Dominic').slice(0, 60),
         texto: String(body.texto || 'Tem jogo novo! Vem jogar 🎮').slice(0, 200),
@@ -110,7 +116,7 @@ module.exports = async (req, res) => {
         } catch (e) { /* um aparelho com erro não para os outros */ }
       }));
       if (dead.length) await redis(['SREM', SUBS_KEY, ...dead]);
-      return res.status(200).json({ ok: true, enviados: ok, total: (subs || []).length });
+      return res.status(200).json({ ok: true, enviados: ok, total: (subs || []).length, token });
     }
 
     return res.status(400).json({ error: 'Ação inválida.' });
