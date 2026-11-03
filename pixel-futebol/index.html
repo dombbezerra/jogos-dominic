@@ -208,6 +208,26 @@
     user-select: none;
     box-shadow: 0 4px 0 #008800;
   }
+  #pass-btn {
+    position: absolute;
+    bottom: calc(env(safe-area-inset-bottom) + 150px);
+    right: calc(env(safe-area-inset-right) + 40px);
+    width: 76px;
+    height: 76px;
+    background: rgba(64, 160, 255, 0.85);
+    border: 4px solid #000;
+    color: #fff;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    border-radius: 50%;
+    pointer-events: auto;
+    touch-action: none;
+    font-family: inherit;
+    user-select: none;
+    box-shadow: 0 4px 0 #003a80;
+  }
+  #pass-btn.active { background: #fff; color: #000; transform: translateY(2px); }
   #kick-btn.active {
     background: #fff;
     transform: translateY(2px);
@@ -630,9 +650,9 @@
     <div class="bs-mode-card">
       <div class="bs-mode-tag">MODO EVENTO</div>
       <div class="bs-mode-name">⚽ FUTEBOL</div>
-      <div class="bs-mode-desc">VOCE vs CPU — FACA MAIS GOLS!</div>
+      <div class="bs-mode-desc">VOCE + 3 AMIGOS vs CPU — COM GOLEIRO!</div>
       <div class="bs-mode-stats">
-        <span>1 v 1</span>
+        <span>4 v 4</span>
         <span>🏆 +30</span>
         <span>⏱ 2 MIN</span>
         <span id="selected-brawler-tag">⚔ RMA</span>
@@ -672,6 +692,7 @@
     <div class="dpad-btn" id="dpad-left" data-key="a">◀</div>
     <div class="dpad-btn" id="dpad-right" data-key="d">▶</div>
   </div>
+  <button id="pass-btn">PASSAR</button>
   <button id="kick-btn">CHUTAR</button>
 </div>
 
@@ -681,7 +702,7 @@
   <span id="timer">02:00</span>
   <span class="team-red"><span id="score-p2">0</span> CPU</span>
 </div>
-<canvas id="game" width="400" height="250"></canvas>
+<canvas id="game" width="560" height="350"></canvas>
 <div id="message">
   <div id="msg-text"></div>
   <button id="msg-btn-restart" onclick="reset(); resume();">JOGAR DE NOVO</button>
@@ -689,7 +710,7 @@
   <button id="msg-btn-menu" class="secondary" onclick="goToMenu()">MENU</button>
 </div>
 <div id="controls">
-  WASD ou ← ↑ → ↓ MOVER  ·  ESPACO CHUTAR  ·  P PAUSAR
+  WASD ou ← ↑ → ↓ MOVER  ·  ESPACO CHUTAR / BOTE  ·  E PASSAR  ·  Q TROCAR  ·  P PAUSAR
 </div>
 
 <script>
@@ -719,24 +740,43 @@ const BRAWLERS = [
 let selectedBrawlerId = 'neymar';
 function getBrawler() { return BRAWLERS.find(b => b.id === selectedBrawlerId); }
 
+// Dificuldade mexe no time da CPU: velocidade, força do chute, roubada de bola e goleiro
 const DIFFICULTY = {
-  easy:   { aiSpeed: 0.30, aiKickRange: 6,  aiHesitate: 0.08, kickPower: 7,  predictBall: 0.3, defendThreshold: 200, matchTime: 90 },
-  normal: { aiSpeed: 0.45, aiKickRange: 8,  aiHesitate: 0.02, kickPower: 9,  predictBall: 0.6, defendThreshold: 250, matchTime: 120 },
-  hard:   { aiSpeed: 0.65, aiKickRange: 10, aiHesitate: 0.00, kickPower: 12, predictBall: 1.0, defendThreshold: 300, matchTime: 150 },
+  easy:   { cpuSpeed: 1.45, kickPower: 7.5, stealChance: 0.30, gkSave: 0.40, shootRange: 130, matchTime: 120 },
+  normal: { cpuSpeed: 1.75, kickPower: 9,   stealChance: 0.45, gkSave: 0.60, shootRange: 160, matchTime: 150 },
+  hard:   { cpuSpeed: 1.92, kickPower: 10,  stealChance: 0.50, gkSave: 0.72, shootRange: 180, matchTime: 180 },
 };
 
-const FIELD = { left: 20, right: W - 20, top: 20, bottom: H - 20 };
-const GOAL = { width: 6, height: 70, yTop: H/2 - 35, yBottom: H/2 + 35 };
+const FIELD = { left: 24, right: W - 24, top: 18, bottom: H - 18 };
+const FW = FIELD.right - FIELD.left, FH = FIELD.bottom - FIELD.top;
+const GOAL = { width: 8, height: 84, yTop: H/2 - 42, yBottom: H/2 + 42 };
+const BOX = { w: 70, h: 160 };   // grande área
+const PICKUP_SPEED = 6.5;        // bola mais rápida que isso quica no jogador em vez de grudar
 
-const ball = { x: W/2, y: H/2, vx: 0, vy: 0, r: 4, trail: [] };
-const p1 = { x: 100, y: H/2, vx: 0, vy: 0, r: 7, facing: 1, kickCooldown: 0, color: 'blue', team: 'p1' };
-const p2 = { x: W - 100, y: H/2, vx: 0, vy: 0, r: 7, facing: -1, kickCooldown: 0, color: 'red', team: 'p2' };
+const ball = { x: W/2, y: H/2, vx: 0, vy: 0, r: 4, trail: [], passTo: null };
+
+// Posição de cada um com o time atacando pra direita (x de 0 a 1 do campo, y de 0 a 1)
+const FORMATION = [
+  { role: 'gk',  x: 0.02, y: 0.5 },
+  { role: 'def', x: 0.24, y: 0.30 },
+  { role: 'def', x: 0.24, y: 0.70 },
+  { role: 'att', x: 0.48, y: 0.28 },
+  { role: 'att', x: 0.48, y: 0.72 },
+];
+
+let players = [];
+let me = null;          // jogador que você controla
+let carrier = null;     // quem está com a bola grudada no pé
+let caller = null;      // colega pedindo a bola
+let switchCooldown = 0;
+let kickHeld = false, passHeld = false, switchHeld = false;
 
 let score = { p1: 0, p2: 0 };
 let timeLeft = 120 * 60;
 let goalCelebration = 0;
 let gameOver = false;
 let particles = [];
+let kickoffTeam = 'p1';
 
 const keys = {};
 document.addEventListener("keydown", e => {
@@ -753,6 +793,7 @@ function dist(a, b) {
   const dx = a.x - b.x, dy = a.y - b.y;
   return Math.sqrt(dx*dx + dy*dy);
 }
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 function spawnParticles(x, y, color, n = 10) {
   for (let i = 0; i < n; i++) {
@@ -767,100 +808,386 @@ function spawnParticles(x, y, color, n = 10) {
   }
 }
 
-function updatePlayer(p, controls, accel = 0.3) {
-  let ax = 0, ay = 0;
-  if (controls.left) ax -= 1;
-  if (controls.right) ax += 1;
-  if (controls.up) ay -= 1;
-  if (controls.down) ay += 1;
-  if (ax !== 0 || ay !== 0) {
-    const m = Math.sqrt(ax*ax + ay*ay);
-    ax /= m; ay /= m;
-    p.vx += ax * accel;
-    p.vy += ay * accel;
-    if (ax !== 0) p.facing = ax > 0 ? 1 : -1;
-  }
-  p.vx *= 0.85;
-  p.vy *= 0.85;
-  const sp = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
-  if (sp > 2.5) { p.vx = p.vx/sp * 2.5; p.vy = p.vy/sp * 2.5; }
-  p.x += p.vx;
-  p.y += p.vy;
-  if (p.x < FIELD.left + p.r) p.x = FIELD.left + p.r;
-  if (p.x > FIELD.right - p.r) p.x = FIELD.right - p.r;
-  if (p.y < FIELD.top + p.r) p.y = FIELD.top + p.r;
-  if (p.y > FIELD.bottom - p.r) p.y = FIELD.bottom - p.r;
-  if (p.kickCooldown > 0) p.kickCooldown--;
+// ── Times ──
+const attackDir = team => (team === 'p1' ? 1 : -1);          // p1 ataca pra direita
+const enemyGoalX = team => (team === 'p1' ? FIELD.right : FIELD.left);
+const ownGoalX = team => (team === 'p1' ? FIELD.left : FIELD.right);
+const teammates = p => players.filter(o => o.team === p.team && o !== p);
+const opponents = p => players.filter(o => o.team !== p.team);
+
+// Converte a posição da formação (time atacando pra direita) pro campo de verdade
+function formationSpot(p, shift = 0) {
+  const fx = clamp(p.home.x + shift, 0.02, 0.92);
+  const x = p.team === 'p1' ? FIELD.left + fx * FW : FIELD.right - fx * FW;
+  return { x, y: FIELD.top + p.home.y * FH };
 }
 
-function tryKick(p, kickPressed, power = 8) {
-  if (!kickPressed || p.kickCooldown > 0) return;
-  const d = dist(p, ball);
-  if (d > p.r + ball.r + 8) return;
-  let dx = ball.x - p.x;
-  let dy = ball.y - p.y;
-  const m = Math.sqrt(dx*dx + dy*dy) || 1;
-  dx /= m; dy /= m;
-  const targetX = p.team === 'p1' ? FIELD.right : FIELD.left;
-  const targetY = H/2;
-  let tx = targetX - p.x, ty = targetY - p.y;
-  const tm = Math.sqrt(tx*tx + ty*ty) || 1;
-  tx /= tm; ty /= tm;
-  const bx = (dx + tx * 0.6);
-  const by = (dy + ty * 0.6);
-  const bm = Math.sqrt(bx*bx + by*by) || 1;
-  ball.vx = (bx/bm) * power;
-  ball.vy = (by/bm) * power;
-  p.kickCooldown = 20;
+function makePlayers() {
+  players = [];
+  for (const team of ['p1', 'p2']) {
+    FORMATION.forEach((f, i) => {
+      const p = {
+        team, role: f.role, gk: f.role === 'gk', num: i,
+        home: { x: f.x, y: f.y },
+        x: 0, y: 0, vx: 0, vy: 0, r: 7,
+        dir: { x: attackDir(team), y: 0 }, facing: attackDir(team),
+        noTouch: 0, protect: 0, stealCd: 0, stun: 0, think: 0, gkHold: 0,
+      };
+      players.push(p);
+    });
+  }
+}
+
+function kickoff(team) {
+  carrier = null; caller = null;
+  ball.vx = ball.vy = 0; ball.trail = []; ball.passTo = null;
+  for (const p of players) {
+    const s = formationSpot(p, -0.05);
+    p.x = s.x; p.y = s.y; p.vx = p.vy = 0;
+    p.noTouch = p.protect = p.stealCd = p.stun = p.gkHold = 0;
+    p.dir = { x: attackDir(p.team), y: 0 }; p.facing = attackDir(p.team);
+  }
+  // Quem toma o gol sai com a bola no meio de campo
+  const taker = players.find(p => p.team === team && p.role === 'att' && p.num === 3);
+  taker.x = W/2 - attackDir(team) * 10; taker.y = H/2;
+  giveBall(taker);
+  taker.protect = 60;   // na saída de bola ninguém rouba na hora
+  me = team === 'p1' ? taker : players.find(p => p.team === 'p1' && p.num === 3);
+}
+
+// ── Bola no pé ──
+function giveBall(p) {
+  carrier = p;
+  ball.passTo = null;
+  p.protect = 25;   // logo depois de pegar não dá pra roubar
+  if (p.team === 'p1' && !p.gk) me = p;
+}
+
+function releaseBall(vx, vy) {
+  const c = carrier;
+  carrier = null;
+  c.noTouch = 14;   // não pega a bola de volta na hora
+  ball.vx = vx; ball.vy = vy;
   spawnParticles(ball.x, ball.y, '#fff', 6);
 }
 
+function shoot(p, power) {
+  // Mira no gol: você escolhe o canto pela direção; a CPU mira longe do goleiro
+  const gx = enemyGoalX(p.team) + attackDir(p.team) * 4;
+  let gy;
+  if (p === me) gy = H/2 + p.dir.y * 34 + (Math.random() - 0.5) * 10;
+  else {
+    const keeper = players.find(o => o.team !== p.team && o.gk);
+    gy = keeper.y < H/2 ? GOAL.yBottom - 12 : GOAL.yTop + 12;
+    gy += (Math.random() - 0.5) * 30;
+  }
+  gy = clamp(gy, GOAL.yTop + 4, GOAL.yBottom - 4);
+  const dx = gx - ball.x, dy = gy - ball.y, m = Math.hypot(dx, dy) || 1;
+  releaseBall(dx / m * power, dy / m * power);
+}
+
+function passTo(p, target) {
+  const lead = 10;
+  const tx = target.x + target.vx * lead, ty = target.y + target.vy * lead;
+  const dx = tx - ball.x, dy = ty - ball.y, d = Math.hypot(dx, dy) || 1;
+  const speed = clamp(2.6 + d * 0.028, 3.5, 7.5);
+  releaseBall(dx / d * speed, dy / d * speed);
+  ball.passTo = target;
+}
+
+// Quanto um colega está livre pra receber (maior = melhor)
+function openness(p, from) {
+  let near = 999;
+  for (const o of opponents(p)) near = Math.min(near, dist(o, p));
+  // Adversário no meio do caminho do passe atrapalha
+  let block = 0;
+  const dx = p.x - from.x, dy = p.y - from.y, len = Math.hypot(dx, dy) || 1;
+  for (const o of opponents(p)) {
+    const t = clamp(((o.x - from.x) * dx + (o.y - from.y) * dy) / (len * len), 0, 1);
+    const cx = from.x + dx * t, cy = from.y + dy * t;
+    if (Math.hypot(o.x - cx, o.y - cy) < 14) block += 40;
+  }
+  const forward = (p.x - from.x) * attackDir(p.team);
+  return Math.min(near, 80) + forward * 0.25 - block - (len > 220 ? 30 : 0);
+}
+
+function bestReceiver(p) {
+  let best = null, bestScore = -Infinity;
+  for (const t of teammates(p)) {
+    if (t.gk) continue;
+    const s = openness(t, p);
+    if (s > bestScore) { bestScore = s; best = t; }
+  }
+  return bestScore > 0 ? best : null;
+}
+
+// ── Movimento ──
+function steer(p, tx, ty, maxSpeed) {
+  if (p.stun > 0) { p.stun--; maxSpeed *= 0.3; }
+  let dx = tx - p.x, dy = ty - p.y;
+  const d = Math.hypot(dx, dy);
+  let sp = d < 4 ? 0 : Math.min(maxSpeed, d * 0.15);
+  if (d > 0.01) { dx /= d; dy /= d; }
+  p.vx += (dx * sp - p.vx) * 0.25;
+  p.vy += (dy * sp - p.vy) * 0.25;
+}
+
+function moveWithInput(p, ctrl, maxSpeed) {
+  if (p.stun > 0) { p.stun--; maxSpeed *= 0.3; }
+  let ax = (ctrl.right ? 1 : 0) - (ctrl.left ? 1 : 0);
+  let ay = (ctrl.down ? 1 : 0) - (ctrl.up ? 1 : 0);
+  const m = Math.hypot(ax, ay);
+  if (m) { ax /= m; ay /= m; }
+  p.vx += (ax * maxSpeed - p.vx) * 0.25;
+  p.vy += (ay * maxSpeed - p.vy) * 0.25;
+}
+
+function integrate(p) {
+  p.x += p.vx; p.y += p.vy;
+  const sp = Math.hypot(p.vx, p.vy);
+  if (sp > 0.3) {
+    p.dir = { x: p.vx / sp, y: p.vy / sp };
+    if (Math.abs(p.vx) > 0.15) p.facing = p.vx > 0 ? 1 : -1;
+  }
+  p.x = clamp(p.x, FIELD.left + p.r, FIELD.right - p.r);
+  p.y = clamp(p.y, FIELD.top + p.r, FIELD.bottom - p.r);
+  if (p.gk) {
+    // Goleiro não sai da grande área
+    const gx = ownGoalX(p.team);
+    if (p.team === 'p1') p.x = Math.min(p.x, gx + BOX.w);
+    else p.x = Math.max(p.x, gx - BOX.w);
+    p.y = clamp(p.y, H/2 - BOX.h/2, H/2 + BOX.h/2);
+  }
+  for (const k of ['noTouch', 'protect', 'stealCd']) if (p[k] > 0) p[k]--;
+}
+
+// Jogadores não ficam um em cima do outro
+function separate() {
+  for (let i = 0; i < players.length; i++) for (let j = i + 1; j < players.length; j++) {
+    const a = players[i], b = players[j];
+    const d = dist(a, b), min = a.r + b.r - 2;
+    if (d > 0 && d < min) {
+      const push = (min - d) / 2, nx = (b.x - a.x) / d, ny = (b.y - a.y) / d;
+      a.x -= nx * push; a.y -= ny * push;
+      b.x += nx * push; b.y += ny * push;
+    }
+  }
+}
+
+// ── IA ──
+function cpuSpeed(p) {
+  const base = p.team === 'p2' ? DIFFICULTY[difficulty].cpuSpeed : 1.75;
+  return p === carrier ? base * 0.88 : base;
+}
+
+function aiGoalkeeper(p) {
+  const gx = ownGoalX(p.team) + attackDir(p.team) * 10;
+  if (carrier === p) {
+    // Segura um pouco e toca pra um colega livre (ou chuta longe)
+    p.gkHold++;
+    steer(p, gx, H/2, 1);
+    if (p.gkHold > 45) {
+      const t = bestReceiver(p);
+      if (t) passTo(p, t);
+      else releaseBall(attackDir(p.team) * 8, (Math.random() - 0.5) * 4);
+      p.gkHold = 0;
+    }
+    return;
+  }
+  const inBox = Math.abs(ball.x - ownGoalX(p.team)) < BOX.w && Math.abs(ball.y - H/2) < BOX.h / 2;
+  const speed = Math.hypot(ball.vx, ball.vy);
+  if (!carrier && inBox && (speed < 3 || dist(p, ball) < 28)) {
+    steer(p, ball.x, ball.y, 2);   // sai pra pegar a bola solta
+  } else {
+    // Fica na linha do gol acompanhando a bola
+    const ty = clamp(H/2 + (ball.y - H/2) * 0.55, GOAL.yTop + 6, GOAL.yBottom - 6);
+    steer(p, gx, ty, 1.9);
+  }
+}
+
+function aiCarrier(p) {
+  const dir = attackDir(p.team);
+  const goalX = enemyGoalX(p.team);
+  const toGoal = Math.abs(goalX - p.x);
+  // Adversário marcando na frente?
+  let pressure = 0, threat = null;
+  for (const o of opponents(p)) {
+    if (o.gk) continue;
+    const d = dist(o, p), ahead = (o.x - p.x) * dir;
+    if (d < 34 && ahead > -6) { pressure = Math.max(pressure, 34 - d); threat = o; }
+  }
+  p.think--;
+  if (p.think <= 0) {
+    p.think = 10 + Math.floor(Math.random() * 10);
+    const cfg = DIFFICULTY[difficulty];
+    const range = p.team === 'p2' ? cfg.shootRange : 160;
+    if (toGoal < range && Math.abs(p.y - H/2) < 110 && Math.random() < 0.55) {
+      shoot(p, p.team === 'p2' ? cfg.kickPower : 9);
+      return;
+    }
+    if (pressure > 10 || Math.random() < 0.12) {
+      const t = bestReceiver(p);
+      if (t && (pressure > 10 || openness(t, p) > 40)) { passTo(p, t); return; }
+    }
+  }
+  // Conduz pro gol, desviando de quem está na frente
+  let ty = H/2 + (p.y - H/2) * 0.7;
+  if (threat) ty = p.y + (p.y > threat.y ? 40 : -40);
+  steer(p, goalX - dir * 20, clamp(ty, FIELD.top + 20, FIELD.bottom - 20), cpuSpeed(p));
+}
+
+function aiOffBall(p) {
+  const myTeamHasBall = carrier && carrier.team === p.team;
+  const ballFrac = (ball.x - FIELD.left) / FW;            // 0 = esquerda, 1 = direita
+  const attackFrac = p.team === 'p1' ? ballFrac : 1 - ballFrac;
+  if (myTeamHasBall) {
+    // Sobe pro ataque e abre espaço pra receber
+    const s = formationSpot(p, (attackFrac - 0.35) * 0.6 + (p.role === 'att' ? 0.18 : 0.05));
+    steer(p, s.x, s.y + Math.sin(performance.now() / 700 + p.num) * 12, cpuSpeed(p));
+    return;
+  }
+  // Sem a bola: o mais perto vai nela, os outros voltam pra marcar
+  const mates = players.filter(o => o.team === p.team && !o.gk && o !== me);
+  const chaser = mates.reduce((a, b) => (dist(a, ball) < dist(b, ball) ? a : b), mates[0]);
+  const meCloser = p.team === 'p1' && me && dist(me, ball) < dist(p, ball) + 20;
+  if (p === chaser && !meCloser) {
+    const lead = carrier ? 4 : 10;
+    steer(p, ball.x + ball.vx * lead, ball.y + ball.vy * lead, cpuSpeed(p));
+    return;
+  }
+  const s = formationSpot(p, (attackFrac - 0.5) * 0.5 - 0.06);
+  const ty = s.y + (ball.y - s.y) * 0.25;
+  steer(p, s.x, ty, cpuSpeed(p) * 0.85);
+}
+
+// ── Seu jogador ──
+function updateMe() {
+  const b = getBrawler();
+  const ctrl = {
+    left: keys['arrowleft'] || keys['a'],
+    right: keys['arrowright'] || keys['d'],
+    up: keys['arrowup'] || keys['w'],
+    down: keys['arrowdown'] || keys['s'],
+  };
+  const sp = (1.55 + b.speed * 0.08) * (carrier === me ? 0.9 : 1);
+  moveWithInput(me, ctrl, sp);
+
+  const kick = !!keys[' '], pass = !!(keys['e'] || keys['k']), sw = !!keys['q'];
+  if (carrier === me) {
+    if (kick && !kickHeld) shoot(me, 7 + b.kick * 0.45);
+    else if (pass && !passHeld) {
+      const t = caller || bestReceiver(me);
+      if (t) passTo(me, t);
+    }
+  } else if (kick && !kickHeld && carrier && carrier.team !== 'p1' && dist(me, carrier) < 20) {
+    // Bote: tenta tirar a bola de quem está perto
+    tryTackle(me, carrier, 0.75);
+  }
+  if (sw && !switchHeld && carrier !== me) switchToClosest(true);
+  kickHeld = kick; passHeld = pass; switchHeld = sw;
+}
+
+// Troca pro colega mais perto da bola quando você está longe dela
+function switchToClosest(force) {
+  const mates = players.filter(p => p.team === 'p1' && !p.gk);
+  const closest = mates.reduce((a, b) => (dist(a, ball) < dist(b, ball) ? a : b));
+  if (closest !== me && (force || dist(me, ball) - dist(closest, ball) > 40)) {
+    me = closest;
+    switchCooldown = 40;
+  }
+}
+
+function tryTackle(p, c, chance) {
+  if (p.stealCd > 0 || c.protect > 0) return;
+  p.stealCd = 30;
+  if (Math.random() < chance) {
+    c.stun = 25;
+    giveBall(p);
+    spawnParticles(ball.x, ball.y, '#fcd000', 8);
+  }
+}
+
+// ── Bola ──
 function updateBall() {
-  ball.vx *= 0.985;
-  ball.vy *= 0.985;
+  if (carrier) {
+    // Bola grudada no pé, na frente de quem conduz
+    const c = carrier;
+    ball.x = clamp(c.x + c.dir.x * (c.r + ball.r - 1), FIELD.left + ball.r, FIELD.right - ball.r);
+    ball.y = clamp(c.y + 3 + c.dir.y * (c.r + ball.r - 2), FIELD.top + ball.r, FIELD.bottom - ball.r);
+    ball.vx = c.vx; ball.vy = c.vy;
+    ball.trail = [];
+    return;
+  }
+  ball.vx *= 0.975;
+  ball.vy *= 0.975;
   if (Math.abs(ball.vx) < 0.05) ball.vx = 0;
   if (Math.abs(ball.vy) < 0.05) ball.vy = 0;
   ball.trail.push({ x: ball.x, y: ball.y });
   if (ball.trail.length > 5) ball.trail.shift();
 
-  // Sub-step movement to prevent tunneling at high speeds
-  const speed = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
-  const maxStep = Math.min(p1.r, ball.r) * 0.8;
-  const steps = Math.max(1, Math.ceil(speed / maxStep));
-  const stepX = ball.vx / steps;
-  const stepY = ball.vy / steps;
-
+  const speed = Math.hypot(ball.vx, ball.vy);
+  const steps = Math.max(1, Math.ceil(speed / 3));
   for (let i = 0; i < steps; i++) {
-    ball.x += stepX;
-    ball.y += stepY;
-
+    ball.x += ball.vx / steps;
+    ball.y += ball.vy / steps;
     if (ball.x - ball.r < FIELD.left) {
       if (ball.y > GOAL.yTop && ball.y < GOAL.yBottom) { goal('p2'); return; }
-      ball.x = FIELD.left + ball.r;
-      ball.vx *= -0.6;
+      ball.x = FIELD.left + ball.r; ball.vx *= -0.6;
     }
     if (ball.x + ball.r > FIELD.right) {
       if (ball.y > GOAL.yTop && ball.y < GOAL.yBottom) { goal('p1'); return; }
-      ball.x = FIELD.right - ball.r;
-      ball.vx *= -0.6;
+      ball.x = FIELD.right - ball.r; ball.vx *= -0.6;
     }
     if (ball.y - ball.r < FIELD.top) { ball.y = FIELD.top + ball.r; ball.vy *= -0.6; }
     if (ball.y + ball.r > FIELD.bottom) { ball.y = FIELD.bottom - ball.r; ball.vy *= -0.6; }
+    if (touchBall()) return;
+  }
+}
 
-    for (const pl of [p1, p2]) {
-      const d = dist(pl, ball);
-      if (d < pl.r + ball.r) {
-        const dx = (ball.x - pl.x) / (d || 1);
-        const dy = (ball.y - pl.y) / (d || 1);
-        ball.x = pl.x + dx * (pl.r + ball.r);
-        ball.y = pl.y + dy * (pl.r + ball.r);
-        // Reflect ball plus add player velocity
-        const incomingSpeed = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
-        const bounceSpeed = Math.max(2, incomingSpeed * 0.6);
-        ball.vx = dx * bounceSpeed + (pl.vx || 0) * 0.7;
-        ball.vy = dy * bounceSpeed + (pl.vy || 0) * 0.7;
-        break;
+// Alguém encostou na bola solta: gruda no pé, o goleiro agarra, ou ela quica
+function touchBall() {
+  const speed = Math.hypot(ball.vx, ball.vy);
+  for (const p of players) {
+    if (p.noTouch > 0) continue;
+    const reach = p.gk ? 6 : 2;
+    const d = dist(p, ball);
+    if (d > p.r + ball.r + reach) continue;
+    if (p.gk) {
+      const chance = p.team === 'p2' ? DIFFICULTY[difficulty].gkSave : 0.6;
+      if (speed < PICKUP_SPEED || Math.random() < chance) {
+        giveBall(p); p.gkHold = 0;
+        spawnParticles(ball.x, ball.y, '#fff', 8);
+        return true;
       }
+      p.noTouch = 10;   // espalmou
+    } else if (speed < PICKUP_SPEED || ball.passTo === p) {
+      giveBall(p);
+      return true;
+    }
+    // Quica no jogador
+    const nx = (ball.x - p.x) / (d || 1), ny = (ball.y - p.y) / (d || 1);
+    ball.x = p.x + nx * (p.r + ball.r + reach);
+    ball.y = p.y + ny * (p.r + ball.r + reach);
+    const bounce = Math.max(2, speed * 0.55);
+    ball.vx = nx * bounce + p.vx * 0.5;
+    ball.vy = ny * bounce + p.vy * 0.5;
+    ball.passTo = null;
+    return false;
+  }
+  return false;
+}
+
+// Quem marca encosta em quem está com a bola e pode roubar
+function checkSteals() {
+  if (!carrier) return;
+  for (const o of opponents(carrier)) {
+    if (o.stun > 0) continue;
+    if (dist(o, carrier) < o.r + carrier.r + 3) {
+      // Encostar já pode roubar; o bote (CHUTAR perto) tem mais chance
+      const chance = o === me ? 0.35 : o.team === 'p2' ? DIFFICULTY[difficulty].stealChance : 0.5;
+      tryTackle(o, carrier, o.gk ? 0.9 : chance);
+      if (carrier !== o) continue;
+      return;
     }
   }
 }
@@ -869,53 +1196,9 @@ function goal(scorer) {
   score[scorer]++;
   document.getElementById(scorer === 'p1' ? 'score-p1' : 'score-p2').textContent = score[scorer];
   goalCelebration = 90;
+  carrier = null; caller = null;
   spawnParticles(ball.x, ball.y, '#fcd000', 30);
-  setTimeout(() => {
-    ball.x = W/2; ball.y = H/2; ball.vx = 0; ball.vy = 0; ball.trail = [];
-    p1.x = 100; p1.y = H/2; p1.vx = 0; p1.vy = 0;
-    p2.x = W - 100; p2.y = H/2; p2.vx = 0; p2.vy = 0;
-  }, 800);
-}
-
-function aiUpdate() {
-  const cfg = DIFFICULTY[difficulty];
-
-  // Predict where ball will be
-  const predict = cfg.predictBall * 8;
-  const predX = ball.x + ball.vx * predict;
-  const predY = ball.y + ball.vy * predict;
-
-  // Decide: attack ball, or defend our goal (right side)?
-  const playerHasBall = dist(p1, ball) < 30;
-  const ballInOurHalf = ball.x > W * 0.55;
-  const defending = playerHasBall && ballInOurHalf;
-
-  let tx, ty;
-  if (defending) {
-    // Position between ball and our goal
-    const goalCenterX = FIELD.right + 5;
-    const goalCenterY = H/2;
-    tx = (ball.x + goalCenterX) / 2 - 8;
-    ty = (ball.y + goalCenterY) / 2;
-  } else {
-    // Approach the predicted ball position from the side facing the enemy goal
-    tx = predX + (ball.x > FIELD.left + 60 ? 8 : 0);
-    ty = predY;
-  }
-
-  const ctrl = {
-    left: p2.x > tx + 3,
-    right: p2.x < tx - 3,
-    up: p2.y > ty + 3,
-    down: p2.y < ty - 3,
-  };
-  if (Math.random() < cfg.aiHesitate) ctrl.left = ctrl.right = false;
-  updatePlayer(p2, ctrl, cfg.aiSpeed);
-
-  const d = dist(p2, ball);
-  if (d < p2.r + ball.r + cfg.aiKickRange && p2.kickCooldown === 0) {
-    tryKick(p2, true, cfg.kickPower);
-  }
+  kickoffTeam = scorer === 'p1' ? 'p2' : 'p1';
 }
 
 function update() {
@@ -924,19 +1207,28 @@ function update() {
   if (goalCelebration > 0) {
     goalCelebration--;
     updateParticles();
+    if (goalCelebration === 0) kickoff(kickoffTeam);
     return;
   }
-  const ctrl = {
-    left: keys['arrowleft'] || keys['a'],
-    right: keys['arrowright'] || keys['d'],
-    up: keys['arrowup'] || keys['w'],
-    down: keys['arrowdown'] || keys['s'],
-  };
-  const b = getBrawler();
-  updatePlayer(p1, ctrl, 0.18 + b.speed * 0.025);
-  tryKick(p1, !!keys[' '], 5 + b.kick * 0.6);
-  aiUpdate();
+  if (switchCooldown > 0) switchCooldown--;
+  else if (carrier !== me && (!carrier || carrier.team !== 'p1' || carrier.gk)) switchToClosest(false);
+
+  updateMe();
+  for (const p of players) {
+    if (p === me) continue;
+    if (p.gk) aiGoalkeeper(p);
+    else if (carrier === p) aiCarrier(p);
+    else aiOffBall(p);
+  }
+  for (const p of players) integrate(p);
+  separate();
+  checkSteals();
   updateBall();
+  // Colega livre pede a bola quando você está com ela
+  if (carrier === me) {
+    if (!caller || Math.random() < 0.05) caller = bestReceiver(me);
+  } else caller = null;
+
   timeLeft--;
   if (timeLeft <= 0) { timeLeft = 0; endGame(); }
   updateTimer();
@@ -1021,14 +1313,14 @@ function reset() {
   gameOver = false;
   goalCelebration = 0;
   particles = [];
-  ball.x = W/2; ball.y = H/2; ball.vx = 0; ball.vy = 0; ball.trail = [];
-  p1.x = 100; p1.y = H/2; p1.vx = 0; p1.vy = 0;
-  p2.x = W - 100; p2.y = H/2; p2.vx = 0; p2.vy = 0;
+  makePlayers();
+  kickoff('p1');
   document.getElementById('score-p1').textContent = 0;
   document.getElementById('score-p2').textContent = 0;
   document.getElementById('message').style.display = 'none';
   updateTimer();
 }
+
 
 // ── Brawler grid + tab switching ──
 function renderBrawlers() {
@@ -1075,7 +1367,7 @@ renderBrawlers();
 
 document.getElementById('btn-start').addEventListener('click', startGame);
 document.getElementById('btn-how').addEventListener('click', () => {
-  alert('COMO JOGAR\n\n• WASD ou setas para mover\n• ESPACO para chutar\n• P para pausar\n\nFaca mais gols que a CPU antes do tempo acabar!');
+  alert('COMO JOGAR\n\n• WASD ou setas para mover (a bola fica grudada no pé)\n• ESPACO para chutar no gol\n• E para passar pro colega que grita TOCA!\n• Sem a bola: encoste no adversário ou aperte ESPACO perto dele pra roubar\n• Q troca pro jogador mais perto da bola\n• P para pausar\n\nSeu time tem 4 na linha + goleiro. Faca mais gols que a CPU!');
 });
 document.getElementById('pause-btn').addEventListener('click', pause);
 document.querySelectorAll('#difficulty button').forEach(btn => {
@@ -1088,39 +1380,35 @@ document.querySelectorAll('#difficulty button').forEach(btn => {
 
 // ── DRAW ──
 function drawField() {
-  for (let i = 0; i < W; i += 20) {
-    ctx.fillStyle = (i / 20) % 2 === 0 ? '#2d8a2d' : '#369936';
-    ctx.fillRect(i, 0, 20, H);
+  for (let i = 0; i < W; i += 28) {
+    ctx.fillStyle = (i / 28) % 2 === 0 ? '#2d8a2d' : '#369936';
+    ctx.fillRect(i, 0, 28, H);
   }
   ctx.fillStyle = '#fff';
-  ctx.fillRect(FIELD.left, FIELD.top - 1, FIELD.right - FIELD.left, 2);
-  ctx.fillRect(FIELD.left, FIELD.bottom - 1, FIELD.right - FIELD.left, 2);
-  ctx.fillRect(FIELD.left - 1, FIELD.top, 2, FIELD.bottom - FIELD.top);
-  ctx.fillRect(FIELD.right - 1, FIELD.top, 2, FIELD.bottom - FIELD.top);
-  for (let y = FIELD.top; y < FIELD.bottom; y += 4) {
-    ctx.fillRect(W/2 - 1, y, 2, 2);
-  }
-  drawCircleOutline(W/2, H/2, 25, '#fff');
+  ctx.fillRect(FIELD.left, FIELD.top - 1, FW, 2);
+  ctx.fillRect(FIELD.left, FIELD.bottom - 1, FW, 2);
+  ctx.fillRect(FIELD.left - 1, FIELD.top, 2, FH);
+  ctx.fillRect(FIELD.right - 1, FIELD.top, 2, FH);
+  for (let y = FIELD.top; y < FIELD.bottom; y += 4) ctx.fillRect(W/2 - 1, y, 2, 2);
+  drawCircleOutline(W/2, H/2, 36, '#fff');
   ctx.fillRect(W/2 - 1, H/2 - 1, 2, 2);
-  drawRectOutline(FIELD.left, H/2 - 50, 40, 100, '#fff');
-  drawRectOutline(FIELD.right - 40, H/2 - 50, 40, 100, '#fff');
-  drawRectOutline(FIELD.left, H/2 - 25, 18, 50, '#fff');
-  drawRectOutline(FIELD.right - 18, H/2 - 25, 18, 50, '#fff');
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(FIELD.left - GOAL.width, GOAL.yTop, GOAL.width, 2);
-  ctx.fillRect(FIELD.left - GOAL.width, GOAL.yBottom - 2, GOAL.width, 2);
-  ctx.fillRect(FIELD.left - GOAL.width, GOAL.yTop, 2, GOAL.yBottom - GOAL.yTop);
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  for (let y = GOAL.yTop + 2; y < GOAL.yBottom - 2; y += 3) ctx.fillRect(FIELD.left - GOAL.width + 2, y, GOAL.width - 2, 1);
-  for (let x = FIELD.left - GOAL.width + 2; x < FIELD.left; x += 3) ctx.fillRect(x, GOAL.yTop + 2, 1, GOAL.yBottom - GOAL.yTop - 4);
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(FIELD.right, GOAL.yTop, GOAL.width, 2);
-  ctx.fillRect(FIELD.right, GOAL.yBottom - 2, GOAL.width, 2);
-  ctx.fillRect(FIELD.right + GOAL.width - 2, GOAL.yTop, 2, GOAL.yBottom - GOAL.yTop);
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  for (let y = GOAL.yTop + 2; y < GOAL.yBottom - 2; y += 3) ctx.fillRect(FIELD.right, y, GOAL.width - 2, 1);
-  for (let x = FIELD.right + 2; x < FIELD.right + GOAL.width; x += 3) ctx.fillRect(x, GOAL.yTop + 2, 1, GOAL.yBottom - GOAL.yTop - 4);
+  drawRectOutline(FIELD.left, H/2 - BOX.h/2, BOX.w, BOX.h, '#fff');
+  drawRectOutline(FIELD.right - BOX.w, H/2 - BOX.h/2, BOX.w, BOX.h, '#fff');
+  drawRectOutline(FIELD.left, H/2 - 45, 26, 90, '#fff');
+  drawRectOutline(FIELD.right - 26, H/2 - 45, 26, 90, '#fff');
+  // Gols com rede
+  for (const left of [true, false]) {
+    const x0 = left ? FIELD.left - GOAL.width : FIELD.right;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x0, GOAL.yTop, GOAL.width, 2);
+    ctx.fillRect(x0, GOAL.yBottom - 2, GOAL.width, 2);
+    ctx.fillRect(left ? x0 : x0 + GOAL.width - 2, GOAL.yTop, 2, GOAL.height);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    for (let y = GOAL.yTop + 2; y < GOAL.yBottom - 2; y += 3) ctx.fillRect(x0 + (left ? 2 : 0), y, GOAL.width - 2, 1);
+    for (let x = x0 + 2; x < x0 + GOAL.width; x += 3) ctx.fillRect(x, GOAL.yTop + 2, 1, GOAL.height - 4);
+  }
 }
+
 
 function drawRectOutline(x, y, w, h, color) {
   ctx.fillStyle = color;
@@ -1173,32 +1461,42 @@ function shadeHex(hex, amt) {
   return '#' + toHex(r) + toHex(g) + toHex(b);
 }
 
+function teamColors(team) {
+  const pc = getBrawler().bg;
+  if (team === 'p1') return { main: pc, dark: shadeHex(pc, -0.3) };
+  // Cor da CPU contrasta com a cor do seu time
+  const c = colorsTooSimilar(pc, '#ff4040') ? '#3050d8' : '#ff4040';
+  return { main: c, dark: shadeHex(c, -0.3) };
+}
+
 function drawPlayer(p) {
   const x = Math.floor(p.x), y = Math.floor(p.y);
-  let teamColor, teamDark;
-  if (p.team === 'p1') {
-    teamColor = getBrawler().bg;
-    teamDark = shadeHex(teamColor, -0.3);
-  } else {
-    // Pick enemy color that contrasts with player's brawler color
-    const pc = getBrawler().bg;
-    teamColor = colorsTooSimilar(pc, '#ff4040') ? '#3050d8' : '#ff4040';
-    teamDark = shadeHex(teamColor, -0.3);
-  }
+  const kit = p.gk
+    ? (p.team === 'p1' ? { main: '#2ee6a0', dark: '#1a8a60' } : { main: '#fcd000', dark: '#a87800' })
+    : teamColors(p.team);
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.fillRect(x - 5, y + 5, 10, 2);
   ctx.fillStyle = '#000';
   ctx.fillRect(x - 4, y + 1, 8, 4);
-  ctx.fillStyle = teamColor;
+  ctx.fillStyle = kit.main;
   ctx.fillRect(x - 5, y - 5, 10, 6);
-  ctx.fillStyle = teamDark;
+  ctx.fillStyle = kit.dark;
   ctx.fillRect(x - 5, y - 5, 10, 1);
-  ctx.fillStyle = teamDark;
-  ctx.fillRect(x - 6, y - 3, 1, 3);
-  ctx.fillRect(x + 5, y - 3, 1, 3);
+  // Goleiro tem luvas brancas e braços abertos
+  if (p.gk) {
+    ctx.fillStyle = kit.main;
+    ctx.fillRect(x - 7, y - 3, 2, 3);
+    ctx.fillRect(x + 5, y - 3, 2, 3);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x - 7, y, 2, 2);
+    ctx.fillRect(x + 5, y, 2, 2);
+  } else {
+    ctx.fillRect(x - 6, y - 3, 1, 3);
+    ctx.fillRect(x + 5, y - 3, 1, 3);
+  }
   ctx.fillStyle = '#fcb088';
   ctx.fillRect(x - 3, y - 9, 6, 4);
-  ctx.fillStyle = '#481800';
+  ctx.fillStyle = p.gk ? '#000' : '#481800';
   ctx.fillRect(x - 3, y - 10, 6, 2);
   ctx.fillStyle = '#000';
   if (p.facing > 0) {
@@ -1216,36 +1514,34 @@ function drawPlayer(p) {
   ctx.fillRect(x + 1, y + 7, 3, 2);
 }
 
-function drawGoalie(g) {
-  const x = Math.floor(g.x), y = Math.floor(g.y);
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.fillRect(x - 5, y + 5, 10, 2);
+// Setinha amarela em cima de quem você controla
+function drawMeMarker() {
+  if (!me) return;
+  const x = Math.floor(me.x), y = Math.floor(me.y) - 16 + Math.round(Math.sin(performance.now() / 150));
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x - 4, y - 1, 9, 2);
   ctx.fillStyle = '#fcd000';
-  ctx.fillRect(x - 5, y - 5, 10, 6);
-  ctx.fillStyle = '#a87800';
-  ctx.fillRect(x - 5, y - 5, 10, 1);
-  ctx.fillStyle = '#000';
-  ctx.fillRect(x - 4, y + 1, 8, 4);
-  ctx.fillStyle = '#fcd000';
-  ctx.fillRect(x - 7, y - 3, 2, 3);
-  ctx.fillRect(x + 5, y - 3, 2, 3);
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(x - 7, y, 2, 2);
-  ctx.fillRect(x + 5, y, 2, 2);
-  ctx.fillStyle = '#fcb088';
-  ctx.fillRect(x - 3, y - 9, 6, 4);
-  ctx.fillStyle = '#000';
-  ctx.fillRect(x - 3, y - 10, 6, 2);
-  ctx.fillStyle = '#000';
-  ctx.fillRect(x - 2, y - 7, 1, 1);
-  ctx.fillRect(x + 1, y - 7, 1, 1);
-  ctx.fillStyle = '#fcb088';
-  ctx.fillRect(x - 3, y + 5, 2, 3);
-  ctx.fillRect(x + 1, y + 5, 2, 3);
-  ctx.fillStyle = '#000';
-  ctx.fillRect(x - 4, y + 7, 3, 2);
-  ctx.fillRect(x + 1, y + 7, 3, 2);
+  ctx.fillRect(x - 3, y, 7, 1);
+  ctx.fillRect(x - 2, y + 1, 5, 1);
+  ctx.fillRect(x - 1, y + 2, 3, 1);
+  ctx.fillRect(x, y + 3, 1, 1);
 }
+
+// Balão "TOCA!" no colega que está pedindo a bola
+function drawCaller() {
+  if (!caller) return;
+  const x = Math.floor(caller.x), y = Math.floor(caller.y) - 24;
+  const pulse = Math.floor(performance.now() / 250) % 2;
+  ctx.fillStyle = pulse ? '#fff' : '#fcd000';
+  ctx.fillRect(x - 15, y - 6, 30, 11);
+  ctx.fillRect(x - 2, y + 5, 4, 2);
+  ctx.fillStyle = '#000';
+  ctx.font = 'bold 9px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('TOCA!', x, y + 3);
+  ctx.textAlign = 'left';
+}
+
 
 function drawBall() {
   for (let i = 0; i < ball.trail.length; i++) {
@@ -1292,12 +1588,20 @@ function drawCelebration() {
 
 function draw() {
   drawField();
-  drawBall();
-  drawPlayer(p1);
-  drawPlayer(p2);
+  const sorted = [...players].sort((a, b) => a.y - b.y);
+  // Bola atrás de quem está mais embaixo na tela
+  let drewBall = false;
+  for (const p of sorted) {
+    if (!drewBall && ball.y < p.y) { drawBall(); drewBall = true; }
+    drawPlayer(p);
+  }
+  if (!drewBall) drawBall();
+  drawMeMarker();
+  drawCaller();
   drawParticles();
   drawCelebration();
 }
+
 
 // ── Touch controls ──
 if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
@@ -1336,6 +1640,22 @@ const kickRelease = e => {
 };
 kickBtn.addEventListener('touchend', kickRelease, { passive: false });
 kickBtn.addEventListener('touchcancel', kickRelease, { passive: false });
+
+// Botão de passar: segura enquanto o dedo está nele
+const passBtn = document.getElementById('pass-btn');
+passBtn.addEventListener('touchstart', e => {
+  e.preventDefault();
+  keys['e'] = true;
+  passBtn.classList.add('active');
+}, { passive: false });
+const passRelease = e => {
+  e.preventDefault();
+  keys['e'] = false;
+  passBtn.classList.remove('active');
+};
+passBtn.addEventListener('touchend', passRelease, { passive: false });
+passBtn.addEventListener('touchcancel', passRelease, { passive: false });
+
 
 function loop() {
   update();
