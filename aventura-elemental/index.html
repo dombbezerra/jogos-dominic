@@ -121,6 +121,20 @@
     .wallet { position: absolute; top: 10px; right: 14px; font-size: 16px; font-weight: bold; }
     .wallet .coin { color: #f5c518; }
     .user-tag { position: absolute; top: 12px; left: 14px; font-size: 12px; color: #c9b8ff; max-width: 45%; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .friends {
+      position: absolute; top: 36px; right: 14px; width: 130px; text-align: left;
+      background: rgba(20, 14, 50, 0.85); border: 2px solid #4a3a8a; border-radius: 6px; overflow: hidden;
+    }
+    .friends-title { background: #4a3a8a; color: #fff; font-weight: 900; font-size: 12px; letter-spacing: 1px; padding: 4px 8px; }
+    #friends-list { list-style: none; min-height: 60px; max-height: 150px; overflow-y: auto; padding: 4px 0; font-size: 12px; }
+    #friends-list li { padding: 3px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #friends-list li::before { content: '● '; color: #2fd15a; }
+    /* Só mostra na tela inicial; em tela estreita fica em cima, antes do título */
+    .panel:not(:has(#page-main.on)) .friends { display: none; }
+    @media (max-width: 620px) {
+      .friends { position: static; width: auto; margin: 22px 0 4px; }
+      #friends-list { min-height: 28px; max-height: 80px; }
+    }
     .page { display: none; }
     .page.on { display: block; }
     h1 { margin: 14px 0 6px; line-height: 1; }
@@ -208,6 +222,11 @@
     <div class="panel">
       <div class="wallet"><span class="coin">●</span> <b id="m-coins">0</b></div>
       <div id="m-user" class="user-tag"></div>
+      <!-- Amigos online (a lista vai ser preenchida quando tiver o sistema de amigos) -->
+      <div class="friends">
+        <div class="friends-title">AMIGOS</div>
+        <ul id="friends-list"></ul>
+      </div>
 
       <div class="page" id="page-main">
         <h1><span class="t1">AVENTURA</span><span class="t2">ELEMENTAL</span></h1>
