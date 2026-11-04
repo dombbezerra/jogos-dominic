@@ -57,6 +57,16 @@ module.exports = async (req, res) => {
       return res.status(200).json({ online: await listarOnline(email) });
     }
 
+    // Apagar o próprio usuário (sai da lista de nomes e de quem está online)
+    if (action === 'apagar') {
+      const [raw] = await redis(['GET', 'aventura:user:' + email]);
+      if (!raw) return res.status(404).json({ error: 'Usuário não encontrado.' });
+      const u = JSON.parse(raw);
+      await redis(['DEL', 'aventura:user:' + email], ['SREM', 'aventura:users', email],
+        ['HDEL', 'aventura:nomes', nomeKey(u.nome)], ['ZREM', 'aventura:online', email]);
+      return res.status(200).json({ ok: true });
+    }
+
     // Salvar usuário (e-mail, nome e cor do nome)
     const nome = String(body.nome || '').trim().slice(0, 40);
     const cor = CORES.includes(body.cor) ? body.cor : 'branco';
