@@ -1273,11 +1273,17 @@
     if (!EMAIL_OK.test(email)) { msg.textContent = 'E-mail errado. O @ fica no meio, assim: seunome@gmail.com'; msg.className = 'err'; return; }
     if (!nome) { msg.textContent = 'Escreva o nome como você quer ficar.'; msg.className = 'err'; return; }
     msg.textContent = 'Salvando...'; msg.className = '';
+    const before = meta.user;
     meta.user = { email, nome };
     writeMeta();
     try {
       const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, nome, cor: meta.nameColor }) });
       const data = await r.json().catch(() => ({}));
+      if (r.status === 409) {   // nome de outra pessoa: não troca
+        meta.user = before; writeMeta();
+        msg.textContent = data.error; msg.className = 'err';
+        return;
+      }
       if (!r.ok) throw new Error(data.error || 'erro');
       msg.textContent = 'Pronto, ' + nome + '! Você está online. 👋'; msg.className = 'ok';
     } catch (err) {
@@ -1304,7 +1310,9 @@
     if (playAfterHelp) { playAfterHelp = false; startPlaying(); }
   });
 
-  // Caixa de amigos: por enquanto só avisa quem ainda não tem usuário
+  // Caixa de amigos: mostra todo mundo que está jogando agora (sem precisar adicionar).
+  // O jogo avisa o servidor que você está online a cada 25 segundos e pega a lista na mesma hora
+  let friends = [];
   function renderFriends() {
     const list = $('friends-list');
     list.innerHTML = '';
@@ -1312,8 +1320,31 @@
       const li = el('li', 'Coloque seu usuário pra ficar online', 'friends-hint');
       li.addEventListener('click', () => showPage('user'));
       list.appendChild(li);
+      return;
     }
+    for (const f of friends) {
+      const li = el('li', null, 'friend-on');
+      paintName(li, f.nome, '', f.cor);
+      list.appendChild(li);
+    }
+    if (!friends.length) list.appendChild(el('li', 'Ninguém mais online agora', 'friends-empty'));
   }
+
+  async function heartbeat() {
+    if (!meta.user || document.hidden) return;
+    try {
+      const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'online', email: meta.user.email }) });
+      if (!r.ok) return;
+      const data = await r.json();
+      friends = data.online || [];
+      if (state === 'title') renderFriends();
+    } catch (err) { /* sem internet: tenta de novo daqui a pouco */ }
+  }
+  setInterval(heartbeat, 25000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) heartbeat(); });
+  setTimeout(heartbeat, 500);
+
   $('menu-btn').addEventListener('click', () => {
     if (state !== 'play' && state !== 'win') return;
     if (state === 'win') state = 'play';
