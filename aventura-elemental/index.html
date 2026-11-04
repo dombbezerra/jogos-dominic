@@ -172,6 +172,8 @@
     #friends-list li::before { content: '● '; color: #2fd15a; }
     #friends-list li.friends-hint { white-space: normal; color: #ffcc33; cursor: pointer; text-decoration: underline; }
     #friends-list li.friends-empty { white-space: normal; color: #8a82b8; font-size: 11px; }
+    #friends-list li.friend-off { opacity: 0.6; }
+    #friends-list li.friend-off::before { content: '● '; color: #8a8a9a; }
     #friends-list li.friends-empty::before { content: ''; }
     #friends-list li.friends-hint::before { content: ''; }
     /* Só mostra na tela inicial; em tela estreita fica em cima, antes do título */
@@ -285,7 +287,7 @@
       <div id="m-user" class="user-tag"></div>
       <!-- Amigos online (a lista vai ser preenchida quando tiver o sistema de amigos) -->
       <div class="friends">
-        <div class="friends-title">AMIGOS ONLINE</div>
+        <div class="friends-title">AMIGOS</div>
         <ul id="friends-list"></ul>
       </div>
 
@@ -375,6 +377,6 @@
     </div>
   </div>
 
-  <script src="game.js?v=19"></script>
+  <script src="game.js?v=20"></script>
 </body>
 </html>

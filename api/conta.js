@@ -24,15 +24,21 @@ async function redis(...commands) {
 const ONLINE_SECS = 75;   // sem sinal por mais que isso, a pessoa sai do "online"
 const nomeKey = (n) => n.trim().toLowerCase();
 
-// Quem está online agora (todo mundo, sem precisar adicionar). Só nome e cor: o e-mail dos outros nunca sai daqui
-async function listarOnline(email) {
+// Todo mundo que tem usuário, com quem está jogando agora primeiro (sem precisar adicionar).
+// Só nome, cor e online: o e-mail dos outros nunca sai daqui
+async function listarJogadores(email) {
   const now = Date.now();
-  const [, emails] = await redis(['ZREMRANGEBYSCORE', 'aventura:online', 0, now - ONLINE_SECS * 1000],
-    ['ZREVRANGEBYSCORE', 'aventura:online', '+inf', now - ONLINE_SECS * 1000, 'LIMIT', 0, 40]);
-  const outros = (emails || []).filter((e) => e !== email);
+  const [, onlineEmails, todos] = await redis(['ZREMRANGEBYSCORE', 'aventura:online', 0, now - ONLINE_SECS * 1000],
+    ['ZRANGE', 'aventura:online', 0, -1], ['SMEMBERS', 'aventura:users']);
+  const on = new Set(onlineEmails || []);
+  const outros = (todos || []).filter((e) => e !== email).slice(0, 80);
   if (!outros.length) return [];
   const users = await redis(...outros.map((e) => ['GET', 'aventura:user:' + e]));
-  return users.filter(Boolean).map((raw) => { const u = JSON.parse(raw); return { nome: u.nome, cor: u.cor || 'branco' }; });
+  return outros.map((e, i) => {
+    if (!users[i]) return null;
+    const u = JSON.parse(users[i]);
+    return { nome: u.nome, cor: u.cor || 'branco', online: on.has(e) };
+  }).filter(Boolean).sort((x, y) => (y.online - x.online) || x.nome.localeCompare(y.nome));
 }
 
 module.exports = async (req, res) => {
@@ -54,7 +60,7 @@ module.exports = async (req, res) => {
       const u = JSON.parse(raw);
       // Usuários de antes da lista de nomes entram nela aqui (se o nome ainda estiver livre)
       await redis(['ZADD', 'aventura:online', Date.now(), email], ['HSETNX', 'aventura:nomes', nomeKey(u.nome), email]);
-      return res.status(200).json({ online: await listarOnline(email) });
+      return res.status(200).json({ jogadores: await listarJogadores(email) });
     }
 
     // Apagar o próprio usuário (sai da lista de nomes e de quem está online)

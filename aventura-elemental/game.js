@@ -1310,7 +1310,7 @@
     if (playAfterHelp) { playAfterHelp = false; startPlaying(); }
   });
 
-  // Caixa de amigos: mostra todo mundo que está jogando agora (sem precisar adicionar).
+  // Caixa de amigos: todo mundo que tem usuário, quem está jogando agora primeiro (bolinha verde).
   // O jogo avisa o servidor que você está online a cada 25 segundos e pega a lista na mesma hora
   let friends = [];
   function renderFriends() {
@@ -1323,11 +1323,11 @@
       return;
     }
     for (const f of friends) {
-      const li = el('li', null, 'friend-on');
+      const li = el('li', null, f.online ? 'friend-on' : 'friend-off');
       paintName(li, f.nome, '', f.cor);
       list.appendChild(li);
     }
-    if (!friends.length) list.appendChild(el('li', 'Ninguém mais online agora', 'friends-empty'));
+    if (!friends.length) list.appendChild(el('li', 'Ninguém mais tem usuário ainda', 'friends-empty'));
   }
 
   async function heartbeat() {
@@ -1337,7 +1337,7 @@
         body: JSON.stringify({ action: 'online', email: meta.user.email }) });
       if (!r.ok) return;
       const data = await r.json();
-      friends = data.online || [];
+      friends = data.jogadores || [];
       if (state === 'title') renderFriends();
     } catch (err) { /* sem internet: tenta de novo daqui a pouco */ }
   }
