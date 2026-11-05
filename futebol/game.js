@@ -28,24 +28,6 @@
     { key: 'neymaro-barca', nome: 'Neymaro Jr', pos: 'ATA', r: 100, face: '😎', club: 'Blaugrana FC', badge: '🔵' },
     { key: 'neymaro-paris', nome: 'Neymaro Jr', pos: 'ATA', r: 118, face: '😎', club: 'Paris Estrelas', badge: '🗼' },
     { key: 'neymaro-brasil', nome: 'Neymaro Jr', pos: 'ATA', r: 128, face: '😎', club: 'Brasil', badge: '🇧🇷', album: 'brasil' },
-    // Álbum de seleções
-    { key: 'vinny-brasil', nome: 'Vinny Júnior', pos: 'ATA', r: 118, face: '🕺', club: 'Brasil', badge: '🇧🇷', album: 'brasil' },
-    { key: 'alissao-brasil', nome: 'Alissão', pos: 'GOL', r: 105, face: '🧤', club: 'Brasil', badge: '🇧🇷', album: 'brasil' },
-    { key: 'messy-arg', nome: 'Lionel Messy', pos: 'ATA', r: 130, face: '🐐', club: 'Argentina', badge: '🇦🇷', album: 'argentina' },
-    { key: 'dimariah-arg', nome: 'Di Mariah', pos: 'MEI', r: 108, face: '😁', club: 'Argentina', badge: '🇦🇷', album: 'argentina' },
-    { key: 'dibu-arg', nome: 'Dibu Martinéz', pos: 'GOL', r: 104, face: '🧤', club: 'Argentina', badge: '🇦🇷', album: 'argentina' },
-    { key: 'ronaldinho-por', nome: 'Cristiano Ronaldinho', pos: 'ATA', r: 127, face: '💪', club: 'Portugal', badge: '🇵🇹', album: 'portugal' },
-    { key: 'fernandao-por', nome: 'Bruno Fernandão', pos: 'MEI', r: 110, face: '😏', club: 'Portugal', badge: '🇵🇹', album: 'portugal' },
-    { key: 'rubem-por', nome: 'Rúbem Dias', pos: 'ZAG', r: 106, face: '🧱', club: 'Portugal', badge: '🇵🇹', album: 'portugal' },
-    { key: 'mbappo-fra', nome: 'Mbappô', pos: 'ATA', r: 126, face: '🐢', club: 'França', badge: '🇫🇷', album: 'franca' },
-    { key: 'grizma-fra', nome: 'Grizmã', pos: 'MEI', r: 108, face: '🥖', club: 'França', badge: '🇫🇷', album: 'franca' },
-    { key: 'saliba-fra', nome: 'Salibá', pos: 'ZAG', r: 104, face: '🧱', club: 'França', badge: '🇫🇷', album: 'franca' },
-    { key: 'kaine-ing', nome: 'Harry Kaine', pos: 'ATA', r: 122, face: '🎯', club: 'Inglaterra', badge: '🏴', album: 'inglaterra' },
-    { key: 'bellinghao-ing', nome: 'Bellinghão', pos: 'MEI', r: 116, face: '😤', club: 'Inglaterra', badge: '🏴', album: 'inglaterra' },
-    { key: 'pickfordo-ing', nome: 'Pickfordo', pos: 'GOL', r: 102, face: '🧤', club: 'Inglaterra', badge: '🏴', album: 'inglaterra' },
-    { key: 'yamal-esp', nome: 'Lamine Yamalzinho', pos: 'ATA', r: 120, face: '⚡', club: 'Espanha', badge: '🇪🇸', album: 'espanha' },
-    { key: 'pedri-esp', nome: 'Pedrí', pos: 'MEI', r: 112, face: '🎩', club: 'Espanha', badge: '🇪🇸', album: 'espanha' },
-    { key: 'rodri-esp', nome: 'Rodrigo Rodri', pos: 'MEI', r: 114, face: '🧠', club: 'Espanha', badge: '🇪🇸', album: 'espanha' },
   ];
   const ALBUM = [['brasil', '🇧🇷 BRASIL'], ['argentina', '🇦🇷 ARGENTINA'], ['portugal', '🇵🇹 PORTUGAL'], ['franca', '🇫🇷 FRANÇA'],
     ['inglaterra', '🏴 INGLATERRA'], ['espanha', '🇪🇸 ESPANHA']];
@@ -268,17 +250,19 @@
       sec.className = 'album-team';
       const h = document.createElement('div');
       h.className = 'album-title';
-      h.textContent = title + '  ' + got + '/' + players.length + (got === players.length ? '  ✅' : '');
+      const full = players.length > 0 && got === players.length;
+      h.textContent = title + '  ' + got + '/' + players.length + (full ? '  ✅' : '');
       const row = document.createElement('div');
       row.className = 'album-row';
       for (const sp of players) {
         if (have.has(sp.key)) row.appendChild(withRemove(cardEl(sp), sp));
         else row.appendChild(withRemove(cardEl(sp, 'album-missing'), sp));   // ainda não tem: aparece apagadinho
       }
+      if (!players.length) row.appendChild(Object.assign(document.createElement('div'), { className: 'hint', textContent: 'Ainda sem jogadores. Use ➕ pra colocar os seus!' }));
       sec.append(h, row, addForm(id));
       list.appendChild(sec);
       // Completou a seleção pela primeira vez: prêmio!
-      if (got === players.length && !data.albumDone.includes(id)) {
+      if (full && !data.albumDone.includes(id)) {
         data.albumDone.push(id);
         data.coins += ALBUM_PRIZE;
         save();
