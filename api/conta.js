@@ -89,7 +89,7 @@ async function emailDaConta(raw) {
 
 // Nada comprado some: um aparelho velho (ou com o jogo antigo guardado) não apaga o que a conta já tinha.
 // Se o aparelho está sem alguma coisa que a conta tem, ele está atrasado: fica o maior de cada coisa
-const ITENS = ['skins', 'avatars', 'frames', 'colors', 'codes', 'gifs'];
+const ITENS = ['skins', 'avatars', 'frames', 'colors', 'codes', 'gifs', 'pets'];
 function protegerSave(novo, velho) {
   const a = (velho && velho.meta) || null, b = novo.meta;
   if (!a || !b || typeof b !== 'object') return false;

@@ -257,6 +257,38 @@
     { id: 'gelo',     name: 'Gelo',        price: 60 },
     { id: 'arcoiris', name: 'Arco-íris',   price: 200 },
   ];
+  // Pets: andam com você. Ímã puxa as Gemas perto; alguns pegam coração e atiram nos inimigos
+  const PETS = [
+    { id: 'gato',     name: 'Gatinho',        price: 150, cur: 'gema',  magnet: 40,  desc: 'Puxa as Gemas pertinho' },
+    { id: 'cachorro', name: 'Cachorrinho',    price: 300, cur: 'gema',  magnet: 70,  desc: 'Puxa as Gemas de mais longe' },
+    { id: 'coruja',   name: 'Coruja',         price: 500, cur: 'gema',  magnet: 90,  hearts: true, desc: 'Puxa Gemas e corações' },
+    { id: 'dragao',   name: 'Dragãozinho',    price: 50,  cur: 'moeda', magnet: 90,  hearts: true, shoot: 1, desc: 'Puxa tudo e cospe fogo nos inimigos' },
+    { id: 'fenix',    name: 'Fênix Arco-íris', price: 150, cur: 'moeda', magnet: 130, hearts: true, shoot: 2, desc: 'A mais forte: puxa tudo de longe e atira forte' },
+  ];
+  const petOf = id => PETS.find(p => p.id === id) || null;
+  // Desenho do pet (uns 12x10), virado pra direita (dir 1) ou esquerda (-1)
+  function drawPet(g, x, y, id, t, dir) {
+    const p = (a, b, w, h, c) => { g.fillStyle = c; g.fillRect(dir < 0 ? x + 12 - a - w : x + a, y + b, w, h); };
+    const flap = Math.floor(t / 6) % 2;
+    if (id === 'gato') {
+      p(1, 3, 9, 6, '#ff9a3a'); p(1, 1, 2, 2, '#ff9a3a'); p(5, 1, 2, 2, '#ff9a3a'); p(1, 3, 6, 4, '#ffb05a');
+      p(2, 4, 1, 1, '#000'); p(5, 4, 1, 1, '#000'); p(3, 6, 2, 1, '#ff6a8a'); p(10, 2 + flap, 2, 5, '#ff9a3a'); p(2, 9, 2, 1, '#e07a2a'); p(7, 9, 2, 1, '#e07a2a');
+    } else if (id === 'cachorro') {
+      p(2, 2, 7, 6, '#c88a4a'); p(0, 2, 2, 5, '#7a4a1a'); p(7, 2, 2, 5, '#7a4a1a'); p(3, 4, 1, 1, '#000'); p(6, 4, 1, 1, '#000');
+      p(4, 6, 2, 1, '#000'); p(4, 7, 2, 2, '#ff6a8a'); p(9, 5 - flap, 3, 2, '#c88a4a'); p(3, 8, 2, 2, '#a86a2a'); p(6, 8, 2, 2, '#a86a2a');
+    } else if (id === 'coruja') {
+      p(2, 1, 8, 9, '#8a5a2a'); p(3, 3, 6, 6, '#e8d0a0'); p(3, 3, 2, 2, '#fff'); p(7, 3, 2, 2, '#fff'); p(4, 4, 1, 1, '#000'); p(8, 4, 1, 1, '#000');
+      p(5, 5, 2, 2, '#ffb02e'); p(2, 0, 2, 2, '#8a5a2a'); p(8, 0, 2, 2, '#8a5a2a'); p(0, 3 + flap * 2, 2, 4, '#6a3a1a'); p(10, 3 + flap * 2, 2, 4, '#6a3a1a');
+    } else if (id === 'dragao') {
+      p(2, 4, 7, 5, '#3ac85a'); p(7, 2, 4, 4, '#3ac85a'); p(9, 3, 1, 1, '#000'); p(11, 4, 1, 1, '#ff6a2a'); p(3, 7, 5, 2, '#bff2a0');
+      p(3, flap ? 0 : 2, 4, 3, '#2a9a4a'); p(0, 5, 2, 2, '#3ac85a'); p(8, 1, 1, 1, '#ffe94a');
+    } else if (id === 'fenix') {
+      const c = k => rainbow(k);
+      p(3, 3, 6, 5, c(0)); p(8, 1, 3, 3, c(1)); p(10, 2, 1, 1, '#000'); p(11, 2, 1, 1, '#ffb02e');
+      p(1, flap ? 0 : 3, 4, 3, c(2)); p(5, flap ? 0 : 3, 3, 2, c(3)); p(0, 7, 3, 2, c(4)); p(1, 9, 2, 1, c(5));
+      if (t % 8 < 4) p(Math.floor(t / 4) % 10, 9, 1, 1, '#fff');
+    }
+  }
   // 'skin:gotinha' = rosto de personagem; 'bicho:slime' = bicho
   const hasAvatar = id => {
     const [kind, v] = String(id || '').split(':');
@@ -357,7 +389,7 @@
   const paintMyTag = () => paintTag($('m-user'), meta.user ? meta.user.nome : '', meta.nameColor, meta.avatar, meta.frame);
   // meta.coins = Gemas Elementais (ganhas jogando); meta.gems = Moedas Elementais (especiais)
   const meta = { coins: 0, gems: 0, skins: FREE_SKINS.slice(), skin: 'gotinha', up: { vida: 0, forca: 0, rapido: 0, veloz: 0 },
-    colors: ['branco'], nameColor: 'branco', avatars: [], avatar: 'skin:gotinha', frames: [], frame: 'nenhuma', gifs: [], user: null };
+    colors: ['branco'], nameColor: 'branco', avatars: [], avatar: 'skin:gotinha', frames: [], frame: 'nenhuma', gifs: [], pets: [], pet: null, user: null };
   let chestHearts = 0;   // corações ganhos nos baús desta aventura
   function loadMeta() {
     let m = null;
@@ -387,6 +419,8 @@
     meta.frames = Array.isArray(m.frames) ? m.frames.filter(id => FRAMES.some(f => f.id === id)) : [];
     meta.frame = meta.frames.includes(m.frame) ? m.frame : 'nenhuma';
     meta.gifs = Array.isArray(m.gifs) ? m.gifs.filter(id => typeof id === 'string') : [];
+    meta.pets = Array.isArray(m.pets) ? m.pets.filter(id => petOf(id)) : [];
+    meta.pet = meta.pets.includes(m.pet) ? m.pet : null;
     meta.updatedAt = m.updatedAt || 0;
     if (refund) writeMeta();   // devolve uma vez só
   }
@@ -716,7 +750,7 @@
         }
         enemies = enemies.filter(e => !e.dead);
         if (boss && s.life > 0 && s.x > boss.x && s.x < boss.x + boss.w && s.y > boss.y && s.y < boss.y + boss.h) {
-          damageBoss(dmgOf(s.elem), ELEMS[s.elem].color, s.elem === 'gelo' ? 20 : 0, true);
+          damageBoss(s.dmg || dmgOf(s.elem), ELEMS[s.elem].color, s.elem === 'gelo' && !s.petShot ? 20 : 0, true);
           s.life = 0;
         }
       } else {
@@ -729,7 +763,7 @@
   }
 
   function damageEnemy(e, s) {
-    hitEnemy(e, dmgOf(s.elem), s.elem);
+    hitEnemy(e, s.dmg || dmgOf(s.elem), s.elem);
     burst(s.x, s.y, ELEMS[s.elem].color, 6);
     beep(330, 0.05, 'square');
   }
@@ -895,6 +929,57 @@
     pickups = pickups.filter(p => p.life > 0);
   }
 
+  // ── Pet ───────────────────────────────────────────────────
+  const pet = { x: 0, y: 0, cd: 60, t: 0, face: 1 };
+  function updatePet() {
+    const def = petOf(meta.pet);
+    if (!def) return;
+    pet.t++;
+    // Voa atrás de você, balançando
+    const wantX = player.x + player.w / 2 - player.face * 16 - 6, wantY = player.y - 12 + Math.sin(pet.t / 15) * 3;
+    if (Math.abs(wantX - pet.x) > 200 || Math.abs(wantY - pet.y) > 200) { pet.x = wantX; pet.y = wantY; }
+    pet.x += (wantX - pet.x) * 0.12; pet.y += (wantY - pet.y) * 0.12;
+    pet.face = player.face;
+    const cx = player.x + player.w / 2, cy = player.y + player.h / 2;
+    // Ímã: as Gemas (e corações) que caíram dos inimigos vêm até você
+    for (const k of pickups) {
+      if (k.type === 'pop' || (k.type === 'heart' && !def.hearts)) continue;
+      const dx = cx - (k.x + 4), dy = cy - (k.y + 4);
+      if (dx * dx + dy * dy < def.magnet * def.magnet) { k.x += Math.sign(dx) * Math.min(3, Math.abs(dx)); k.y += Math.sign(dy) * Math.min(3, Math.abs(dy)); k.vy = 0; }
+    }
+    // E pega as Gemas do mapa que estão perto
+    const r = Math.ceil(def.magnet / T);
+    for (let ty = Math.floor(cy / T) - r; ty <= Math.floor(cy / T) + r; ty++) for (let tx = Math.floor(cx / T) - r; tx <= Math.floor(cx / T) + r; tx++) {
+      const ch = tileAt(tx, ty);
+      if (ch !== 'o' && !(ch === 'h' && def.hearts)) continue;
+      const dx = cx - (tx * T + 8), dy = cy - (ty * T + 8);
+      if (dx * dx + dy * dy > def.magnet * def.magnet) continue;
+      setTile(tx, ty, ' ');
+      if (ch === 'o') { meta.coins++; burst(tx * T + 8, ty * T + 8, '#ffd23a', 4); }
+      else player.hp = Math.min(player.maxHp, player.hp + 1);
+      if (pet.t % 3 === 0) beep(990, 0.04, 'triangle');
+    }
+    // Pet que atira: mira no inimigo (ou chefão) mais perto
+    if (!def.shoot) return;
+    if (pet.cd > 0) { pet.cd--; return; }
+    let best = null, bd = 130 * 130;
+    for (const e of enemies) {
+      const dx = e.x + e.w / 2 - pet.x, dy = e.y + e.h / 2 - pet.y, d = dx * dx + dy * dy;
+      if (d < bd) { bd = d; best = e; }
+    }
+    if (!best && boss) best = boss;
+    if (!best) return;
+    const dx = best.x + best.w / 2 - (pet.x + 6), dy = best.y + best.h / 2 - (pet.y + 5), len = Math.hypot(dx, dy) || 1;
+    if (len > 160) return;
+    shots.push({ x: pet.x + 6, y: pet.y + 5, vx: dx / len * 3.2, vy: dy / len * 3.2, grav: 0, elem: def.id === 'dragao' ? 'fogo' : player.elem, life: 60, dmg: def.shoot, petShot: true });
+    pet.cd = def.shoot > 1 ? 50 : 75;
+    beep(def.shoot > 1 ? 1400 : 500, 0.04, 'triangle');
+  }
+  function drawPetNow() {
+    if (!petOf(meta.pet) || state === 'dead') return;
+    drawPet(ctx, Math.round(pet.x - camX), Math.round(pet.y) + HUD, meta.pet, pet.t, pet.face);
+  }
+
   // ── Efeitos ───────────────────────────────────────────────
   function burst(x, y, color, n) {
     for (let i = 0; i < n; i++) {
@@ -947,6 +1032,7 @@
       updateBoss();
       updateShots();
       updatePickups();
+      updatePet();
       // A câmera segue você pela fase
       const want = clamp(player.x - 130, 0, lv.width * T - W);
       camX += (want - camX) * 0.15;
@@ -1340,11 +1426,12 @@
 
   // Abas da loja. Fotos, cores e molduras somem quando você já tem todas
   let shopTab = 'melhorias';
-  const SHOP_TABS = [['melhorias', 'MELHORIAS'], ['gemas', 'RECURSOS ELEMENTAIS'], ['fotos', 'FOTOS DE PERFIL'], ['cores', 'COR DO NOME'], ['molduras', 'MOLDURAS'], ['gifs', 'GIFS DO CHAT']];
+  const SHOP_TABS = [['melhorias', 'MELHORIAS'], ['gemas', 'RECURSOS ELEMENTAIS'], ['fotos', 'FOTOS DE PERFIL'], ['cores', 'COR DO NOME'], ['molduras', 'MOLDURAS'], ['gifs', 'GIFS DO CHAT'], ['pets', 'PETS']];
   const tabDone = id => id === 'fotos' ? BICHOS.every(b => meta.avatars.includes(b.id))
     : id === 'cores' ? NAME_COLORS.every(c => meta.colors.includes(c.id))
     : id === 'molduras' ? FRAMES.every(f => f.price === 0 || meta.frames.includes(f.id))
     : id === 'gifs' ? SHOP_GIFS.every(g => meta.gifs.includes(g[0])) : false;
+  // Pets: a aba não some, porque é nela que você escolhe qual pet leva
   function renderShop() {
     const tabs = $('shop-tabs');
     tabs.innerHTML = '';
@@ -1362,7 +1449,29 @@
     else if (shopTab === 'fotos') shopAvatars(grid);
     else if (shopTab === 'cores') shopColors(grid);
     else if (shopTab === 'molduras') shopFrames(grid);
-    else shopGifs(grid);
+    else if (shopTab === 'gifs') shopGifs(grid);
+    else shopPets(grid);
+  }
+
+  // Pets: compra uma vez, depois escolhe qual vai com você (ou nenhum)
+  function shopPets(grid) {
+    for (const d of PETS) {
+      const have = meta.pets.includes(d.id), on = meta.pet === d.id, wallet = d.cur === 'gema' ? 'coins' : 'gems';
+      const btn = el('button', on ? 'TIRAR' : have ? 'LEVAR' : '', on ? 'cyan' : have ? 'green' : d.cur === 'gema' ? 'orange' : 'purple');
+      if (!have) priced(btn, '', d.cur, d.price);
+      btn.disabled = !have && meta[wallet] < d.price;
+      btn.addEventListener('click', () => {
+        if (!have) { meta[wallet] -= d.price; meta.pets.push(d.id); }
+        meta.pet = on ? null : d.id;
+        writeMeta(); renderMenu();
+      });
+      const c = card(on);
+      const cv = document.createElement('canvas');
+      cv.width = 14; cv.height = 12;
+      drawPet(cv.getContext('2d'), 1, 1, d.id, 0, 1);
+      c.append(cv, el('b', d.name), el('small', d.desc), btn);
+      grid.appendChild(c);
+    }
   }
 
   // GIFs do chat: uns com Gema Elemental, os arco-íris com Moeda Elemental
@@ -1853,7 +1962,7 @@
     const m = Object.assign({}, a);
     m.coins = Math.max(a.coins || 0, b.coins || 0);
     m.gems = Math.max(a.gems || 0, b.gems || 0);
-    for (const k of ['skins', 'colors', 'codes', 'avatars', 'frames', 'gifs']) m[k] = [...new Set([...(a[k] || []), ...(b[k] || [])])];
+    for (const k of ['skins', 'colors', 'codes', 'avatars', 'frames', 'gifs', 'pets']) m[k] = [...new Set([...(a[k] || []), ...(b[k] || [])])];
     m.up = Object.assign({}, a.up);
     for (const k in b.up || {}) m.up[k] = Math.max((a.up || {})[k] || 0, b.up[k] || 0);
     m.seenHelp = a.seenHelp || b.seenHelp;
@@ -1980,7 +2089,7 @@
     if (state === 'play' || state === 'dead') {
       const p = player;
       coopSend({ t: 'me', lvl: levelIdx, x: Math.round(p.x), y: Math.round(p.y), f: p.face, w: p.walk, g: p.onGround ? 1 : 0,
-        i: p.inv, d: state === 'dead' ? 1 : 0, s: meta.skin, e: p.elem });
+        i: p.inv, d: state === 'dead' ? 1 : 0, s: meta.skin, e: p.elem, pet: meta.pet });
     }
     if (coop.host && state === 'play') {
       coopSend({ t: 'world', lvl: levelIdx,
@@ -2033,7 +2142,7 @@
     if (m.t === 'me') {
       if (m.lvl !== levelIdx) { if (remote) remote.dead = true; return; }
       if (!remote) remote = { x: m.x, y: m.y, w: 10, h: 14 };
-      Object.assign(remote, { tx: m.x, ty: m.y, face: m.f, walk: m.w, onGround: !!m.g, inv: m.i, dead: !!m.d, skin: m.s, elem: m.e });
+      Object.assign(remote, { tx: m.x, ty: m.y, face: m.f, walk: m.w, onGround: !!m.g, inv: m.i, dead: !!m.d, skin: m.s, elem: m.e, pet: petOf(m.pet) ? m.pet : null });
       if (Math.abs(remote.x - m.x) > 60) { remote.x = m.x; remote.y = m.y; }   // voltou do checkpoint
       return;
     }
@@ -2077,6 +2186,7 @@
     const x = Math.round(r.x + 5 - camX), y = Math.round(r.y + 14 - 8) + HUD;
     if (x < -30 || x > W + 30) return;
     drawHero(ctx, x, y, r.skin, ELEMS[r.elem] ? r.elem : 'agua', r.face, 0, !r.onGround ? 1 : r.walk % 16 < 8 ? 0 : 1);
+    if (r.pet) drawPet(ctx, x - (r.face || 1) * 16 - 6, y - 20 + Math.round(Math.sin(frame / 15) * 3), r.pet, frame, r.face || 1);   // o pet do amigo
     const c = colorOf(coop && coop.friend.cor).color;
     ctx.font = 'bold 7px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = '#000'; ctx.fillText(coop ? coop.friend.nome : '', x + 1, y - 18);
@@ -2236,6 +2346,7 @@
     for (const e of enemies) drawEnemy(e);
     drawBoss();
     drawRemote();
+    drawPetNow();
     drawPlayer();
     for (const s of shots) drawShot(s);
     for (const p of parts) px(Math.round(p.x - camX), Math.round(p.y) + HUD, 2, 2, p.color);
