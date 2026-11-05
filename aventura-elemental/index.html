@@ -161,7 +161,8 @@
       animation: rainbow-move 3s linear infinite;
     }
     @keyframes rainbow-move { from { background-position: 0% 0; } to { background-position: 200% 0; } }
-    .user-tag { position: absolute; top: 12px; left: 14px; font-size: 12px; color: #c9b8ff; max-width: 45%; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .user-tag { position: absolute; top: 8px; left: 12px; font-size: 12px; color: #c9b8ff; max-width: 45%; text-align: left; white-space: nowrap; display: flex; align-items: center; }
+    .user-tag span { overflow: hidden; text-overflow: ellipsis; }
     .friends {
       position: absolute; top: 36px; right: 14px; width: 175px; text-align: left;
       background: rgba(20, 14, 50, 0.85); border: 2px solid #4a3a8a; border-radius: 6px; overflow: hidden;
@@ -185,22 +186,22 @@
     .u-pic { background: rgba(20, 14, 50, 0.85); border: 2px solid #4a3a8a; border-radius: 6px; padding: 3px; cursor: pointer; line-height: 0; }
     .u-pic canvas { width: 34px; height: 34px; }
     /* Foto de perfil do lado do nome */
-    canvas.avatar { image-rendering: pixelated; width: 18px; height: 18px; vertical-align: middle; margin-right: 4px; background: rgba(255, 255, 255, 0.08); border-radius: 3px; flex: none; }
+    canvas.avatar { image-rendering: pixelated; width: 22px; height: 22px; vertical-align: middle; margin-right: 4px; background: rgba(255, 255, 255, 0.08); border-radius: 3px; flex: none; }
     .friend-name { display: flex; align-items: center; }
     .friend-name span { overflow: hidden; text-overflow: ellipsis; }
     /* Molduras da foto de perfil */
     canvas.avatar.big { width: 56px; height: 56px; margin: 4px auto; border-radius: 6px; }
-    canvas.fr-bronze { box-shadow: 0 0 0 2px #c07a3a; }
-    canvas.fr-prata { box-shadow: 0 0 0 2px #d8dde6; }
-    canvas.fr-ouro { box-shadow: 0 0 0 2px #ffd23a, 0 0 6px #ffd23a; }
-    canvas.fr-fogo { box-shadow: 0 0 0 2px #ff5a1a, 0 0 7px #ffb02e; }
-    canvas.fr-gelo { box-shadow: 0 0 0 2px #9fe0ff, 0 0 7px #cff4ff; }
-    canvas.fr-arcoiris { animation: fr-rainbow 1.5s linear infinite; }
-    @keyframes fr-rainbow {
-      0% { box-shadow: 0 0 0 2px #ff4a4a, 0 0 6px #ff4a4a; } 20% { box-shadow: 0 0 0 2px #ffb02e, 0 0 6px #ffb02e; }
-      40% { box-shadow: 0 0 0 2px #ffe94a, 0 0 6px #ffe94a; } 60% { box-shadow: 0 0 0 2px #7ddf64, 0 0 6px #7ddf64; }
-      80% { box-shadow: 0 0 0 2px #5ccfff, 0 0 6px #5ccfff; } 100% { box-shadow: 0 0 0 2px #b06cff, 0 0 6px #b06cff; }
-    }
+    /* Moldura = borda grossa colorida em volta da foto (o meio continua escuro) */
+    canvas.fr-bronze, canvas.fr-prata, canvas.fr-ouro, canvas.fr-fogo, canvas.fr-gelo, canvas.fr-arcoiris { padding: 3px; border-radius: 5px; }
+    canvas.avatar.big:not(.fr-nenhuma) { padding: 6px; border-radius: 9px; }
+    canvas.fr-bronze { background: linear-gradient(#1a1240, #1a1240) content-box, linear-gradient(135deg, #7a3e14, #e8a868, #9a5524, #e8a868, #7a3e14) padding-box; }
+    canvas.fr-prata { background: linear-gradient(#1a1240, #1a1240) content-box, linear-gradient(135deg, #8a93a6, #ffffff, #a9b2c3, #ffffff, #8a93a6) padding-box; }
+    canvas.fr-ouro { background: linear-gradient(#1a1240, #1a1240) content-box, linear-gradient(135deg, #b8860b, #fff3a0, #ffd23a, #fff3a0, #b8860b) padding-box; box-shadow: 0 0 6px #ffd23a; }
+    canvas.fr-fogo { background: linear-gradient(#1a1240, #1a1240) content-box, linear-gradient(0deg, #d8261a, #ff7a1a, #ffd23a, #ff7a1a, #d8261a) padding-box; background-size: auto, 100% 200%; animation: fr-move 0.8s linear infinite; box-shadow: 0 0 7px #ff7a1a; }
+    canvas.fr-gelo { background: linear-gradient(#1a1240, #1a1240) content-box, linear-gradient(135deg, #5aaad8, #ffffff, #9fe0ff, #ffffff, #5aaad8) padding-box; box-shadow: 0 0 7px #9fe0ff; }
+    canvas.fr-arcoiris { background: linear-gradient(#1a1240, #1a1240) content-box, linear-gradient(90deg, #ff4a4a, #ffb02e, #ffe94a, #7ddf64, #5ccfff, #b06cff, #ff4a4a) padding-box; background-size: auto, 200% 100%; animation: fr-slide 1.5s linear infinite; box-shadow: 0 0 7px #b06cff; }
+    @keyframes fr-move { from { background-position: 0 0, 0 0; } to { background-position: 0 0, 0 -200%; } }
+    @keyframes fr-slide { from { background-position: 0 0, 0 0; } to { background-position: 0 0, 200% 0; } }
     .shop-note { grid-column: 1 / -1; font-size: 12px; color: #c9c3e6; margin-top: 6px; }
     /* Janelinha do jogar junto (convite, esperando, conectando) */
     #coop-modal { position: fixed; inset: 0; z-index: 70; display: none; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, 0.6); font-family: Arial, Helvetica, sans-serif; }
@@ -422,6 +423,6 @@
   </div>
 
   <div id="coop-modal"><div class="coop-box"><div id="coop-title"></div><div id="coop-sub"></div><div id="coop-btns"></div></div></div>
-  <script src="game.js?v=29"></script>
+  <script src="game.js?v=30"></script>
 </body>
 </html>
