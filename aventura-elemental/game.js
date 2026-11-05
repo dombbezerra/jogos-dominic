@@ -1622,6 +1622,18 @@
       const name = el('span', null, 'friend-name');
       paintTag(name, f.nome, f.cor, f.foto, f.moldura);
       li.appendChild(name);
+      // ADM: 💬 convida pro chat (ou tira, se já está)
+      if (adminToken() && f.nome in chatGuests) {
+        const on = chatGuests[f.nome];
+        const c = el('button', on ? '💬✓' : '💬+', 'friend-btn ' + (on ? 'friend-chat-on' : 'friend-chat'));
+        c.title = on ? 'Tirar ' + f.nome + ' do chat' : 'Convidar ' + f.nome + ' pro chat';
+        c.addEventListener('click', async () => {
+          c.disabled = true;
+          await adminChat({ action: 'admin-chat', nome: f.nome, convidar: !on }).catch(() => null);
+          renderFriends();
+        });
+        li.appendChild(c);
+      }
       // Amigo online: ENTRAR chama ele pra jogar junto
       if (f.online && !coop) {
         const b = el('button', 'ENTRAR', 'friend-btn');
@@ -1645,6 +1657,17 @@
     return g ? el('span', g[1], 'gif gif-' + g[2]) : el('span', '');
   };
   let chatMsgs = [], chatLast = 0, chatMember = null, chatBusy = false;
+  // ADM: quem entrou na página de avisos neste aparelho pode convidar direto pelo jogo
+  const adminToken = () => { try { return localStorage.getItem('avisos_token'); } catch (e) { return null; } };
+  let chatGuests = {};   // nome → está no chat (só pro ADM)
+  async function adminChat(body) {
+    const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken() }, body: JSON.stringify(body) });
+    if (!r.ok) return null;
+    const data = await r.json();
+    chatGuests = {};
+    for (const u of data.usuarios || []) chatGuests[u.nome] = u.chat;
+    return data;
+  }
   function chatInfo(text) {
     const list = $('chat-list');
     list.innerHTML = '';
@@ -1656,7 +1679,19 @@
     if (!can) $('chat-gifs').classList.remove('on');
     if (!meta.user) return chatInfo('Coloque seu usuário (em USUÁRIO) pra usar o chat.');
     if (chatMember === null) { chatInfo('Carregando...'); return pollChat(); }
-    if (!chatMember) return chatInfo('🔒 O chat é só pra convidados. Peça pro ADM te convidar!');
+    if (!chatMember) {
+      chatInfo('🔒 O chat é só pra convidados. Peça pro ADM te convidar!');
+      if (adminToken()) {   // o ADM se convida com um toque
+        const b = el('button', '👑 ENTRAR NO CHAT (ADM)', 'mbtn green');
+        b.addEventListener('click', async () => {
+          b.disabled = true;
+          await adminChat({ action: 'admin-chat', nome: meta.user.nome, convidar: true }).catch(() => null);
+          chatMember = null; pollChat();
+        });
+        const li = el('li', null, 'chat-info'); li.appendChild(b); $('chat-list').appendChild(li);
+      }
+      return;
+    }
     const list = $('chat-list');
     const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
     list.innerHTML = '';
@@ -1778,6 +1813,7 @@
       if (!r.ok) return;
       const data = await r.json();
       friends = data.jogadores || [];
+      if (adminToken()) await adminChat({ action: 'admin-lista' }).catch(() => null);
       if (state === 'title') renderFriends();
     } catch (err) { /* sem internet: tenta de novo daqui a pouco */ }
   }
