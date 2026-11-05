@@ -65,7 +65,7 @@
     d.querySelector('.ps').textContent = c.pos;
     d.querySelector('.face').textContent = c.face;
     d.querySelector('.nm').textContent = nameOf(c);
-    d.querySelector('.tier').textContent = c.club ? c.club : t[2];
+    d.querySelector('.tier').textContent = c.time || c.club || t[2];
     return d;
   }
 
@@ -86,7 +86,7 @@
     $('coins').textContent = isAdm() ? '∞' : data.coins;
     $('ovr').textContent = $('ovr2').textContent = teamOvr();
     $('n-cards').textContent = data.cards.length + ' cartas';
-    if (page === 'team') renderTeam();
+    if (page === 'team') { renderTeam(); renderClubs(); }
     if (page === 'packs') renderPacks();
     if (page === 'cards') renderCards();
     if (page === 'album') renderAlbum();
@@ -176,7 +176,7 @@
     let x = Math.random() * w.reduce((a, b) => a + b, 0), i = 0;
     while (i < ok.length - 1 && (x -= w[i]) > 0) i++;
     const sp = ok[i];
-    return { id: data.next++, key: sp.key, nome: sp.nome, pos: sp.pos, r: sp.r, face: sp.face, club: sp.club, badge: sp.badge };
+    return { id: data.next++, key: sp.key, nome: sp.nome, pos: sp.pos, r: sp.r, face: sp.face, club: sp.club, badge: sp.badge, time: sp.time };
   }
   function openPack(p) {
     if (!allSpecials().length) { $('pack-msg').textContent = 'Primeiro crie seus jogadores no 📒 ÁLBUM (➕ ADICIONAR JOGADOR)!'; return; }
@@ -240,9 +240,11 @@
       '<select class="a-pos">' + POSITIONS.map(([sg, nm]) => '<option value="' + sg + '">' + nm + ' (' + sg + ')</option>').join('') + '</select>' +
       '<input class="a-r" type="number" min="60" max="130" value="100" title="Nota (60 a 130)">' +
       '<select class="a-face">' + FACES.concat(['⚽', '🐐', '👑', '🔥', '⚡', '🧤']).map(x => '<option>' + x + '</option>').join('') + '</select>' +
+      '<input class="a-time" list="clubs-dl" maxlength="24" placeholder="🔍 Time (opcional)">' +
       '<button class="a-ok"></button><div class="a-msg"></div>';
     const q = sel => f.querySelector(sel);
-    const [nomeEl, posEl, rEl, faceEl, okEl, msgEl] = ['.a-nome', '.a-pos', '.a-r', '.a-face', '.a-ok', '.a-msg'].map(q);   // guarda antes de sair do f
+    const [nomeEl, posEl, rEl, faceEl, timeEl, okEl, msgEl] = ['.a-nome', '.a-pos', '.a-r', '.a-face', '.a-time', '.a-ok', '.a-msg'].map(q);   // guarda antes de sair do f
+    timeEl.addEventListener('keydown', e => e.stopPropagation());
     okEl.textContent = label;
     nomeEl.addEventListener('keydown', e => e.stopPropagation());
     okEl.addEventListener('click', () => {
@@ -251,11 +253,53 @@
       if (!nome) { msgEl.textContent = 'Escreva o nome!'; return; }
       if (!(r >= MIN_R && r <= MAX_R)) { msgEl.textContent = 'A nota é de 60 a 130.'; return; }
       msgEl.textContent = '';
-      onOk({ nome, pos: posEl.value, r, face: faceEl.value });
+      const time = timeEl.value.trim() ? addClub(timeEl.value) : null;   // time que não existe vira time novo
+      onOk(Object.assign({ nome, pos: posEl.value, r, face: faceEl.value }, time ? { time } : {}));
       nomeEl.value = '';
     });
     return [...f.childNodes];
   }
+  // ── Times: pesquisa; se não achar, cria time novo ──
+  const CLUB_BADGES = ['⚽', '🔴', '🔵', '🟢', '🟡', '🟣', '⚫', '⚪', '🦁', '🐍', '🦅', '🐟', '🐯', '⭐'];
+  const findClub = nome => (data.clubs || []).find(c => c.nome.toLowerCase() === nome.trim().toLowerCase());
+  function addClub(nome) {
+    nome = nome.trim().slice(0, 24);
+    const found = findClub(nome);
+    if (found) return found.nome;
+    data.clubs = data.clubs || [];
+    data.clubs.push({ nome, badge: pick(CLUB_BADGES) });
+    save(); fillClubList();
+    return nome;
+  }
+  function fillClubList() {
+    $('clubs-dl').innerHTML = '';
+    for (const c of data.clubs || []) { const o = document.createElement('option'); o.value = c.nome; $('clubs-dl').appendChild(o); }
+  }
+  const myClub = () => findClub(data.myClub || '');
+  function renderClubs() {
+    const c = myClub();
+    $('club-now').textContent = c ? c.badge + ' ' + c.nome : 'Escolha o nome do seu time 👇';
+    const chips = $('club-chips');
+    chips.innerHTML = '';
+    for (const cl of data.clubs || []) {
+      const b = document.createElement('button');
+      b.textContent = cl.badge + ' ' + cl.nome;
+      if (c && c.nome === cl.nome) b.className = 'on';
+      b.addEventListener('click', () => { data.myClub = cl.nome; save(); renderClubs(); });
+      chips.appendChild(b);
+    }
+  }
+  $('club-go').addEventListener('click', () => {
+    const v = $('club-search').value.trim();
+    if (!v) { $('club-msg').textContent = 'Escreva o nome do time!'; return; }
+    const isNew = !findClub(v);
+    data.myClub = addClub(v);
+    save(); renderClubs();
+    $('club-search').value = '';
+    $('club-msg').textContent = isNew ? '✨ Time novo criado: ' + data.myClub + '!' : '✅ Agora você joga com o ' + data.myClub + '!';
+  });
+  $('club-search').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') $('club-go').click(); });
+
   $('name-save').addEventListener('click', () => {
     const v = $('name-input').value.trim().slice(0, 20);
     if (!v) { $('name-msg').textContent = 'Escreva seu nome!'; return; }
@@ -723,7 +767,7 @@
     const min = Math.min(90, Math.floor(M.t / MATCH_FRAMES * 90));
     ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(W / 2 - 120, 4, 240, 24);
     ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#9fc8ff'; ctx.fillText('VOCÊ', W / 2 - 75, 16);
+    ctx.fillStyle = '#9fc8ff'; ctx.font = 'bold 10px Arial'; ctx.fillText(data.myClub || 'VOCÊ', W / 2 - 75, 16); ctx.font = 'bold 13px Arial';
     ctx.fillStyle = '#fff'; ctx.fillText(M.score[0] + '  x  ' + M.score[1], W / 2, 16);
     ctx.fillStyle = '#ffb0b0'; ctx.font = 'bold 10px Arial'; ctx.fillText(M.opp, W / 2 + 75, 16);
     ctx.fillStyle = '#ffd23a'; ctx.font = 'bold 11px Arial'; ctx.fillText(min + "'", W / 2 + 140, 16);
@@ -748,6 +792,7 @@
   requestAnimationFrame(loop);
 
   load();
+  fillClubList();
   show('main');
 
   // Só pra testar pelo console: abrir com #debug

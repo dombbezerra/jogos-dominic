@@ -104,6 +104,11 @@
     .pitch .line { display: flex; justify-content: center; gap: 14px; }
     .slot-label { font-size: 11px; font-weight: 900; color: #fff; text-shadow: 0 1px 2px #000; margin-top: 2px; }
     .slot { display: inline-flex; flex-direction: column; align-items: center; }
+    .club-box { background: rgba(0, 0, 0, 0.25); border-radius: 12px; padding: 10px; margin-bottom: 10px; }
+    .club-now { font-size: 18px; font-weight: 900; margin-bottom: 8px; }
+    .club-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+    .club-chips button { background: #2a4ab0; color: #fff; border: 2px solid #5a7aff; border-radius: 16px; padding: 4px 10px; font-weight: bold; cursor: pointer; font-family: inherit; }
+    .club-chips button.on { background: #2fb060; border-color: #7ddf64; }
     .card.slot-empty { background: rgba(255, 255, 255, 0.12); border: 2px dashed #fff; color: #fff; font-size: 40px; justify-content: center; box-shadow: none; }
     .slot.picking .card { outline: 4px solid #ffd23a; outline-offset: 2px; }
     .grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
@@ -169,6 +174,13 @@
 
       <div class="page" id="page-team">
         <h2>👕 MEU TIME</h2>
+        <!-- Pesquisa o time: se não existir, vira time novo -->
+        <div class="club-box">
+          <div class="club-now" id="club-now"></div>
+          <div class="form-row"><input id="club-search" list="clubs-dl" maxlength="24" placeholder="🔍 Pesquisar time..."><button id="club-go">ESCOLHER</button></div>
+          <div class="msg" id="club-msg"></div>
+          <div class="club-chips" id="club-chips"></div>
+        </div>
         <div class="ovr">Força: <b id="ovr2">0</b></div>
         <div class="pitch" id="pitch"></div>
         <div class="hint" id="team-hint">Toque num jogador do campo pra trocar.</div>
@@ -215,6 +227,7 @@
     </div>
   </div>
 
+  <datalist id="clubs-dl"></datalist>
   <div id="reveal"><h3 id="reveal-title">NOVOS JOGADORES!</h3><div class="cards-out" id="reveal-cards"></div><button class="back" id="reveal-ok" style="position:static;margin:0">OK!</button></div>
 
   <div id="touch">
@@ -225,6 +238,6 @@
   </div>
   <div id="keys-help">Setas/WASD: andar · J: passe · K: chute (segure pra mais força) · Shift: correr</div>
 
-  <script src="game.js?v=10"></script>
+  <script src="game.js?v=11"></script>
 </body>
 </html>
