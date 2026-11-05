@@ -92,6 +92,9 @@
     .t-elite { background: linear-gradient(160deg, #d8b0ff, #6a2ab0); color: #fff; }
     .t-lenda { background: linear-gradient(135deg, #ff4a4a, #ffb02e, #ffe94a, #7ddf64, #5ccfff, #b06cff); background-size: 300% 300%;
       animation: lenda 3s linear infinite; color: #fff; text-shadow: 0 1px 2px #000; }
+    .t-ultra { background: radial-gradient(circle at 50% 30%, #3a1a6a, #0a0a1a 70%); color: #ffd23a; text-shadow: 0 0 6px #ffd23a;
+      box-shadow: 0 0 0 3px #ffd23a, 0 0 18px #ff4ad5, 0 0 30px #5ccfff; animation: ultra 1.2s ease-in-out infinite alternate; }
+    @keyframes ultra { from { box-shadow: 0 0 0 3px #ffd23a, 0 0 14px #ff4ad5, 0 0 24px #5ccfff; } to { box-shadow: 0 0 0 3px #fff, 0 0 24px #ffd23a, 0 0 40px #ff4ad5; } }
     @keyframes lenda { from { background-position: 0 0; } to { background-position: 300% 0; } }
     .card .badge { position: absolute; top: 5px; right: 7px; font-size: 16px; }
     .card.special { box-shadow: 0 0 0 2px #fff, 0 0 12px #ffd23a, 0 3px 8px rgba(0, 0, 0, 0.5); }
@@ -284,6 +287,6 @@
   </div>
   <div id="keys-help">Setas/WASD: andar · J: passe · K: chute (segure pra mais força) · Shift: correr</div>
 
-  <script src="game.js?v=20"></script>
+  <script src="game.js?v=21"></script>
 </body>
 </html>

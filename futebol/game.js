@@ -17,7 +17,8 @@
     ['LE', 'Lateral esquerdo'], ['LD', 'Lateral direito'], ['GOL', 'Goleiro']];
   const POS = POSITIONS.map(p => p[0]);
   const MIN_R = 60, MAX_R = 130;
-  const TIERS = [[120, 'lenda', 'LENDA'], [105, 'elite', 'ELITE'], [90, 'ouro', 'OURO'], [75, 'prata', 'PRATA'], [0, 'bronze', 'BRONZE']];
+  // Acima de 130 é ULTRA RARA (só as cartas especiais, não sai em pacote)
+  const TIERS = [[131, 'ultra', 'ULTRA RARA'], [120, 'lenda', 'LENDA'], [105, 'elite', 'ELITE'], [90, 'ouro', 'OURO'], [75, 'prata', 'PRATA'], [0, 'bronze', 'BRONZE']];
   const tierOf = r => TIERS.find(t => r >= t[0]);
   const pick = a => a[Math.floor(Math.random() * a.length)];
 
