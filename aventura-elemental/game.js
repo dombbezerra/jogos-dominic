@@ -1297,6 +1297,23 @@
     }
   });
 
+  // Código secreto de presente: cada código vale uma vez por aparelho
+  const GIFT_CODES = { MOEDAS1000: { gems: 0, coins: 1000 } };
+  $('code-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const code = $('code').value.trim().toUpperCase().replace(/\s+/g, ''), msg = $('code-msg');
+    const gift = GIFT_CODES[code];
+    if (!gift) { msg.textContent = 'Esse código não existe. Confere as letras!'; msg.className = 'err'; return; }
+    meta.codes = meta.codes || [];
+    if (meta.codes.includes(code)) { msg.textContent = 'Você já usou esse código neste aparelho.'; msg.className = 'err'; return; }
+    meta.codes.push(code);
+    meta.coins += gift.gems;   // Gemas Elementais
+    meta.gems += gift.coins;   // Moedas Elementais
+    writeMeta(); renderMenu();
+    $('code').value = '';
+    msg.textContent = `🎉 Presente! +${gift.coins} Moedas Elementais!`; msg.className = 'ok';
+  });
+
   // Sem usuário não fica online: o JOGAR leva antes pra tela de usuário
   $('m-play').addEventListener('click', () => {
     if (!meta.user) { playAfterUser = true; showPage('user'); return; }
