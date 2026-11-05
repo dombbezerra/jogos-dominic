@@ -1313,7 +1313,30 @@
     $('u-name').value = meta.user ? meta.user.nome : '';
     $('u-msg').textContent = playAfterUser ? 'Coloque seu usuário pra ficar online e jogar!' : '';
     $('u-msg').className = '';
+    renderUserColors();
   }
+  // As cores de nome que você já tem: toca numa e o nome já muda
+  function renderUserColors() {
+    const box = $('u-colors');
+    box.innerHTML = '';
+    const nome = $('u-name').value.trim() || (meta.user ? meta.user.nome : 'Seu nome');
+    for (const c of NAME_COLORS.filter(c => meta.colors.includes(c.id))) {
+      const b = el('button', null, 'u-color' + (meta.nameColor === c.id ? ' on' : ''));
+      b.type = 'button';
+      b.title = c.name;
+      const txt = el('span');   // o nome vai num span: o fundo do botão não apaga o arco-íris
+      paintName(txt, nome, '', c.id);
+      b.appendChild(txt);
+      b.addEventListener('click', () => {
+        meta.nameColor = c.id;
+        writeMeta(); syncUser();
+        paintName($('m-user'), meta.user ? meta.user.nome : '', '👤 ');
+        renderUserColors();
+      });
+      box.appendChild(b);
+    }
+  }
+  $('u-name').addEventListener('input', () => renderUserColors());
   // Na primeira vez, mostra o COMO JOGAR antes de começar
   let playAfterHelp = false;
   function startPlaying() {

@@ -173,6 +173,11 @@
     .friend-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
     .friend-btn { flex: none; background: #2fd15a; color: #fff; border: 2px solid #1d8a3a; border-radius: 4px; font-weight: 900; font-size: 10px; padding: 2px 6px; cursor: pointer; font-family: inherit; }
     .friend-btn.friend-leave { background: #e04848; border-color: #8a2020; }
+    /* Cores do nome que você já tem, na tela de usuário */
+    .u-colors-title { font-weight: bold; font-size: 14px; margin-bottom: -6px; }
+    #u-colors { display: flex; flex-wrap: wrap; gap: 6px; }
+    .u-color { background: rgba(20, 14, 50, 0.85); border: 2px solid #4a3a8a; border-radius: 6px; padding: 5px 9px; font-weight: 900; font-size: 13px; cursor: pointer; font-family: inherit; }
+    .u-color.on { border-color: #f5c518; box-shadow: 0 0 0 2px #f5c518; }
     /* Janelinha do jogar junto (convite, esperando, conectando) */
     #coop-modal { position: fixed; inset: 0; z-index: 70; display: none; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, 0.6); font-family: Arial, Helvetica, sans-serif; }
     #coop-modal.on { display: flex; }
@@ -380,6 +385,8 @@
         <form id="user-form" autocomplete="on" novalidate>
           <label>E-mail<input id="u-email" type="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="seu@email.com" required></label>
           <label>Nome como quer ficar<input id="u-name" type="text" placeholder="Seu nome no jogo" required></label>
+          <div class="u-colors-title">Cor do nome</div>
+          <div id="u-colors"></div>
           <div id="u-msg"></div>
           <button class="mbtn green" type="submit">SALVAR</button>
         </form>
@@ -389,6 +396,6 @@
   </div>
 
   <div id="coop-modal"><div class="coop-box"><div id="coop-title"></div><div id="coop-sub"></div><div id="coop-btns"></div></div></div>
-  <script src="game.js?v=24"></script>
+  <script src="game.js?v=25"></script>
 </body>
 </html>
