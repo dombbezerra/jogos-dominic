@@ -66,6 +66,8 @@
     d.querySelector('.face').textContent = c.face;
     d.querySelector('.nm').textContent = nameOf(c);
     d.querySelector('.tier').textContent = c.time || c.club || t[2];
+    const cl = c.time && findClub(c.time);
+    if (cl && cl.logo) { d.querySelector('.tier').textContent = ''; d.querySelector('.tier').appendChild(logoImg(cl, 'card-logo')); }
     return d;
   }
 
@@ -276,17 +278,57 @@
     for (const c of data.clubs || []) { const o = document.createElement('option'); o.value = c.nome; $('clubs-dl').appendChild(o); }
   }
   const myClub = () => findClub(data.myClub || '');
+  // Escudo: a foto que você escolheu, ou o emoji
+  function logoImg(cl, cls) {
+    if (!cl.logo) return document.createTextNode(cl.badge);
+    const im = new Image();
+    im.src = cl.logo; im.className = cls || 'logo'; im.alt = cl.nome;
+    return im;
+  }
+  // 📷 Escolhe uma foto do aparelho e diminui pra caber (64x64)
+  function pickLogo(cl) {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*';
+    inp.addEventListener('change', () => {
+      const file = inp.files[0];
+      if (!file) return;
+      const im = new Image();
+      im.onload = () => {
+        const cv = document.createElement('canvas');
+        cv.width = cv.height = 64;
+        const g = cv.getContext('2d'), k = Math.min(im.width, im.height);
+        g.drawImage(im, (im.width - k) / 2, (im.height - k) / 2, k, k, 0, 0, 64, 64);
+        cl.logo = cv.toDataURL('image/png');
+        URL.revokeObjectURL(im.src);
+        save(); render();
+        $('club-msg').textContent = '📷 Escudo do ' + cl.nome + ' trocado!';
+      };
+      im.src = URL.createObjectURL(file);
+    });
+    inp.click();
+  }
   function renderClubs() {
     const c = myClub();
-    $('club-now').textContent = c ? c.badge + ' ' + c.nome : 'Escolha o nome do seu time 👇';
+    const now = $('club-now');
+    now.innerHTML = '';
+    if (c) now.append(logoImg(c, 'logo-big'), document.createTextNode(' ' + c.nome));
+    else now.textContent = 'Escolha o nome do seu time 👇';
     const chips = $('club-chips');
     chips.innerHTML = '';
     for (const cl of data.clubs || []) {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
       const b = document.createElement('button');
-      b.textContent = cl.badge + ' ' + cl.nome;
+      b.append(logoImg(cl), document.createTextNode(' ' + cl.nome));
       if (c && c.nome === cl.nome) b.className = 'on';
       b.addEventListener('click', () => { data.myClub = cl.nome; save(); renderClubs(); });
-      chips.appendChild(b);
+      const ph = document.createElement('button');
+      ph.className = 'photo';
+      ph.textContent = '📷';
+      ph.title = 'Colocar a foto do escudo';
+      ph.addEventListener('click', () => pickLogo(cl));
+      chip.append(b, ph);
+      chips.appendChild(chip);
     }
   }
   $('club-go').addEventListener('click', () => {
@@ -754,6 +796,7 @@
       if (M.charge > 0) { ctx.fillStyle = '#000'; ctx.fillRect(p.x - 10, p.y + 9, 20, 3); ctx.fillStyle = M.charge > 0.8 ? '#ff4a4a' : '#ffd23a'; ctx.fillRect(p.x - 10, p.y + 9, 20 * M.charge, 3); }
     }
   }
+  const scoreLogo = new Image();   // escudo do seu time no placar
   function draw() {
     ctx.fillStyle = '#0b1a2e'; ctx.fillRect(0, 0, W, H);
     if (!M) return;
@@ -767,7 +810,9 @@
     const min = Math.min(90, Math.floor(M.t / MATCH_FRAMES * 90));
     ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(W / 2 - 120, 4, 240, 24);
     ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#9fc8ff'; ctx.font = 'bold 10px Arial'; ctx.fillText(data.myClub || 'VOCÊ', W / 2 - 75, 16); ctx.font = 'bold 13px Arial';
+    const mc = myClub();
+    if (mc && mc.logo) { scoreLogo.src !== mc.logo && (scoreLogo.src = mc.logo); if (scoreLogo.complete) ctx.drawImage(scoreLogo, W / 2 - 86, 6, 20, 20); }
+    else { ctx.fillStyle = '#9fc8ff'; ctx.font = 'bold 10px Arial'; ctx.fillText(data.myClub || 'VOCÊ', W / 2 - 75, 16); ctx.font = 'bold 13px Arial'; }
     ctx.fillStyle = '#fff'; ctx.fillText(M.score[0] + '  x  ' + M.score[1], W / 2, 16);
     ctx.fillStyle = '#ffb0b0'; ctx.font = 'bold 10px Arial'; ctx.fillText(M.opp, W / 2 + 75, 16);
     ctx.fillStyle = '#ffd23a'; ctx.font = 'bold 11px Arial'; ctx.fillText(min + "'", W / 2 + 140, 16);
