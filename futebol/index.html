@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0b1a2e">
+  <title>Dominic FC</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overscroll-behavior: none; }
+    body {
+      background: #0b1a2e; color: #fff; font-family: Arial, Helvetica, sans-serif;
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+      user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; touch-action: none;
+    }
+    #game { background: #1f7a32; width: min(100vw, calc(100vh * 480 / 300)); height: auto; aspect-ratio: 480 / 300; display: block; }
+    #back-link {
+      position: fixed; top: calc(env(safe-area-inset-top) + 8px); left: calc(env(safe-area-inset-left) + 8px); z-index: 60;
+      background: rgba(0, 0, 0, 0.8); color: #ffcc33; border: 2px solid #ffcc33; padding: 5px 10px; font-size: 13px; font-weight: bold;
+      text-decoration: none; border-radius: 4px;
+    }
+    body.in-match #back-link { display: none; }
+
+    /* ── Menu (estilo FC Mobile) ── */
+    #menu { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 12px;
+      background: radial-gradient(ellipse at top, #1d3d6e 0%, #0b1a2e 70%); }
+    body.in-match #menu { display: none; }
+    .panel { width: min(760px, 100%); max-height: 100%; overflow-y: auto; text-align: center; padding: 16px 12px; }
+    .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-left: 80px; }
+    .logo { font-size: 30px; font-weight: 900; letter-spacing: 2px; font-style: italic; }
+    .logo b { color: #2fe0a0; }
+    .coins { background: rgba(0, 0, 0, 0.4); border: 2px solid #ffd23a; border-radius: 20px; padding: 4px 12px; font-weight: 900; color: #ffd23a; }
+    .page { display: none; }
+    .page.on { display: block; }
+    h2 { font-size: 22px; margin: 6px 0 10px; letter-spacing: 1px; }
+    .ovr { font-size: 15px; color: #9fc8ff; margin-bottom: 10px; }
+    .ovr b { font-size: 26px; color: #fff; }
+    .big-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 520px; margin: 10px auto 0; }
+    .tile { border: none; border-radius: 12px; padding: 18px 10px; font-size: 18px; font-weight: 900; color: #fff; cursor: pointer; font-family: inherit;
+      box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.25); letter-spacing: 1px; }
+    .tile small { display: block; font-size: 11px; font-weight: normal; opacity: 0.85; margin-top: 4px; letter-spacing: 0; }
+    .tile.play { grid-column: 1 / -1; background: linear-gradient(135deg, #2fe0a0, #1a9a6a); font-size: 26px; padding: 22px; }
+    .tile.team { background: linear-gradient(135deg, #3a7aff, #2a4ab0); }
+    .tile.packs { background: linear-gradient(135deg, #ffb02e, #e0662a); }
+    .tile.cards { background: linear-gradient(135deg, #b06cff, #6a3ab0); grid-column: 1 / -1; }
+    .back { position: sticky; bottom: 0; z-index: 5; display: block; margin: 14px auto 0 0; background: #ffd23a; color: #1a1a2a; border: none;
+      border-radius: 8px; padding: 10px 18px; font-weight: 900; cursor: pointer; font-family: inherit; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6); }
+    .msg { min-height: 18px; color: #ffd23a; font-size: 14px; margin: 6px 0; }
+
+    /* Cartinha de jogador */
+    .card { position: relative; width: 92px; height: 128px; border-radius: 10px; padding: 6px 5px; color: #1a1a1a; display: inline-flex; flex-direction: column;
+      align-items: center; justify-content: space-between; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5); vertical-align: top; cursor: pointer; }
+    .card .rt { position: absolute; top: 5px; left: 7px; font-size: 22px; font-weight: 900; line-height: 1; }
+    .card .ps { position: absolute; top: 28px; left: 8px; font-size: 11px; font-weight: 900; }
+    .card .face { margin-top: 18px; font-size: 38px; line-height: 1; }
+    .card .nm { font-size: 11px; font-weight: 900; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .card .tier { font-size: 9px; font-weight: bold; opacity: 0.8; }
+    .t-bronze { background: linear-gradient(160deg, #e0a070, #9a5a2a); }
+    .t-prata { background: linear-gradient(160deg, #ffffff, #a9b2c3); }
+    .t-ouro { background: linear-gradient(160deg, #fff3a0, #e0a810); }
+    .t-elite { background: linear-gradient(160deg, #d8b0ff, #6a2ab0); color: #fff; }
+    .t-lenda { background: linear-gradient(135deg, #ff4a4a, #ffb02e, #ffe94a, #7ddf64, #5ccfff, #b06cff); background-size: 300% 300%;
+      animation: lenda 3s linear infinite; color: #fff; text-shadow: 0 1px 2px #000; }
+    @keyframes lenda { from { background-position: 0 0; } to { background-position: 300% 0; } }
+    .card.sel { outline: 4px solid #2fe0a0; outline-offset: 2px; }
+    .card.in-team::after { content: '✓'; position: absolute; top: 4px; right: 6px; font-weight: 900; color: #0a6a3a; }
+
+    /* Meu time */
+    .pitch { background: repeating-linear-gradient(180deg, #2a8a3a 0 28px, #237a32 28px 56px); border: 3px solid #fff; border-radius: 10px;
+      max-width: 420px; margin: 0 auto; padding: 14px 6px; display: grid; gap: 10px; }
+    .pitch .line { display: flex; justify-content: center; gap: 14px; }
+    .slot-label { font-size: 11px; font-weight: 900; color: #fff; text-shadow: 0 1px 2px #000; margin-top: 2px; }
+    .slot { display: inline-flex; flex-direction: column; align-items: center; }
+    .slot.picking .card { outline: 4px solid #ffd23a; outline-offset: 2px; }
+    .grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+    .hint { font-size: 13px; color: #9fc8ff; margin: 8px 0; }
+    .card-actions { margin-top: 6px; }
+    .card-actions button { background: #e04848; color: #fff; border: none; border-radius: 6px; padding: 5px 10px; font-weight: bold; cursor: pointer; font-family: inherit; }
+
+    /* Pacotes */
+    .packs { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .pack { width: 150px; border-radius: 12px; padding: 12px 8px; border: none; cursor: pointer; font-family: inherit; color: #fff; font-weight: 900;
+      box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.25); }
+    .pack .ico { font-size: 40px; }
+    .pack small { display: block; font-weight: normal; font-size: 11px; margin: 4px 0; }
+    .pack .price { background: rgba(0, 0, 0, 0.35); border-radius: 12px; padding: 4px; margin-top: 6px; color: #ffd23a; }
+    .pack:disabled { opacity: 0.45; cursor: default; }
+    #reveal { position: fixed; inset: 0; z-index: 70; background: rgba(0, 0, 0, 0.85); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+    #reveal.on { display: flex; }
+    #reveal .cards-out { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+    #reveal .card { transform: scale(1.3); margin: 20px; animation: pop 0.6s ease-out both; }
+    @keyframes pop { from { transform: scale(0) rotate(-20deg); opacity: 0; } to { transform: scale(1.3) rotate(0); opacity: 1; } }
+    #reveal h3 { font-size: 26px; color: #ffd23a; }
+
+    /* Botões do jogo no celular */
+    #touch { position: fixed; inset: 0; z-index: 30; display: none; pointer-events: none; }
+    body.in-match.touch #touch { display: block; }
+    #stick { position: absolute; left: calc(env(safe-area-inset-left) + 30px); bottom: calc(env(safe-area-inset-bottom) + 30px); width: 130px; height: 130px;
+      border-radius: 50%; background: rgba(255, 255, 255, 0.12); border: 3px solid rgba(255, 255, 255, 0.35); pointer-events: auto; }
+    #knob { position: absolute; left: 40px; top: 40px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255, 255, 255, 0.55); }
+    .mbtn { position: absolute; border-radius: 50%; border: 3px solid rgba(0, 0, 0, 0.3); color: #fff; font-weight: 900; font-family: inherit; pointer-events: auto;
+      display: flex; align-items: center; justify-content: center; text-align: center; opacity: 0.85; }
+    .mbtn.on { transform: scale(0.92); opacity: 1; }
+    #b-shoot { right: calc(env(safe-area-inset-right) + 24px); bottom: calc(env(safe-area-inset-bottom) + 34px); width: 96px; height: 96px; background: #e04848; font-size: 15px; }
+    #b-pass { right: calc(env(safe-area-inset-right) + 134px); bottom: calc(env(safe-area-inset-bottom) + 24px); width: 76px; height: 76px; background: #2a8aff; font-size: 13px; }
+    #b-sprint { right: calc(env(safe-area-inset-right) + 64px); bottom: calc(env(safe-area-inset-bottom) + 140px); width: 70px; height: 70px; background: #2fb060; font-size: 12px; }
+    #keys-help { position: fixed; left: 10px; bottom: 8px; font-size: 12px; color: #cfe; opacity: 0.8; display: none; z-index: 30; }
+    body.in-match:not(.touch) #keys-help { display: block; }
+    #pause-btn { position: fixed; top: calc(env(safe-area-inset-top) + 8px); right: calc(env(safe-area-inset-right) + 8px); z-index: 35; display: none;
+      background: rgba(0, 0, 0, 0.7); color: #fff; border: 2px solid #fff; border-radius: 6px; padding: 4px 10px; font-weight: 900; cursor: pointer; }
+    body.in-match #pause-btn { display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="game" width="480" height="300"></canvas>
+  <a href="../index.html" id="back-link">← Menu</a>
+  <button id="pause-btn">SAIR</button>
+
+  <div id="menu">
+    <div class="panel">
+      <div class="top"><div class="logo">DOMINIC <b>FC</b></div><div class="coins">🪙 <span id="coins">0</span></div></div>
+
+      <div class="page on" id="page-main">
+        <div class="ovr">Força do seu time: <b id="ovr">0</b></div>
+        <div class="big-btns">
+          <button class="tile play" id="go-play">⚽ JOGAR<small>Partida contra o computador</small></button>
+          <button class="tile team" data-go="team">👕 MEU TIME<small>Escolha os 5 titulares</small></button>
+          <button class="tile packs" data-go="packs">🎁 PACOTES<small>Ganhe jogadores novos</small></button>
+          <button class="tile cards" data-go="cards">🃏 MINHAS CARTAS<small id="n-cards"></small></button>
+        </div>
+        <div class="msg" id="main-msg"></div>
+      </div>
+
+      <div class="page" id="page-team">
+        <h2>👕 MEU TIME</h2>
+        <div class="ovr">Força: <b id="ovr2">0</b></div>
+        <div class="pitch" id="pitch"></div>
+        <div class="hint" id="team-hint">Toque num jogador do campo pra trocar.</div>
+        <div class="grid" id="team-pick"></div>
+        <button class="back" data-go="main">◀ VOLTAR</button>
+      </div>
+
+      <div class="page" id="page-packs">
+        <h2>🎁 PACOTES</h2>
+        <div class="packs" id="pack-list"></div>
+        <div class="msg" id="pack-msg"></div>
+        <button class="back" data-go="main">◀ VOLTAR</button>
+      </div>
+
+      <div class="page" id="page-cards">
+        <h2>🃏 MINHAS CARTAS</h2>
+        <div class="hint">Toque numa carta pra vender (quem está no time não pode).</div>
+        <div class="grid" id="card-list"></div>
+        <button class="back" data-go="main">◀ VOLTAR</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="reveal"><h3 id="reveal-title">NOVOS JOGADORES!</h3><div class="cards-out" id="reveal-cards"></div><button class="back" id="reveal-ok" style="position:static;margin:0">OK!</button></div>
+
+  <div id="touch">
+    <div id="stick"><div id="knob"></div></div>
+    <button class="mbtn" id="b-sprint">CORRER</button>
+    <button class="mbtn" id="b-pass">PASSE</button>
+    <button class="mbtn" id="b-shoot">CHUTE</button>
+  </div>
+  <div id="keys-help">Setas/WASD: andar · J: passe · K: chute (segure pra mais força) · Shift: correr</div>
+
+  <script src="game.js?v=1"></script>
+</body>
+</html>

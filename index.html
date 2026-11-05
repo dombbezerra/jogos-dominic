@@ -210,6 +210,11 @@
       max-width: 240px; background: rgba(20, 20, 40, 0.95); border: 2px solid #ffcc00; border-radius: 10px;
       padding: 8px 12px; font-size: 13px; display: none;
     }
+    .futebol {
+      --card-color: #2fe0a0;
+      --card-shadow: rgba(47, 224, 160, 0.4);
+      --card-bg: linear-gradient(135deg, #1a5a3a, #2a8a3a);
+    }
     /* Modo teste */
     .test-banner { position: fixed; top: max(12px, env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left)); z-index: 10;
       background: #ff6ad5; color: #fff; font-weight: 900; padding: 6px 12px; border-radius: 20px; font-size: 13px; letter-spacing: 1px; display: none; }
@@ -324,7 +329,17 @@
   <div class="test-area" id="test-area">
     <div class="test-title">🧪 EM TESTE</div>
     <div class="test-hint">Jogos novos aparecem aqui primeiro. Só quem está no modo teste vê.</div>
-    <div class="games test-games" id="test-games"></div>
+    <div class="games test-games" id="test-games">
+      <a href="futebol/index.html" class="game-card futebol">
+        <div class="game-icon">⚽</div>
+        <div class="game-title">DOMINIC FC</div>
+        <div class="game-desc">
+          Futebol no estilo FC Mobile: cartas de 60 a 130,
+          pacotes e partidas!
+        </div>
+        <div class="play-btn">JOGAR ▶</div>
+      </a>
+    </div>
   </div>
 
   <footer>
