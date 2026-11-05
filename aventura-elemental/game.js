@@ -238,6 +238,12 @@
     { id: 'morcego',   name: 'Morcego',     price: 20 },
     { id: 'esqueleto', name: 'Esqueleto',   price: 30 },
     { id: 'rei',       name: 'Rei Sombrio', price: 100 },
+    // Elementos
+    { id: 'gota',      name: 'Gota (Água)',       price: 15 },
+    { id: 'chama',     name: 'Chama (Fogo)',      price: 15 },
+    { id: 'cubo',      name: 'Cubo de Gelo',      price: 15 },
+    { id: 'raio',      name: 'Raio',              price: 15 },
+    { id: 'arcoiris',  name: 'Chama Arco-íris',   price: 150 },
   ];
   // 'skin:gotinha' = rosto de personagem; 'bicho:slime' = bicho
   const hasAvatar = id => {
@@ -267,6 +273,27 @@
       p(4, 1, 8, 6, '#ecebe2'); p(5, 3, 2, 2, '#000'); p(9, 3, 2, 2, '#000');
       p(5, 7, 6, 5, '#ecebe2'); p(5, 8, 6, 1, '#888'); p(5, 10, 6, 1, '#888');
       p(5, 12, 2, 3, '#ecebe2'); p(9, 12, 2, 3, '#ecebe2');
+    } else if (v === 'gota') {
+      c.width = c.height = 16;
+      p(7, 1, 2, 2, '#5ccfff'); p(6, 3, 4, 2, '#5ccfff'); p(5, 5, 6, 2, '#3aa8ff'); p(4, 7, 8, 5, '#2a8aef');
+      p(5, 12, 6, 2, '#1f6fd0'); p(5, 7, 2, 3, '#cfeeff');
+    } else if (v === 'chama' || v === 'arcoiris') {
+      c.width = c.height = 16;
+      // Chama de fogo; a do arco-íris tem uma faixa de cada cor
+      const rb = v === 'arcoiris';
+      const col = k => rb ? RAINBOW[k % RAINBOW.length] : ['#ff3a1a', '#ff7a1a', '#ffb02e', '#ffe94a'][Math.min(k, 3)];
+      p(7, 0, 2, 2, col(rb ? 0 : 0)); p(6, 2, 4, 2, col(rb ? 1 : 0)); p(5, 4, 6, 2, col(rb ? 2 : 1));
+      p(4, 6, 8, 2, col(rb ? 3 : 1)); p(3, 8, 10, 3, col(rb ? 4 : 2)); p(4, 11, 8, 3, col(rb ? 5 : 2)); p(5, 14, 6, 1, col(rb ? 0 : 1));
+      if (!rb) { p(6, 9, 4, 4, '#ffe94a'); p(7, 7, 2, 2, '#ffb02e'); }
+      else { p(6, 9, 4, 4, '#fff'); }
+    } else if (v === 'cubo') {
+      c.width = c.height = 16;
+      p(2, 4, 12, 10, '#9fe0ff'); p(4, 2, 12, 2, '#cff4ff'); p(14, 4, 2, 10, '#6cc4ef'); p(2, 2, 2, 2, '#cff4ff');
+      p(4, 6, 2, 5, '#fff'); p(6, 6, 2, 2, '#fff'); p(3, 13, 11, 1, '#5aaad8');
+    } else if (v === 'raio') {
+      c.width = c.height = 16;
+      p(8, 0, 5, 2, '#ffe94a'); p(6, 2, 5, 2, '#ffe94a'); p(4, 4, 5, 2, '#ffe94a'); p(3, 6, 10, 2, '#ffd23a');
+      p(8, 8, 4, 2, '#ffd23a'); p(6, 10, 4, 2, '#ffb02e'); p(4, 12, 4, 2, '#ffb02e'); p(3, 14, 2, 2, '#ffb02e');
     } else {   // Rei Sombrio
       c.width = c.height = 28;
       p(0, 18, 28, 10, '#3a1f5c'); p(4, 8, 20, 12, '#5a3a8a');
