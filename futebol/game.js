@@ -1,4 +1,4 @@
-// Dominic FC — futebol no estilo FC Mobile: cartas de jogadores (nota 60 a 130), pacotes, meu time e partida 5 contra 5
+// Dominic FC — futebol no estilo FC Mobile: cartas de jogadores (nota 60 a 130), pacotes, meu time e partida 7 contra 7
 (() => {
   const $ = id => document.getElementById(id);
   const canvas = $('game');
@@ -13,8 +13,8 @@
   // ── Cartas ────────────────────────────────────────────────
   const FACES = ['😀', '😎', '🤠', '🧐', '😤', '🥶', '😄', '🦁', '🐯', '🦊', '🐺', '🤖', '👽', '🥷', '🧙', '🐲'];
   // Posições (sigla e nome), igual no FC
-  const POSITIONS = [['ATA', 'Atacante'], ['PD', 'Ponta-direita'], ['PE', 'Ponta-esquerda'], ['MEI', 'Meia'], ['MC', 'Meia-central'],
-    ['MD', 'Meia-direita'], ['ME', 'Meia-esquerda'], ['LD', 'Lateral direito'], ['LE', 'Lateral esquerdo'], ['ZAG', 'Zagueiro'], ['GOL', 'Goleiro']];
+  const POSITIONS = [['PD', 'Ponta-direita'], ['PE', 'Ponta-esquerda'], ['ATA', 'Atacante'], ['ZAG', 'Zagueiro'],
+    ['LE', 'Lateral esquerdo'], ['LD', 'Lateral direito'], ['GOL', 'Goleiro']];
   const POS = POSITIONS.map(p => p[0]);
   const MIN_R = 60, MAX_R = 130;
   const TIERS = [[120, 'lenda', 'LENDA'], [105, 'elite', 'ELITE'], [90, 'ouro', 'OURO'], [75, 'prata', 'PRATA'], [0, 'bronze', 'BRONZE']];
@@ -35,7 +35,7 @@
   function load() {
     try { data = JSON.parse(localStorage.getItem(KEY)); } catch (e) { data = null; }
     if (!data || !Array.isArray(data.cards)) {
-      data = { coins: 500, cards: [], team: [null, null, null, null, null], next: 1, played: 0, wins: 0, semFalsas: true };
+      data = { coins: 500, cards: [], team: SLOTS.map(() => null), next: 1, played: 0, wins: 0, semFalsas: true };
       save();
     }
     // Sem cartas inventadas: só ficam os jogadores que você criou (álbum ➕ ou 👑 CRIAR CARTA)
@@ -43,17 +43,37 @@
       data.cards = data.cards.filter(c => c.key || c.criada);
       data.semFalsas = true;
     }
-    data.team = [0, 1, 2, 3, 4].map(i => (data.team && cardById(data.team[i])) ? data.team[i] : null);
+    // Time de antes (5 vagas): cada um vai pra vaga da posição dele, ou pra primeira livre
+    if (!data.team || data.team.length !== SLOTS.length) {
+      const ids = (data.team || []).filter(id => cardById(id));
+      data.team = SLOTS.map(() => null);
+      for (const id of ids) {
+        const c = cardById(id);
+        let i = SLOTS.findIndex((sl, k) => sl.pos === c.pos && !data.team[k]);
+        if (i < 0) i = data.team.findIndex((x, k) => !x && !SLOTS[k].gk);
+        if (i >= 0) data.team[i] = id;
+      }
+    }
+    data.team = data.team.map(id => cardById(id) ? id : null);
     save();
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* sem salvar */ } }
   const cardById = id => data.cards.find(c => c.id === id);
 
-  // Posições do time: 1 goleiro, 2 na defesa e 2 no ataque
-  const SLOTS = [{ label: 'GOL', gk: true }, { label: 'DEFESA' }, { label: 'DEFESA' }, { label: 'ATAQUE' }, { label: 'ATAQUE' }];
-  // Goleiro na linha (ou jogador de linha no gol) joga pior
-  const effR = (card, slot) => !card ? 40 : Math.round(card.r * ((SLOTS[slot].gk ? card.pos === 'GOL' : card.pos !== 'GOL') ? 1 : 0.7));
-  const teamOvr = () => Math.round(data.team.reduce((s, id, i) => s + effR(cardById(id), i), 0) / 5);
+  // Time de 7: goleiro, laterais e zagueiro atrás; pontas e atacante na frente.
+  // home = lugar no campo (x e y de 0 a 1, pra quem ataca pra direita; y pequeno = lado esquerdo)
+  const SLOTS = [
+    { label: 'GOL', pos: 'GOL', gk: true, home: [0.02, 0.5] },
+    { label: 'LD', pos: 'LD', home: [0.24, 0.82] },
+    { label: 'ZAG', pos: 'ZAG', home: [0.17, 0.5] },
+    { label: 'LE', pos: 'LE', home: [0.24, 0.18] },
+    { label: 'PD', pos: 'PD', att: true, home: [0.6, 0.84] },
+    { label: 'ATA', pos: 'ATA', att: true, home: [0.7, 0.5] },
+    { label: 'PE', pos: 'PE', att: true, home: [0.6, 0.16] },
+  ];
+  // Na posição certa joga 100%; fora dela joga menos (goleiro na linha ou de linha no gol, bem menos)
+  const effR = (card, slot) => !card ? 40 : Math.round(card.r * (card.pos === SLOTS[slot].pos ? 1 : SLOTS[slot].gk || card.pos === 'GOL' ? 0.7 : 0.9));
+  const teamOvr = () => Math.round(data.team.reduce((s, id, i) => s + effR(cardById(id), i), 0) / SLOTS.length);
 
   function cardEl(c, extra) {
     const t = tierOf(c.r);
@@ -116,7 +136,7 @@
     const pitch = $('pitch');
     pitch.innerHTML = '';
     // De cima pra baixo: ataque, defesa, goleiro
-    for (const line of [[3, 4], [1, 2], [0]]) {
+    for (const line of [[6, 5, 4], [3, 2, 1], [0]]) {   // de cima pra baixo: PE ATA PD / LE ZAG LD / GOL
       const row = document.createElement('div');
       row.className = 'line';
       for (const i of line) {
@@ -529,8 +549,8 @@
   const GY0 = MIDY - GOAL_H / 2, GY1 = MIDY + GOAL_H / 2;   // boca do gol
   const MATCH_FRAMES = 60 * 120;                            // 2 minutos
   const CLUBS = ['Dragões FC', 'Raio Azul', 'Tubarões do Mar', 'Fênix United', 'Leões de Gelo', 'Trovão SC', 'Cometa EC', 'Lobos da Noite', 'Atlético Vulcão', 'Real Furacão'];
-  // Lugar de cada um no campo (pra quem ataca pra direita): x e y de 0 a 1
-  const HOME = [[0.02, 0.5], [0.25, 0.3], [0.25, 0.7], [0.6, 0.32], [0.6, 0.68]];
+  const HOME = SLOTS.map(sl => sl.home);
+  const ATA_SLOT = SLOTS.findIndex(sl => sl.pos === 'ATA');
 
   let M = null;   // a partida
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -554,7 +574,7 @@
       const mine = p.team === 0 ? bf : 1 - bf;
       fx += (mine - 0.5) * 0.4;
       const attacking = M.ball.owner && M.ball.owner.team === p.team;
-      if (attacking) fx += p.slot >= 3 ? 0.18 : 0.08;
+      if (attacking) fx += SLOTS[p.slot].att ? 0.18 : 0.08;
       fy = lerp(fy, (M.ball.y - FY0) / (FY1 - FY0), 0.25);
     }
     fx = clamp(fx, 0.02, 0.95);
@@ -567,7 +587,7 @@
     const opp = clamp(myOvr + Math.floor(Math.random() * 11) - 4, MIN_R, MAX_R);
     const players = [];
     data.team.forEach((id, i) => { const c = cardById(id); players.push(makePlayer(0, i, effR(c, i), c)); });
-    for (let i = 0; i < 5; i++) players.push(makePlayer(1, i, clamp(opp + Math.floor(Math.random() * 9) - 4, MIN_R, MAX_R), null));
+    for (let i = 0; i < SLOTS.length; i++) players.push(makePlayer(1, i, clamp(opp + Math.floor(Math.random() * 9) - 4, MIN_R, MAX_R), null));
     M = { players, ball: { x: W / 2, y: MIDY, vx: 0, vy: 0, owner: null }, score: [0, 0], t: 0, opp: pick(CLUBS), oppOvr: opp,
       me: null, pause: 0, msg: '', msgT: 0, charge: 0, over: false, switchCd: 0 };
     kickoff(0);
@@ -584,10 +604,10 @@
     }
     const b = M.ball;
     b.x = W / 2; b.y = MIDY; b.vx = b.vy = 0;
-    const taker = M.players.find(p => p.team === team && p.slot === 3);
+    const taker = M.players.find(p => p.team === team && p.slot === ATA_SLOT);
     taker.x = W / 2 + (team === 0 ? -8 : 8); taker.y = MIDY;
     b.owner = taker;
-    M.me = M.players.find(p => p.team === 0 && p.slot === 3);
+    M.me = M.players.find(p => p.team === 0 && p.slot === ATA_SLOT);
     M.pause = 50;
   }
 
