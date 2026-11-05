@@ -188,6 +188,19 @@
     canvas.avatar { image-rendering: pixelated; width: 18px; height: 18px; vertical-align: middle; margin-right: 4px; background: rgba(255, 255, 255, 0.08); border-radius: 3px; flex: none; }
     .friend-name { display: flex; align-items: center; }
     .friend-name span { overflow: hidden; text-overflow: ellipsis; }
+    /* Molduras da foto de perfil */
+    canvas.avatar.big { width: 56px; height: 56px; margin: 4px auto; border-radius: 6px; }
+    canvas.fr-bronze { box-shadow: 0 0 0 2px #c07a3a; }
+    canvas.fr-prata { box-shadow: 0 0 0 2px #d8dde6; }
+    canvas.fr-ouro { box-shadow: 0 0 0 2px #ffd23a, 0 0 6px #ffd23a; }
+    canvas.fr-fogo { box-shadow: 0 0 0 2px #ff5a1a, 0 0 7px #ffb02e; }
+    canvas.fr-gelo { box-shadow: 0 0 0 2px #9fe0ff, 0 0 7px #cff4ff; }
+    canvas.fr-arcoiris { animation: fr-rainbow 1.5s linear infinite; }
+    @keyframes fr-rainbow {
+      0% { box-shadow: 0 0 0 2px #ff4a4a, 0 0 6px #ff4a4a; } 20% { box-shadow: 0 0 0 2px #ffb02e, 0 0 6px #ffb02e; }
+      40% { box-shadow: 0 0 0 2px #ffe94a, 0 0 6px #ffe94a; } 60% { box-shadow: 0 0 0 2px #7ddf64, 0 0 6px #7ddf64; }
+      80% { box-shadow: 0 0 0 2px #5ccfff, 0 0 6px #5ccfff; } 100% { box-shadow: 0 0 0 2px #b06cff, 0 0 6px #b06cff; }
+    }
     .shop-note { grid-column: 1 / -1; font-size: 12px; color: #c9c3e6; margin-top: 6px; }
     /* Janelinha do jogar junto (convite, esperando, conectando) */
     #coop-modal { position: fixed; inset: 0; z-index: 70; display: none; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, 0.6); font-family: Arial, Helvetica, sans-serif; }
@@ -409,6 +422,6 @@
   </div>
 
   <div id="coop-modal"><div class="coop-box"><div id="coop-title"></div><div id="coop-sub"></div><div id="coop-btns"></div></div></div>
-  <script src="game.js?v=28"></script>
+  <script src="game.js?v=29"></script>
 </body>
 </html>

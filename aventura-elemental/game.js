@@ -248,6 +248,15 @@
     { id: 'raioarcoiris', name: 'Raio Arco-íris', price: 150 },
     { id: 'cuboarcoiris', name: 'Cubo Arco-íris', price: 150 },
   ];
+  const FRAMES = [
+    { id: 'nenhuma',  name: 'Sem moldura', price: 0 },
+    { id: 'bronze',   name: 'Bronze',      price: 10 },
+    { id: 'prata',    name: 'Prata',       price: 20 },
+    { id: 'ouro',     name: 'Ouro',        price: 40 },
+    { id: 'fogo',     name: 'Fogo',        price: 60 },
+    { id: 'gelo',     name: 'Gelo',        price: 60 },
+    { id: 'arcoiris', name: 'Arco-íris',   price: 200 },
+  ];
   // 'skin:gotinha' = rosto de personagem; 'bicho:slime' = bicho
   const hasAvatar = id => {
     const [kind, v] = String(id || '').split(':');
@@ -338,17 +347,17 @@
     return c;
   }
   // Nome com a foto do lado (no canto do menu e na lista de amigos)
-  function paintTag(node, nome, colorId, avatarId) {
+  function paintTag(node, nome, colorId, avatarId, frameId) {
     node.innerHTML = '';
     if (!nome) return;
     const txt = el('span');
     paintName(txt, nome, '', colorId);
-    node.append(avatarCanvas(avatarId), txt);
+    node.append(avatarCanvas(avatarId, 'fr-' + (frameId || 'nenhuma')), txt);
   }
-  const paintMyTag = () => paintTag($('m-user'), meta.user ? meta.user.nome : '', meta.nameColor, meta.avatar);
+  const paintMyTag = () => paintTag($('m-user'), meta.user ? meta.user.nome : '', meta.nameColor, meta.avatar, meta.frame);
   // meta.coins = Gemas Elementais (ganhas jogando); meta.gems = Moedas Elementais (especiais)
   const meta = { coins: 0, gems: 0, skins: FREE_SKINS.slice(), skin: 'gotinha', up: { vida: 0, forca: 0, rapido: 0, veloz: 0 },
-    colors: ['branco'], nameColor: 'branco', avatars: [], avatar: 'skin:gotinha', user: null };
+    colors: ['branco'], nameColor: 'branco', avatars: [], avatar: 'skin:gotinha', frames: [], frame: 'nenhuma', user: null };
   let chestHearts = 0;   // corações ganhos nos baús desta aventura
   function loadMeta() {
     let m = null;
@@ -375,6 +384,8 @@
     meta.nameColor = meta.colors.includes(m.nameColor) ? m.nameColor : 'branco';
     meta.avatars = Array.isArray(m.avatars) ? m.avatars.filter(id => BICHOS.some(b => b.id === id)) : [];
     meta.avatar = hasAvatar(m.avatar) ? m.avatar : 'skin:' + meta.skin;
+    meta.frames = Array.isArray(m.frames) ? m.frames.filter(id => FRAMES.some(f => f.id === id)) : [];
+    meta.frame = meta.frames.includes(m.frame) ? m.frame : 'nenhuma';
     meta.updatedAt = m.updatedAt || 0;
     if (refund) writeMeta();   // devolve uma vez só
   }
@@ -1324,13 +1335,17 @@
     }
   }
 
-  // Loja com 3 abas: melhorias do personagem, recursos elementais e cor do nome
+  // Abas da loja. Fotos e cores somem quando você já tem todas (e aí ficam as molduras)
   let shopTab = 'melhorias';
-  const SHOP_TABS = [['melhorias', 'MELHORIAS'], ['gemas', 'RECURSOS ELEMENTAIS'], ['fotos', 'FOTOS DE PERFIL']];
+  const SHOP_TABS = [['melhorias', 'MELHORIAS'], ['gemas', 'RECURSOS ELEMENTAIS'], ['fotos', 'FOTOS DE PERFIL'], ['cores', 'COR DO NOME'], ['molduras', 'MOLDURAS']];
+  const tabDone = id => id === 'fotos' ? BICHOS.every(b => meta.avatars.includes(b.id))
+    : id === 'cores' ? NAME_COLORS.every(c => meta.colors.includes(c.id)) : false;
   function renderShop() {
     const tabs = $('shop-tabs');
     tabs.innerHTML = '';
-    for (const [id, label] of SHOP_TABS) {
+    const shown = SHOP_TABS.filter(([id]) => !tabDone(id));
+    if (!shown.some(([id]) => id === shopTab)) shopTab = shown[0][0];
+    for (const [id, label] of shown) {
       const b = el('button', label, 'tab' + (shopTab === id ? ' on' : ''));
       b.addEventListener('click', () => { shopTab = id; renderShop(); });
       tabs.appendChild(b);
@@ -1339,7 +1354,49 @@
     grid.innerHTML = '';
     if (shopTab === 'melhorias') shopUpgrades(grid);
     else if (shopTab === 'gemas') shopGems(grid);
-    else shopAvatars(grid);
+    else if (shopTab === 'fotos') shopAvatars(grid);
+    else if (shopTab === 'cores') shopColors(grid);
+    else shopFrames(grid);
+  }
+
+  function shopColors(grid) {
+    for (const c of NAME_COLORS) {
+      const have = meta.colors.includes(c.id), on = meta.nameColor === c.id;
+      const btn = el('button', on ? 'USANDO' : 'USAR', on ? 'cyan' : have ? 'green' : 'purple');
+      if (!on && !have) priced(btn, '', 'moeda', c.price);
+      btn.disabled = on || (!have && meta.gems < c.price);
+      btn.addEventListener('click', () => {
+        if (!have) { meta.gems -= c.price; meta.colors.push(c.id); }
+        meta.nameColor = c.id;
+        writeMeta(); renderMenu();
+        syncUser();
+      });
+      const d = card(on);
+      const sample = el('div', null, 'name-sample');
+      paintName(sample, meta.user ? meta.user.nome : 'Seu nome', '', c.id);
+      d.append(sample, el('b', c.name), el('small', have ? 'Sua' : 'Custa ' + c.price + ' Moedas Elementais'), btn);
+      grid.appendChild(d);
+    }
+  }
+
+  // Molduras: a borda em volta da sua foto de perfil
+  function shopFrames(grid) {
+    for (const f of FRAMES) {
+      const have = f.price === 0 || meta.frames.includes(f.id), on = meta.frame === f.id;
+      const btn = el('button', on ? 'USANDO' : 'USAR', on ? 'cyan' : have ? 'green' : 'purple');
+      if (!on && !have) priced(btn, '', 'moeda', f.price);
+      btn.disabled = on || (!have && meta.gems < f.price);
+      btn.addEventListener('click', () => {
+        if (!have) { meta.gems -= f.price; meta.frames.push(f.id); }
+        meta.frame = f.id;
+        writeMeta(); renderMenu();
+        syncUser();
+      });
+      const d = card(on);
+      const pic = avatarCanvas(meta.avatar, 'big fr-' + f.id);
+      d.append(pic, el('b', f.name), el('small', have ? 'Sua' : 'Custa ' + f.price + ' Moedas Elementais'), btn);
+      grid.appendChild(d);
+    }
   }
 
   function shopUpgrades(grid) {
@@ -1417,7 +1474,7 @@
   function syncUser() {
     if (!meta.user) return;
     fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: meta.user.email, nome: meta.user.nome, cor: meta.nameColor, foto: meta.avatar }) }).catch(() => {});
+      body: JSON.stringify({ email: meta.user.email, nome: meta.user.nome, cor: meta.nameColor, foto: meta.avatar, moldura: meta.frame }) }).catch(() => {});
   }
 
   // Usuário: e-mail e nome, guardados neste aparelho e no servidor do site
@@ -1488,7 +1545,7 @@
     meta.user = { email, nome };
     writeMeta();
     try {
-      const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, nome, cor: meta.nameColor, foto: meta.avatar }) });
+      const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, nome, cor: meta.nameColor, foto: meta.avatar, moldura: meta.frame }) });
       const data = await r.json().catch(() => ({}));
       if (r.status === 409) {   // nome de outra pessoa: não troca
         meta.user = before; writeMeta();
@@ -1537,7 +1594,7 @@
     if (coop && coop.begun) {
       const li = el('li', null, 'friend-on friend-coop');
       const name = el('span', null, 'friend-name');
-      paintTag(name, '🤝 ' + coop.friend.nome, coop.friend.cor, coop.friend.foto);
+      paintTag(name, '🤝 ' + coop.friend.nome, coop.friend.cor, coop.friend.foto, coop.friend.moldura);
       const b = el('button', 'SAIR', 'friend-btn friend-leave');
       b.addEventListener('click', () => endCoop('Você saiu do jogo junto.'));
       li.append(name, b);
@@ -1546,7 +1603,7 @@
     for (const f of friends) {
       const li = el('li', null, f.online ? 'friend-on' : 'friend-off');
       const name = el('span', null, 'friend-name');
-      paintTag(name, f.nome, f.cor, f.foto);
+      paintTag(name, f.nome, f.cor, f.foto, f.moldura);
       li.appendChild(name);
       // Amigo online: ENTRAR chama ele pra jogar junto
       if (f.online && !coop) {
@@ -1578,7 +1635,7 @@
     const m = Object.assign({}, a);
     m.coins = Math.max(a.coins || 0, b.coins || 0);
     m.gems = Math.max(a.gems || 0, b.gems || 0);
-    for (const k of ['skins', 'colors', 'codes', 'avatars']) m[k] = [...new Set([...(a[k] || []), ...(b[k] || [])])];
+    for (const k of ['skins', 'colors', 'codes', 'avatars', 'frames']) m[k] = [...new Set([...(a[k] || []), ...(b[k] || [])])];
     m.up = Object.assign({}, a.up);
     for (const k in b.up || {}) m.up[k] = Math.max((a.up || {})[k] || 0, b.up[k] || 0);
     m.seenHelp = a.seenHelp || b.seenHelp;
@@ -1746,7 +1803,7 @@
     if (!coop) return;
     coop.last = Date.now();
     if (m.t === 'hi') {
-      coop.friend = { nome: m.nome, cor: m.cor, foto: m.foto, level: m.level };
+      coop.friend = { nome: m.nome, cor: m.cor, foto: m.foto, moldura: m.moldura, level: m.level };
       if (!coop.begun) { coop.begun = true; coopBegin(); }
       return;
     }
@@ -1838,7 +1895,7 @@
       joining = null;
       hideModal();
       coop = { host, pc, dc, open: true, begun: false, last: Date.now(), gone: {}, friend: { nome, level: 0 } };
-      coopSend({ t: 'hi', level: myLevel(), nome: meta.user.nome, cor: meta.nameColor, foto: meta.avatar });
+      coopSend({ t: 'hi', level: myLevel(), nome: meta.user.nome, cor: meta.nameColor, foto: meta.avatar, moldura: meta.frame });
     };
     dc.onmessage = e => { try { onCoopMsg(JSON.parse(e.data)); } catch (err) { /* mensagem estranha */ } };
     dc.onclose = () => { if (coop && coop.dc === dc) endCoop(nome + ' saiu do jogo junto.'); };
