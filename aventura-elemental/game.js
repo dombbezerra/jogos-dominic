@@ -1504,6 +1504,20 @@
       });
       pics.appendChild(b);
     }
+    // Molduras que você tem (e "sem moldura"), com a sua foto dentro
+    const frames = $('u-frames');
+    frames.innerHTML = '';
+    for (const f of FRAMES.filter(f => f.price === 0 || meta.frames.includes(f.id))) {
+      const b = el('button', null, 'u-pic' + (meta.frame === f.id ? ' on' : ''));
+      b.type = 'button';
+      b.title = f.name;
+      b.appendChild(avatarCanvas(meta.avatar, 'fr-' + f.id));
+      b.addEventListener('click', () => {
+        meta.frame = f.id;
+        writeMeta(); syncUser(); paintMyTag(); renderUserColors();
+      });
+      frames.appendChild(b);
+    }
     const box = $('u-colors');
     box.innerHTML = '';
     const nome = $('u-name').value.trim() || (meta.user ? meta.user.nome : 'Seu nome');
