@@ -223,9 +223,12 @@ module.exports = async (req, res) => {
 
     // Chat de amigos (só convidados)
     if (action === 'chatLer' || action === 'chatEnviar') {
-      const [membro, raw, marcado] = await redis(['SISMEMBER', 'aventura:chat:membros', email], ['GET', 'aventura:user:' + email], ['SISMEMBER', 'aventura:adm', email]);
+      const [membro, raw, marcado, oculto] = await redis(['SISMEMBER', 'aventura:chat:membros', email], ['GET', 'aventura:user:' + email],
+        ['SISMEMBER', 'aventura:adm', email], ['SISMEMBER', 'aventura:ocultos', email]);
       const adm = !!marcado && admPeloNome(raw);
-      if (!(membro || adm) || !raw) return res.status(200).json({ membro: false });
+      if (!(membro || adm || oculto) || !raw) return res.status(200).json({ membro: false });
+      // Conta de teste: tem um chat só dela, sem ninguém
+      const sala = oculto ? 'aventura:chat:msgs:teste:' + email : 'aventura:chat:msgs';
       if (action === 'chatEnviar') {
         const texto = filtrar(body.texto);
         let gif = CHAT_GIFS.includes(body.gif) || GIFS_LOJA.includes(body.gif) ? body.gif : null;
@@ -240,9 +243,9 @@ module.exports = async (req, res) => {
         const u = JSON.parse(raw);
         const [id] = await redis(['INCR', 'aventura:chat:id']);
         const msg = { id, nome: u.nome, cor: u.cor || 'branco', foto: u.foto || 'skin:gotinha', moldura: u.moldura || 'nenhuma', texto, gif, t: Date.now() };
-        await redis(['RPUSH', 'aventura:chat:msgs', JSON.stringify(msg)], ['LTRIM', 'aventura:chat:msgs', -100, -1]);
+        await redis(['RPUSH', sala, JSON.stringify(msg)], ['LTRIM', sala, -100, -1]);
       }
-      const [lista, limpo] = await redis(['LRANGE', 'aventura:chat:msgs', 0, -1], ['GET', 'aventura:chat:limpo']);
+      const [lista, limpo] = await redis(['LRANGE', sala, 0, -1], ['GET', oculto ? 'aventura:chat:limpo:teste' : 'aventura:chat:limpo']);
       const desde = Number(body.desde) || 0;
       return res.status(200).json({ membro: true, limpo: Number(limpo) || 0, msgs: (lista || []).map((m) => JSON.parse(m)).filter((m) => m.id > desde) });
     }
