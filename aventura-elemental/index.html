@@ -232,6 +232,10 @@
       66% { filter: hue-rotate(240deg) drop-shadow(0 0 4px #5ccfff); } 100% { filter: hue-rotate(360deg) drop-shadow(0 0 4px #ff4a4a); }
     }
     .gif-shop .gif { font-size: 40px; }
+    /* Pets: o cartão brilha da cor do elemento */
+    .card.pet-agua canvas { filter: drop-shadow(0 0 6px #3aa8ff); } .card.pet-fogo canvas { filter: drop-shadow(0 0 6px #ff5a2a); }
+    .card.pet-gelo canvas { filter: drop-shadow(0 0 6px #cfeeff); } .card.pet-raio canvas { filter: drop-shadow(0 0 6px #ffe94a); }
+    .card.pet-all canvas { animation: gif-arco 1.5s linear infinite; }
     .gif-more { width: 100%; font-size: 12px; color: #ffcc33; }
     /* Molduras da foto de perfil */
     canvas.avatar.big { width: 56px; height: 56px; margin: 4px auto; border-radius: 6px; }
@@ -484,6 +488,6 @@
   </div>
 
   <div id="coop-modal"><div class="coop-box"><div id="coop-title"></div><div id="coop-sub"></div><div id="coop-btns"></div></div></div>
-  <script src="game.js?v=43"></script>
+  <script src="game.js?v=44"></script>
 </body>
 </html>

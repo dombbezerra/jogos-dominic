@@ -257,37 +257,52 @@
     { id: 'gelo',     name: 'Gelo',        price: 60 },
     { id: 'arcoiris', name: 'Arco-íris',   price: 200 },
   ];
-  // Pets: andam com você. Ímã puxa as Gemas perto; alguns pegam coração e atiram nos inimigos
+  // Pets: um bebê (Gemas) e um lendário (Moedas) de cada elemento, e a Fênix Arco-íris.
+  // Desenho em texto: cada letra é uma cor da paleta; 'w' é asa (bate pra cima e pra baixo)
   const PETS = [
-    { id: 'gato',     name: 'Gatinho',        price: 150, cur: 'gema',  magnet: 40,  desc: 'Puxa as Gemas pertinho' },
-    { id: 'cachorro', name: 'Cachorrinho',    price: 300, cur: 'gema',  magnet: 70,  desc: 'Puxa as Gemas de mais longe' },
-    { id: 'coruja',   name: 'Coruja',         price: 500, cur: 'gema',  magnet: 90,  hearts: true, desc: 'Puxa Gemas e corações' },
-    { id: 'dragao',   name: 'Dragãozinho',    price: 50,  cur: 'moeda', magnet: 90,  hearts: true, shoot: 1, desc: 'Puxa tudo e cospe fogo nos inimigos' },
-    { id: 'fenix',    name: 'Fênix Arco-íris', price: 150, cur: 'moeda', magnet: 130, hearts: true, shoot: 2, desc: 'A mais forte: puxa tudo de longe e atira forte' },
+    { id: 'peixe',      elem: 'agua', name: 'Peixinho Bolha',   price: 200, cur: 'gema',  magnet: 60,  shoot: 1, rate: 90, desc: 'Puxa Gemas e solta bolhas nos inimigos',
+      pal: { b: '#1f6fd0', B: '#3aa8ff', L: '#cfeeff', t: '#5ccfff', e: '#000', h: '#fff' },
+      map: ['..............', '.....bbbb.....', '...bbBBBBbb...', 'tt.bBBBBBhBb..', 'ttbBBBBBBeeBb.', 'ttbBBBBBBBBBb.', 'tt.bLLLLLLBb..', '...bbLLLLbb...', '.....bbbb.....'] },
+    { id: 'golfinho',   elem: 'agua', name: 'Golfinho do Mar',  price: 60,  cur: 'moeda', magnet: 110, hearts: true, shoot: 2, rate: 60, desc: 'Puxa tudo de longe e atira jatos de água',
+      pal: { b: '#1a5a9a', B: '#4a9ae0', L: '#d8f0ff', w: '#2a7ac0', e: '#000', h: '#fff', n: '#3a8ad0' },
+      map: ['......ww......', '.....wwww.....', '..bbbBBBBbb...', '.bBBBBBBBBBb..', 'bBBBBBBBBhBBb.', 'tbBBBBBBBeBBBn', 'ttbLLLLLLLLBb.', 't..bbLLLLLbb..', '.....bbbb.....'] },
+    { id: 'salamandra', elem: 'fogo', name: 'Salamandra',       price: 200, cur: 'gema',  magnet: 60,  shoot: 1, rate: 90, desc: 'Puxa Gemas e cospe faíscas de fogo',
+      pal: { r: '#c8261a', R: '#ff5a2a', Y: '#ffd23a', O: '#ff9a2e', e: '#000', h: '#fff' },
+      map: ['..............', '.........RRR..', '........RRhRR.', 'Y......RRRRe..', 'OY..RRRRRRRR..', '.ORRRRRRRRR...', '..RrYYYYYRr...', '...r.r..r.r...'] },
+    { id: 'dragao',     elem: 'fogo', name: 'Dragão de Fogo',   price: 60,  cur: 'moeda', magnet: 110, hearts: true, shoot: 2, rate: 60, desc: 'Puxa tudo de longe e cospe bolas de fogo',
+      pal: { r: '#a81a10', R: '#e8341a', Y: '#ffd23a', w: '#ff7a1a', e: '#000', h: '#fff', c: '#ffe94a' },
+      map: ['...ww.....c.c.', '..www....RRRR.', '.wwwww..RRhRRY', '..www..RRRReRR', '.....RRRRRRRR.', 'Y.RRRRRRRRR...', 'YRRRYYYYYRR...', '.Y.RRYYYRR....', '....r..r......'] },
+    { id: 'pinguim',    elem: 'gelo', name: 'Pinguim',          price: 200, cur: 'gema',  magnet: 60,  shoot: 1, rate: 90, desc: 'Puxa Gemas e joga bolinhas de neve',
+      pal: { k: '#1a1a2a', W: '#ffffff', o: '#ffb02e', s: '#5ccfff', e: '#000', h: '#fff' },
+      map: ['....kkkkk.....', '...kkkkkkk....', '...kWhWWek....', '...kWWWWWoo...', '..ssssssss....', '..kWWWWWWk....', '.kkWWWWWWkk...', '..kWWWWWWk....', '...oo..oo.....'] },
+    { id: 'coruja',     elem: 'gelo', name: 'Coruja da Neve',   price: 60,  cur: 'moeda', magnet: 110, hearts: true, shoot: 2, rate: 60, desc: 'Puxa tudo de longe e congela os inimigos',
+      pal: { W: '#ffffff', g: '#cfeeff', b: '#5ccfff', w: '#9fe0ff', e: '#1a1a2a', o: '#ffb02e', k: '#8ab0c8' },
+      map: ['..W......W....', '..WWWWWWWW....', '.WWbbWWbbWW...', '.WWbeWWbeWW...', 'wWWWWooWWWWw..', 'wwWgWWWWgWww..', 'wwWWgWWgWWww..', '..WWWWWWWW....', '...k.k.k.k....'] },
+    { id: 'vagalume',   elem: 'raio', name: 'Vagalume Elétrico', price: 200, cur: 'gema', magnet: 60,  shoot: 1, rate: 90, desc: 'Puxa Gemas e dá choquinhos',
+      pal: { k: '#2a2a3a', Y: '#ffe94a', L: '#fffbd0', w: '#cfeeff', e: '#fff', a: '#5a5a7a' },
+      map: ['.....a...a....', '......a.a.....', '...ww.kkk.....', '..wwwkkekk....', '...wkkkkkk....', '.YYYkkkkk.....', 'YLLYYkkk......', 'YLLYY.........', '.YYY..........'] },
+    { id: 'trovao',     elem: 'raio', name: 'Pássaro Trovão',   price: 60,  cur: 'moeda', magnet: 110, hearts: true, shoot: 2, rate: 60, desc: 'Puxa tudo de longe e solta raios',
+      pal: { Y: '#ffd23a', y: '#ffe94a', B: '#3a4ab0', w: '#5ccfff', e: '#000', h: '#fff', o: '#ff9a2e', z: '#ffffff' },
+      map: ['.......z.z....', '........zz....', '..www..YYYY...', '.wwwwwYYhYYo..', 'wwwwwYYYYeYoo.', '..YYYYYYYYY...', 'BBYYyyyyYY....', '.BB.YYYY......', '....o..o......'] },
+    { id: 'fenix',      elem: 'all',  name: 'Fênix Arco-íris',  price: 150, cur: 'moeda', magnet: 140, hearts: true, shoot: 3, rate: 45, desc: 'A mais forte: puxa tudo e atira de todos os elementos',
+      pal: { R: 'rainbow', w: 'rainbow', e: '#000', h: '#fff', o: '#ffb02e', W: '#ffffff' },
+      map: ['..w......RRR..', '.www....RRhRR.', 'wwwww..RRRReoo', '.wwwwRRRRRRR..', '...RRRRRRRRR..', 'RRRRRRWWWRR...', '.RRRRRWWRR....', 'R.R.RRRR......', '..R...........'] },
   ];
   const petOf = id => PETS.find(p => p.id === id) || null;
-  // Desenho do pet (uns 12x10), virado pra direita (dir 1) ou esquerda (-1)
+  // Desenha o pet virado pra direita (dir 1) ou pra esquerda (-1)
   function drawPet(g, x, y, id, t, dir) {
-    const p = (a, b, w, h, c) => { g.fillStyle = c; g.fillRect(dir < 0 ? x + 12 - a - w : x + a, y + b, w, h); };
+    const d = petOf(id);
+    if (!d) return;
     const flap = Math.floor(t / 6) % 2;
-    if (id === 'gato') {
-      p(1, 3, 9, 6, '#ff9a3a'); p(1, 1, 2, 2, '#ff9a3a'); p(5, 1, 2, 2, '#ff9a3a'); p(1, 3, 6, 4, '#ffb05a');
-      p(2, 4, 1, 1, '#000'); p(5, 4, 1, 1, '#000'); p(3, 6, 2, 1, '#ff6a8a'); p(10, 2 + flap, 2, 5, '#ff9a3a'); p(2, 9, 2, 1, '#e07a2a'); p(7, 9, 2, 1, '#e07a2a');
-    } else if (id === 'cachorro') {
-      p(2, 2, 7, 6, '#c88a4a'); p(0, 2, 2, 5, '#7a4a1a'); p(7, 2, 2, 5, '#7a4a1a'); p(3, 4, 1, 1, '#000'); p(6, 4, 1, 1, '#000');
-      p(4, 6, 2, 1, '#000'); p(4, 7, 2, 2, '#ff6a8a'); p(9, 5 - flap, 3, 2, '#c88a4a'); p(3, 8, 2, 2, '#a86a2a'); p(6, 8, 2, 2, '#a86a2a');
-    } else if (id === 'coruja') {
-      p(2, 1, 8, 9, '#8a5a2a'); p(3, 3, 6, 6, '#e8d0a0'); p(3, 3, 2, 2, '#fff'); p(7, 3, 2, 2, '#fff'); p(4, 4, 1, 1, '#000'); p(8, 4, 1, 1, '#000');
-      p(5, 5, 2, 2, '#ffb02e'); p(2, 0, 2, 2, '#8a5a2a'); p(8, 0, 2, 2, '#8a5a2a'); p(0, 3 + flap * 2, 2, 4, '#6a3a1a'); p(10, 3 + flap * 2, 2, 4, '#6a3a1a');
-    } else if (id === 'dragao') {
-      p(2, 4, 7, 5, '#3ac85a'); p(7, 2, 4, 4, '#3ac85a'); p(9, 3, 1, 1, '#000'); p(11, 4, 1, 1, '#ff6a2a'); p(3, 7, 5, 2, '#bff2a0');
-      p(3, flap ? 0 : 2, 4, 3, '#2a9a4a'); p(0, 5, 2, 2, '#3ac85a'); p(8, 1, 1, 1, '#ffe94a');
-    } else if (id === 'fenix') {
-      const c = k => rainbow(k);
-      p(3, 3, 6, 5, c(0)); p(8, 1, 3, 3, c(1)); p(10, 2, 1, 1, '#000'); p(11, 2, 1, 1, '#ffb02e');
-      p(1, flap ? 0 : 3, 4, 3, c(2)); p(5, flap ? 0 : 3, 3, 2, c(3)); p(0, 7, 3, 2, c(4)); p(1, 9, 2, 1, c(5));
-      if (t % 8 < 4) p(Math.floor(t / 4) % 10, 9, 1, 1, '#fff');
-    }
+    d.map.forEach((row, ry) => [...row].forEach((ch, rx) => {
+      if (ch === '.') return;
+      let c = d.pal[ch];
+      if (!c) return;
+      if (c === 'rainbow') c = RAINBOW[(ry + Math.floor(t / 5)) % RAINBOW.length];
+      const yy = ch === 'w' && flap ? ry + 1 : ry;   // a asa bate
+      g.fillStyle = c;
+      g.fillRect(dir < 0 ? x + 13 - rx : x + rx, y + yy, 1, 1);
+    }));
   }
   // 'skin:gotinha' = rosto de personagem; 'bicho:slime' = bicho
   const hasAvatar = id => {
@@ -936,10 +951,15 @@
     if (!def) return;
     pet.t++;
     // Voa atrás de você, balançando
-    const wantX = player.x + player.w / 2 - player.face * 16 - 6, wantY = player.y - 12 + Math.sin(pet.t / 15) * 3;
+    const wantX = player.x + player.w / 2 - player.face * 16 - 7, wantY = player.y - 12 + Math.sin(pet.t / 15) * 3;
     if (Math.abs(wantX - pet.x) > 200 || Math.abs(wantY - pet.y) > 200) { pet.x = wantX; pet.y = wantY; }
     pet.x += (wantX - pet.x) * 0.12; pet.y += (wantY - pet.y) * 0.12;
     pet.face = player.face;
+    // Rastro brilhante da cor do elemento
+    if (pet.t % 5 === 0) {
+      const col = def.elem === 'all' ? RAINBOW[Math.floor(pet.t / 5) % RAINBOW.length] : ELEMS[def.elem].color;
+      parts.push({ x: pet.x + 7 - pet.face * 6, y: pet.y + 5 + Math.random() * 3, vx: -pet.face * 0.3, vy: 0.2, life: 18, color: col });
+    }
     const cx = player.x + player.w / 2, cy = player.y + player.h / 2;
     // Ímã: as Gemas (e corações) que caíram dos inimigos vêm até você
     for (const k of pickups) {
@@ -971,9 +991,11 @@
     if (!best) return;
     const dx = best.x + best.w / 2 - (pet.x + 6), dy = best.y + best.h / 2 - (pet.y + 5), len = Math.hypot(dx, dy) || 1;
     if (len > 160) return;
-    shots.push({ x: pet.x + 6, y: pet.y + 5, vx: dx / len * 3.2, vy: dy / len * 3.2, grav: 0, elem: def.id === 'dragao' ? 'fogo' : player.elem, life: 60, dmg: def.shoot, petShot: true });
-    pet.cd = def.shoot > 1 ? 50 : 75;
-    beep(def.shoot > 1 ? 1400 : 500, 0.04, 'triangle');
+    // Tiro do elemento do pet (a Fênix vai trocando de elemento)
+    const elem = def.elem === 'all' ? ['agua', 'fogo', 'gelo', 'raio'][Math.floor(pet.t / 45) % 4] : def.elem;
+    shots.push({ x: pet.x + 7, y: pet.y + 4, vx: dx / len * 3.2, vy: dy / len * 3.2, grav: 0, elem, life: 60, dmg: def.shoot, petShot: true });
+    pet.cd = def.rate;
+    beep({ agua: 520, fogo: 300, gelo: 880, raio: 1200 }[elem], 0.04, 'triangle');
   }
   function drawPetNow() {
     if (!petOf(meta.pet) || state === 'dead') return;
@@ -1467,8 +1489,9 @@
       });
       const c = card(on);
       const cv = document.createElement('canvas');
-      cv.width = 14; cv.height = 12;
-      drawPet(cv.getContext('2d'), 1, 1, d.id, 0, 1);
+      cv.width = cv.height = 16;
+      drawPet(cv.getContext('2d'), 1, 3, d.id, 0, 1);
+      c.classList.add('pet-' + d.elem);
       c.append(cv, el('b', d.name), el('small', d.desc), btn);
       grid.appendChild(c);
     }
@@ -2186,7 +2209,7 @@
     const x = Math.round(r.x + 5 - camX), y = Math.round(r.y + 14 - 8) + HUD;
     if (x < -30 || x > W + 30) return;
     drawHero(ctx, x, y, r.skin, ELEMS[r.elem] ? r.elem : 'agua', r.face, 0, !r.onGround ? 1 : r.walk % 16 < 8 ? 0 : 1);
-    if (r.pet) drawPet(ctx, x - (r.face || 1) * 16 - 6, y - 20 + Math.round(Math.sin(frame / 15) * 3), r.pet, frame, r.face || 1);   // o pet do amigo
+    if (r.pet) drawPet(ctx, x - (r.face || 1) * 16 - 7, y - 20 + Math.round(Math.sin(frame / 15) * 3), r.pet, frame, r.face || 1);   // o pet do amigo
     const c = colorOf(coop && coop.friend.cor).color;
     ctx.font = 'bold 7px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = '#000'; ctx.fillText(coop ? coop.friend.nome : '', x + 1, y - 18);
