@@ -34,6 +34,7 @@
   let data;
 
   function load() {
+    loading = true;
     try { data = JSON.parse(localStorage.getItem(KEY)); } catch (e) { data = null; }
     if (!data || !Array.isArray(data.cards)) {
       data = { coins: 500, cards: [], team: SLOTS.map(() => null), next: 1, played: 0, wins: 0, semFalsas: true };
@@ -56,8 +57,10 @@
       }
     }
     data.team = data.team.map(id => cardById(id) ? id : null);
-    takeNovos();
+    const novos = takeNovos();
     save();
+    loading = false;
+    if (novos) save();   // chegaram jogadores: isso é mudança de verdade
   }
   // Jogadores que chegaram de fora (guardados em <KEY>:novos): entram no álbum sem atrapalhar quem está jogando
   function takeNovos() {
@@ -72,9 +75,47 @@
   }
   // Chegaram jogadores novos enquanto o jogo está aberto (outra aba): junta na hora
   addEventListener('storage', e => { if (e.key === KEY + ':novos' && e.newValue && takeNovos()) { save(); render(); } });
+  let loading = false;
   function save() {
     if (data.tactics && data.tactics[data.tactic]) data.tactics[data.tactic].team = data.team;
+    if (!loading) { data.updatedAt = Date.now(); schedulePush(); }   // mudou algo: manda pra conta
     try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* sem salvar */ }
+  }
+
+  // ── Salvo na conta (a mesma da Aventura Elemental): aparece igual no celular e no computador ──
+  const ACCT_KEY = 'aventuraConta' + (PERFIL ? ':' + PERFIL : '');
+  function conta() { try { const m = JSON.parse(localStorage.getItem(ACCT_KEY)); return m && m.user; } catch (e) { return null; } }
+  async function contaApi(body) {
+    const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    return r.ok ? r.json() : null;
+  }
+  function setCloud(txt) { const el = $('cloud'); if (el) el.textContent = txt; }
+  let pushT = null;
+  function schedulePush() {
+    clearTimeout(pushT);
+    pushT = setTimeout(push, 1500);
+  }
+  async function push() {
+    const u = conta();
+    if (!u) return;
+    if (!data.updatedAt) { data.updatedAt = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* ok */ } }
+    setCloud('☁️ salvando...');
+    const r = await contaApi({ action: 'salvarFC', email: u.email, dados: data }).catch(() => null);
+    setCloud(r ? '☁️ salvo na conta ' + u.nome : '☁️ não deu pra salvar agora');
+  }
+  // Ao abrir: se a conta tem uma versão mais nova (de outro aparelho), usa ela
+  async function syncFC() {
+    const u = conta();
+    if (!u) { setCloud('☁️ entre na Aventura Elemental com seu e-mail pra salvar online'); return; }
+    const r = await contaApi({ action: 'carregarFC', email: u.email }).catch(() => null);
+    if (!r) { setCloud('☁️ sem internet agora'); return; }
+    const remote = r.dados;
+    if (remote && (remote.updatedAt || 0) > (data.updatedAt || 0)) {
+      try { localStorage.setItem(KEY, JSON.stringify(remote)); } catch (e) { /* ok */ }
+      load(); fillClubList(); render();
+      setCloud('☁️ carregado da conta ' + u.nome);
+    } else if (!remote || (data.updatedAt || 0) > (remote.updatedAt || 0)) push();
+    else setCloud('☁️ salvo na conta ' + u.nome);
   }
   const cardById = id => data.cards.find(c => c.id === id);
 
@@ -1015,6 +1056,8 @@
   load();
   fillClubList();
   show('main');
+  syncFC();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && !M) syncFC(); });
 
   // Só pra testar pelo console: abrir com #debug
   if (location.hash === '#debug') window.fc = { get M() { return M; }, get data() { return data; }, startMatch, save, render, updateMatch, keys, btn, pressed };

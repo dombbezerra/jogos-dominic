@@ -302,6 +302,20 @@ module.exports = async (req, res) => {
       return res.status(200).json({ dados: raw ? JSON.parse(raw) : null });
     }
 
+    // Dominic FC: cartas, álbum, times e táticas da conta (o mesmo e-mail em todo aparelho)
+    if (action === 'salvarFC') {
+      const txt = JSON.stringify(body.dados || null);
+      if (!body.dados || typeof body.dados !== 'object' || txt.length > 600000) return res.status(400).json({ error: 'Dados inválidos.' });
+      const [exists] = await redis(['EXISTS', 'aventura:user:' + email]);
+      if (!exists) return res.status(404).json({ error: 'Usuário não encontrado.' });
+      await redis(['SET', 'aventura:fc:' + email, txt]);
+      return res.status(200).json({ ok: true });
+    }
+    if (action === 'carregarFC') {
+      const [raw] = await redis(['GET', 'aventura:fc:' + email]);
+      return res.status(200).json({ dados: raw ? JSON.parse(raw) : null });
+    }
+
     // Apagar o próprio usuário (sai da lista de nomes e de quem está online)
     if (action === 'apagar') {
       const [raw] = await redis(['GET', 'aventura:user:' + email]);
