@@ -82,7 +82,19 @@
 
   // ADM: quem tem o nome Dominic. Pacotes de graça, coroa e criar carta
   const isAdm = () => (data.nome || '').trim().toLowerCase() === 'dominic';
+  // ADM tem todas as cartas do álbum: o que faltar entra nas suas cartas
+  function admGetsAll() {
+    if (!isAdm()) return;
+    const have = new Set(data.cards.map(c => c.key).filter(Boolean));
+    let got = false;
+    for (const sp of allSpecials()) if (!have.has(sp.key)) {
+      data.cards.push({ id: data.next++, key: sp.key, nome: sp.nome, pos: sp.pos, r: sp.r, face: sp.face, club: sp.club, badge: sp.badge, time: sp.time });
+      got = true;
+    }
+    if (got) save();
+  }
   function render() {
+    admGetsAll();
     document.body.classList.toggle('adm', isAdm());
     $('name-tag').textContent = data.nome ? (isAdm() ? '👑 ' : '👤 ') + data.nome : '✍️ Seu nome';
     $('coins').textContent = isAdm() ? '∞' : data.coins;
