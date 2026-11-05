@@ -24,11 +24,11 @@
 
   const SPECIALS = [];   // os jogadores quem cria é você (➕ no álbum)
   const ALBUM = [['brasil', '🇧🇷 BRASIL'], ['argentina', '🇦🇷 ARGENTINA'], ['portugal', '🇵🇹 PORTUGAL'], ['franca', '🇫🇷 FRANÇA'],
-    ['inglaterra', '🏴 INGLATERRA'], ['espanha', '🇪🇸 ESPANHA']];
+    ['inglaterra', '🏴 INGLATERRA'], ['espanha', '🇪🇸 ESPANHA'], ['lendas', '🏆 LENDAS']];   // LENDAS: jogadores aposentados
   const ALBUM_PRIZE = 1500;   // completou uma seleção: ganha moedas
   // Os craques do álbum: os do jogo e os que você adicionou (➕)
   const allSpecials = () => SPECIALS.concat((data && data.custom) || []);
-  const BADGES = { brasil: ['🇧🇷', 'Brasil'], argentina: ['🇦🇷', 'Argentina'], portugal: ['🇵🇹', 'Portugal'], franca: ['🇫🇷', 'França'], inglaterra: ['🏴', 'Inglaterra'], espanha: ['🇪🇸', 'Espanha'] };
+  const BADGES = { brasil: ['🇧🇷', 'Brasil'], argentina: ['🇦🇷', 'Argentina'], portugal: ['🇵🇹', 'Portugal'], franca: ['🇫🇷', 'França'], inglaterra: ['🏴', 'Inglaterra'], espanha: ['🇪🇸', 'Espanha'], lendas: ['🏆', 'Lendas'] };
   // Nome que aparece: o que você escreveu no ✏️, ou o da carta
   const nameOf = c => (data.renames && data.renames[c.key || c.id]) || c.nome;
   let data;
