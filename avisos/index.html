@@ -32,6 +32,10 @@
     button:disabled { opacity: 0.6; }
     .msg { min-height: 20px; font-size: 14px; text-align: center; }
     .hidden { display: none !important; }
+    a.exit {
+      display: block; padding: 13px; border-radius: 30px; background: #2fd15a; color: #fff;
+      font-weight: bold; font-size: 15px; opacity: 1; text-align: center;
+    }
     body { flex-direction: column; gap: 16px; }
     .users { list-style: none; display: flex; flex-direction: column; gap: 6px; }
     .users li { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(0, 0, 0, 0.3); border-radius: 10px; padding: 8px 12px; font-weight: bold; }
@@ -58,7 +62,7 @@
     <textarea id="text" rows="3" maxlength="200">Tem jogo novo nos Jogos do Dominic! Vem jogar!</textarea>
     <button type="submit" id="sendBtn">ENVIAR PRA TODOS</button>
     <div class="msg" id="sendMsg"></div>
-    <a href="../">← Voltar pros jogos</a>
+    <a href="../" class="exit">🎮 SAIR E VOLTAR PROS JOGOS</a>
     <a href="#" id="logout">Sair do login</a>
   </form>
 
