@@ -71,7 +71,10 @@
   }
   // Chegaram jogadores novos enquanto o jogo está aberto (outra aba): junta na hora
   addEventListener('storage', e => { if (e.key === KEY + ':novos' && e.newValue && takeNovos()) { save(); render(); } });
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* sem salvar */ } }
+  function save() {
+    if (data.tactics && data.tactics[data.tactic]) data.tactics[data.tactic].team = data.team;
+    try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* sem salvar */ }
+  }
   const cardById = id => data.cards.find(c => c.id === id);
 
   // Time de 7: goleiro, laterais e zagueiro atrás; pontas e atacante na frente.
@@ -134,7 +137,7 @@
     $('coins').textContent = isAdm() ? '∞' : data.coins;
     $('ovr').textContent = $('ovr2').textContent = teamOvr();
     $('n-cards').textContent = data.cards.length + ' cartas';
-    if (page === 'team') { renderTeam(); renderClubs(); }
+    if (page === 'team') { renderTactics(); renderTeam(); renderClubs(); }
     if (page === 'packs') renderPacks();
     if (page === 'cards') renderCards();
     if (page === 'album') renderAlbum();
@@ -325,6 +328,59 @@
     });
     return [...f.childNodes];
   }
+  // ── 3 táticas: cada uma guarda um time (data.team é o da tática escolhida) ──
+  let editingTac = -1;
+  function ensureTactics() {
+    if (!Array.isArray(data.tactics) || data.tactics.length !== 3) {
+      data.tactics = [0, 1, 2].map(i => ({ nome: '', team: i === 0 ? data.team.slice() : SLOTS.map(() => null) }));
+      data.tactic = 0;
+    }
+    data.tactics[data.tactic].team = data.team;   // a tática escolhida usa o time de agora
+  }
+  function renderTactics() {
+    ensureTactics();
+    const box = $('tactics');
+    box.innerHTML = '';
+    data.tactics.forEach((t, i) => {
+      if (editingTac === i) {   // escrevendo o nome
+        const w = document.createElement('div');
+        w.className = 'tac-input';
+        const inp = document.createElement('input');
+        inp.maxLength = 20; inp.placeholder = 'Nome da tática'; inp.value = t.nome;
+        const ok = document.createElement('button');
+        ok.textContent = 'OK';
+        const done = () => { t.nome = inp.value.trim().slice(0, 20); editingTac = -1; save(); renderTactics(); };
+        ok.addEventListener('click', done);
+        inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') done(); });
+        w.append(inp, ok);
+        box.appendChild(w);
+        setTimeout(() => inp.focus(), 0);
+        return;
+      }
+      const b = document.createElement('button');
+      b.className = 'tac' + (data.tactic === i ? ' on' : '');
+      const filled = t.team.filter(Boolean).length;
+      b.textContent = t.nome || 'Tática ' + (i + 1);
+      const sm = document.createElement('small');
+      sm.textContent = filled + '/' + SLOTS.length + ' jogadores';
+      const ed = document.createElement('span');
+      ed.className = 'tac-edit';
+      ed.textContent = '✏️';
+      b.append(sm, ed);
+      b.addEventListener('click', e => {
+        if (e.target === ed || !t.nome) { editingTac = i; renderTactics(); if (e.target === ed) return; }   // primeira vez: pede o nome
+        if (data.tactic !== i) {
+          data.tactics[data.tactic].team = data.team;
+          data.tactic = i;
+          data.team = t.team.map(id => cardById(id) ? id : null);
+          picking = -1;
+          save(); render();
+        }
+      });
+      box.appendChild(b);
+    });
+  }
+
   // ── Times: pesquisa; se não achar, cria time novo ──
   const CLUB_BADGES = ['⚽', '🔴', '🔵', '🟢', '🟡', '🟣', '⚫', '⚪', '🦁', '🐍', '🦅', '🐟', '🐯', '⭐'];
   const findClub = nome => (data.clubs || []).find(c => c.nome.toLowerCase() === nome.trim().toLowerCase());
