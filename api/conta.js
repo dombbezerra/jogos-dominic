@@ -75,7 +75,7 @@ module.exports = async (req, res) => {
         const alvos = todos.filter((e, i) => users[i] && JSON.parse(users[i]).nome === nome);
         if (!alvos.length) return res.status(404).json({ error: 'Não achei esse usuário.' });
         const [dono] = await redis(['HGET', 'aventura:nomes', nomeKey(nome)]);
-        const cmds = alvos.flatMap((e) => [['DEL', 'aventura:user:' + e], ['SREM', 'aventura:users', e], ['ZREM', 'aventura:online', e]]);
+        const cmds = alvos.flatMap((e) => [['DEL', 'aventura:user:' + e], ['DEL', 'aventura:save:' + e], ['SREM', 'aventura:users', e], ['ZREM', 'aventura:online', e]]);
         if (alvos.includes(dono)) cmds.push(['HDEL', 'aventura:nomes', nomeKey(nome)]);
         await redis(...cmds);
         users = users.filter((raw, i) => !alvos.includes(todos[i]));
@@ -99,12 +99,27 @@ module.exports = async (req, res) => {
       return res.status(200).json({ jogadores: await listarJogadores(email) });
     }
 
+    // Progresso do jogo na nuvem: o mesmo e-mail em outro aparelho traz as mesmas gemas, personagens e fase
+    if (action === 'salvarJogo') {
+      const dados = body.dados;
+      const txt = JSON.stringify(dados || null);
+      if (!dados || typeof dados !== 'object' || txt.length > 50000) return res.status(400).json({ error: 'Dados inválidos.' });
+      const [exists] = await redis(['EXISTS', 'aventura:user:' + email]);
+      if (!exists) return res.status(404).json({ error: 'Usuário não encontrado.' });
+      await redis(['SET', 'aventura:save:' + email, txt]);
+      return res.status(200).json({ ok: true });
+    }
+    if (action === 'carregarJogo') {
+      const [raw] = await redis(['GET', 'aventura:save:' + email]);
+      return res.status(200).json({ dados: raw ? JSON.parse(raw) : null });
+    }
+
     // Apagar o próprio usuário (sai da lista de nomes e de quem está online)
     if (action === 'apagar') {
       const [raw] = await redis(['GET', 'aventura:user:' + email]);
       if (!raw) return res.status(404).json({ error: 'Usuário não encontrado.' });
       const u = JSON.parse(raw);
-      await redis(['DEL', 'aventura:user:' + email], ['SREM', 'aventura:users', email],
+      await redis(['DEL', 'aventura:user:' + email], ['DEL', 'aventura:save:' + email], ['SREM', 'aventura:users', email],
         ['HDEL', 'aventura:nomes', nomeKey(u.nome)], ['ZREM', 'aventura:online', email]);
       return res.status(200).json({ ok: true });
     }

@@ -254,9 +254,13 @@
     meta.codes = Array.isArray(m.codes) ? m.codes : [];
     meta.colors = Array.isArray(m.colors) ? [...new Set(['branco', ...m.colors.filter(id => NAME_COLORS.some(c => c.id === id))])] : ['branco'];
     meta.nameColor = meta.colors.includes(m.nameColor) ? m.nameColor : 'branco';
+    meta.updatedAt = m.updatedAt || 0;
     if (refund) writeMeta();   // devolve uma vez só
   }
+  let cloudDirty = false;   // tem mudança pra mandar pro progresso online
   function writeMeta() {
+    meta.updatedAt = Date.now();
+    cloudDirty = true;
     try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch (e) { /* sem salvar */ }
   }
   const skinOf = id => SKINS.find(s => s.id === id) || SKINS[0];
@@ -1291,6 +1295,7 @@
     }
     paintName($('m-user'), nome, '👤 ');
     renderFriends();
+    syncDown();
     if (playAfterUser) {
       playAfterUser = false;
       setTimeout(() => { showPage('main'); startPlaying(); }, 1200);
@@ -1346,6 +1351,60 @@
     }
     if (!friends.length) list.appendChild(el('li', 'Ninguém mais tem usuário ainda', 'friends-empty'));
   }
+
+  // ── Progresso online: o mesmo e-mail no computador, no celular e no Google tem o mesmo jogo ──
+  function readJSON(key) { try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; } }
+  async function contaApi(body, keepalive) {
+    const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive });
+    return r.ok ? r.json() : null;
+  }
+  async function syncUp(keepalive) {
+    if (!meta.user || !cloudDirty) return;
+    cloudDirty = false;
+    const local = readJSON(META_KEY) || {};
+    delete local.user;   // o usuário de cada aparelho fica só nele
+    try { await contaApi({ action: 'salvarJogo', email: meta.user.email, dados: { meta: local, save: readJSON(SAVE_KEY), atualizado: meta.updatedAt } }, keepalive); }
+    catch (e) { cloudDirty = true; }
+  }
+  // Juntar dois progressos (aparelho que ainda não tinha progresso online): fica o maior de cada coisa
+  function mergeMeta(a, b) {
+    const m = Object.assign({}, a);
+    m.coins = Math.max(a.coins || 0, b.coins || 0);
+    m.gems = Math.max(a.gems || 0, b.gems || 0);
+    for (const k of ['skins', 'colors', 'codes']) m[k] = [...new Set([...(a[k] || []), ...(b[k] || [])])];
+    m.up = Object.assign({}, a.up);
+    for (const k in b.up || {}) m.up[k] = Math.max((a.up || {})[k] || 0, b.up[k] || 0);
+    m.seenHelp = a.seenHelp || b.seenHelp;
+    return m;
+  }
+  async function syncDown() {
+    if (!meta.user) return;
+    let data;
+    try { data = await contaApi({ action: 'carregarJogo', email: meta.user.email }); } catch (e) { return; }
+    const remote = data && data.dados;
+    if (!remote || !remote.meta) { cloudDirty = true; return syncUp(); }   // primeira vez: manda o deste aparelho
+    const user = meta.user;
+    if (!meta.updatedAt) {
+      // Aparelho que já tinha jogo antes de ligar o online: junta os dois
+      const merged = mergeMeta(readJSON(META_KEY) || {}, remote.meta);
+      merged.user = user;
+      localStorage.setItem(META_KEY, JSON.stringify(merged));
+      const ls = readJSON(SAVE_KEY), rs = remote.save;
+      if (rs && (!ls || (rs.level || 0) > (ls.level || 0))) localStorage.setItem(SAVE_KEY, JSON.stringify(rs));
+    } else if ((remote.atualizado || 0) > meta.updatedAt) {
+      // O outro aparelho jogou depois: traz o progresso dele
+      localStorage.setItem(META_KEY, JSON.stringify(Object.assign({}, remote.meta, { user })));
+      if (remote.save) localStorage.setItem(SAVE_KEY, JSON.stringify(remote.save));
+    } else { if ((remote.atualizado || 0) < meta.updatedAt) { cloudDirty = true; syncUp(); } return; }
+    loadMeta();
+    if (!meta.updatedAt) writeMeta();
+    started = false;   // o JOGAR carrega a fase de novo, já com o progresso novo
+    if (state === 'title') renderMenu();
+    if (!meta.updatedAt || (remote.atualizado || 0) >= meta.updatedAt) { cloudDirty = true; syncUp(); }
+  }
+  setInterval(() => syncUp(), 20000);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) syncUp(true); else if (state === 'title') syncDown(); });
+  setTimeout(syncDown, 800);
 
   async function heartbeat() {
     if (!meta.user || document.hidden) return;
