@@ -128,7 +128,9 @@
   const SKIES = [['#ff9a5a', '#ffd08a'], ['#6cc4ff', '#cfeaff'], ['#3a3a6a', '#8a7ab0'], ['#7a3a5a', '#e08a6a'], ['#1a2a3a', '#4a6a7a']];
 
   // ── Estado ────────────────────────────────────────────────
-  const SAVE_KEY = 'aventuraElemental';
+  // Perfil: abrir com ?perfil=teste guarda tudo separado, pra ter outra conta na mesma máquina (outra aba)
+  const PERFIL = (new URLSearchParams(location.search).get('perfil') || '').replace(/[^a-z0-9]/gi, '').slice(0, 20);
+  const SAVE_KEY = 'aventuraElemental' + (PERFIL ? ':' + PERFIL : '');
   let save = null;
   let levelIdx = 0, lv = null, grid = null;
   const player = {
@@ -158,7 +160,7 @@
 
 
   // ── Conta: moedas, personagens, melhorias e usuário (continuam mesmo num jogo novo) ──
-  const META_KEY = 'aventuraConta';
+  const META_KEY = 'aventuraConta' + (PERFIL ? ':' + PERFIL : '');
   // Personagens de elemento, por raridade. O bônus de elemento vale pros tiros daquele elemento
   const RARITY = {
     raro:   { name: 'RARO',         color: '#7ddf64', price: 0 },
