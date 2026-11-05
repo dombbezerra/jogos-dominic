@@ -131,6 +131,7 @@
   // Perfil: abrir com ?perfil=teste guarda tudo separado, pra ter outra conta na mesma máquina (outra aba)
   const PERFIL = (new URLSearchParams(location.search).get('perfil') || '').replace(/[^a-z0-9]/gi, '').slice(0, 20);
   const SAVE_KEY = 'aventuraElemental' + (PERFIL ? ':' + PERFIL : '');
+  if (PERFIL) document.getElementById('back-link').href = '../index.html?perfil=' + PERFIL;   // volta pro menu do mesmo perfil
   let save = null;
   let levelIdx = 0, lv = null, grid = null;
   const player = {
