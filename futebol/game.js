@@ -611,8 +611,9 @@
         if (have.has(sp.key)) row.appendChild(withRemove(cardEl(sp), sp));
         else row.appendChild(withRemove(cardEl(sp, 'album-missing'), sp));   // ainda não tem: aparece apagadinho
       }
-      if (!players.length) row.appendChild(Object.assign(document.createElement('div'), { className: 'hint', textContent: 'Ainda sem jogadores. Use ➕ pra colocar os seus!' }));
-      sec.append(h, row, addForm(id));
+      if (!players.length) row.appendChild(Object.assign(document.createElement('div'), { className: 'hint', textContent: 'Ainda sem jogadores.' }));
+      sec.append(h, row);
+      if (isAdm()) sec.appendChild(addForm(id));   // só o ADM adiciona jogador
       list.appendChild(sec);
       // Completou a seleção pela primeira vez: prêmio!
       if (full && !data.albumDone.includes(id)) {
