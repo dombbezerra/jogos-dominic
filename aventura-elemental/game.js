@@ -1664,10 +1664,15 @@
   };
   let chatMsgs = [], chatLast = 0, chatMember = null, chatBusy = false;
   // ADM: quem entrou na página de avisos neste aparelho pode convidar direto pelo jogo
-  const adminToken = () => { try { return localStorage.getItem('avisos_token'); } catch (e) { return null; } };
+  // ADM: login da página de avisos neste aparelho, ou conta marcada como ADM (vale em todo aparelho)
+  let amAdm = false;
+  const avisosToken = () => { try { return localStorage.getItem('avisos_token'); } catch (e) { return null; } };
+  const adminToken = () => !!(avisosToken() || amAdm);
   let chatGuests = {};   // nome → está no chat (só pro ADM)
   async function adminChat(body) {
-    const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken() }, body: JSON.stringify(body) });
+    const headers = { 'Content-Type': 'application/json' };
+    if (avisosToken()) headers.Authorization = 'Bearer ' + avisosToken();
+    const r = await fetch('/api/conta/', { method: 'POST', headers, body: JSON.stringify(Object.assign({ email: meta.user && meta.user.email }, body)) });
     if (!r.ok) return null;
     const data = await r.json();
     chatGuests = {};
@@ -1820,6 +1825,7 @@
       if (!r.ok) return;
       const data = await r.json();
       friends = data.jogadores || [];
+      amAdm = !!data.adm;
       if (adminToken()) await adminChat({ action: 'admin-lista' }).catch(() => null);
       if (state === 'title') renderFriends();
     } catch (err) { /* sem internet: tenta de novo daqui a pouco */ }

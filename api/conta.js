@@ -114,9 +114,15 @@ module.exports = async (req, res) => {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
 
     // Página de avisos: ver todos os usuários e apagar pelo nome (precisa do login)
-    if (body.action === 'admin-lista' || body.action === 'admin-apagar' || body.action === 'admin-chat') {
-      if (!isAdmin(req)) return res.status(401).json({ error: 'Entre com o login da Base Secreta.' });
-      let [todos, membros] = await redis(['SMEMBERS', 'aventura:users'], ['SMEMBERS', 'aventura:chat:membros']);
+    if (body.action === 'admin-lista' || body.action === 'admin-apagar' || body.action === 'admin-chat' || body.action === 'admin-adm') {
+      // Login da Base Secreta pode tudo. Conta de ADM (marcada pelo login) só vê a lista e convida pro chat
+      let ok = isAdmin(req);
+      if (!ok && (body.action === 'admin-lista' || body.action === 'admin-chat') && EMAIL_OK.test(String(body.email || ''))) {
+        const [adm] = await redis(['SISMEMBER', 'aventura:adm', canon(String(body.email).trim().toLowerCase())]);
+        ok = !!adm;
+      }
+      if (!ok) return res.status(401).json({ error: 'Entre com o login da Base Secreta.' });
+      let [todos, membros, adms] = await redis(['SMEMBERS', 'aventura:users'], ['SMEMBERS', 'aventura:chat:membros'], ['SMEMBERS', 'aventura:adm']);
       let users = (todos || []).length ? await redis(...todos.map((e) => ['GET', 'aventura:user:' + e])) : [];
       if (body.action === 'admin-apagar') {
         // Procura pelo nome exato em todos (usuários antigos podem não estar na lista de nomes)
@@ -131,6 +137,14 @@ module.exports = async (req, res) => {
         users = users.filter((raw, i) => !alvos.includes(todos[i]));
         todos = todos.filter((e) => !alvos.includes(e));
       }
+      // Marcar (ou desmarcar) uma conta como ADM, pelo nome
+      adms = new Set(adms || []);
+      if (body.action === 'admin-adm') {
+        const i = users.findIndex((raw) => raw && JSON.parse(raw).nome === String(body.nome || ''));
+        if (i < 0) return res.status(404).json({ error: 'Não achei esse usuário.' });
+        if (body.adm) { await redis(['SADD', 'aventura:adm', todos[i]]); adms.add(todos[i]); }
+        else { await redis(['SREM', 'aventura:adm', todos[i]]); adms.delete(todos[i]); }
+      }
       // Convidar pro chat (ou tirar), pelo nome
       membros = new Set(membros || []);
       if (body.action === 'admin-chat') {
@@ -139,7 +153,7 @@ module.exports = async (req, res) => {
         if (body.convidar) { await redis(['SADD', 'aventura:chat:membros', todos[i]]); membros.add(todos[i]); }
         else { await redis(['SREM', 'aventura:chat:membros', todos[i]]); membros.delete(todos[i]); }
       }
-      const lista = users.map((raw, i) => { if (!raw) return null; const u = JSON.parse(raw); return { nome: u.nome, cor: u.cor || 'branco', chat: membros.has(todos[i]) }; })
+      const lista = users.map((raw, i) => { if (!raw) return null; const u = JSON.parse(raw); return { nome: u.nome, cor: u.cor || 'branco', chat: membros.has(todos[i]) || adms.has(todos[i]), adm: adms.has(todos[i]) }; })
         .filter(Boolean)
         .sort((a, b) => a.nome.localeCompare(b.nome));
       return res.status(200).json({ usuarios: lista });
@@ -157,13 +171,14 @@ module.exports = async (req, res) => {
       const u = JSON.parse(raw);
       // Usuários de antes da lista de nomes entram nela aqui (se o nome ainda estiver livre)
       await redis(['ZADD', 'aventura:online', Date.now(), email], ['HSETNX', 'aventura:nomes', nomeKey(u.nome), email]);
-      return res.status(200).json({ jogadores: await listarJogadores(email) });
+      const [adm] = await redis(['SISMEMBER', 'aventura:adm', email]);
+      return res.status(200).json({ jogadores: await listarJogadores(email), adm: !!adm });
     }
 
     // Chat de amigos (só convidados)
     if (action === 'chatLer' || action === 'chatEnviar') {
-      const [membro, raw] = await redis(['SISMEMBER', 'aventura:chat:membros', email], ['GET', 'aventura:user:' + email]);
-      if (!membro || !raw) return res.status(200).json({ membro: false });
+      const [membro, raw, adm] = await redis(['SISMEMBER', 'aventura:chat:membros', email], ['GET', 'aventura:user:' + email], ['SISMEMBER', 'aventura:adm', email]);
+      if (!(membro || adm) || !raw) return res.status(200).json({ membro: false });
       if (action === 'chatEnviar') {
         const texto = filtrar(body.texto);
         const gif = CHAT_GIFS.includes(body.gif) ? body.gif : null;

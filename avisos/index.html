@@ -140,7 +140,20 @@
             renderUsers(data.usuarios || []);
           } catch (err) { $('usersMsg').textContent = 'Não deu: ' + err.message; chat.disabled = false; }
         });
-        li.append(name, chat, btn);
+        // ADM: a conta fica com os poderes de ADM em qualquer aparelho
+        const adm = document.createElement('button');
+        adm.textContent = u.adm ? '👑 ADM' : '👑?';
+        adm.className = u.adm ? 'chat-off' : 'chat-on';
+        adm.title = u.adm ? 'Tirar ADM de ' + u.nome : 'Deixar ' + u.nome + ' ADM';
+        adm.addEventListener('click', async () => {
+          adm.disabled = true;
+          try {
+            const data = await usersApi({ action: 'admin-adm', nome: u.nome, adm: !u.adm });
+            $('usersMsg').textContent = u.adm ? '✅ ' + u.nome + ' não é mais ADM.' : '✅ ' + u.nome + ' agora é ADM!';
+            renderUsers(data.usuarios || []);
+          } catch (err) { $('usersMsg').textContent = 'Não deu: ' + err.message; adm.disabled = false; }
+        });
+        li.append(name, adm, chat, btn);
         ul.appendChild(li);
       }
     }
