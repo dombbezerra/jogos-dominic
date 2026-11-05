@@ -32,6 +32,10 @@
     button:disabled { opacity: 0.6; }
     .msg { min-height: 20px; font-size: 14px; text-align: center; }
     .hidden { display: none !important; }
+    body { flex-direction: column; gap: 16px; }
+    .users { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .users li { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(0, 0, 0, 0.3); border-radius: 10px; padding: 8px 12px; font-weight: bold; }
+    .users li button { padding: 6px 12px; font-size: 13px; letter-spacing: 0; background: #ff5a5a; color: #fff; }
     a { color: rgba(255, 255, 255, 0.5); font-size: 13px; text-align: center; text-decoration: none; }
   </style>
 </head>
@@ -57,6 +61,14 @@
     <a href="#" id="logout">Sair</a>
   </form>
 
+  <!-- Usuários da Aventura Elemental: dá pra apagar quem não deve estar lá -->
+  <div class="card hidden" id="usersCard">
+    <h1>👤 USUÁRIOS</h1>
+    <p>Quem tem usuário na Aventura Elemental. Toque no 🗑️ e depois em <b>Apagar?</b> pra tirar alguém.</p>
+    <ul id="usersList" class="users"></ul>
+    <div class="msg" id="usersMsg"></div>
+  </div>
+
   <script>
     const $ = id => document.getElementById(id);
     const store = {
@@ -68,7 +80,54 @@
     const show = logged => {
       $('loginForm').classList.toggle('hidden', logged);
       $('sendForm').classList.toggle('hidden', !logged);
+      $('usersCard').classList.toggle('hidden', !logged);
+      if (logged) loadUsers();
     };
+
+    const COLORS = { verde: '#5df07a', azul: '#5ccfff', vermelho: '#ff5a5a', laranja: '#ff9a2e', roxo: '#b06cff', rosa: '#ff6ad5', dourado: '#ffd23a', arcoiris: '#ffd23a' };
+    async function usersApi(body) {
+      const r = await fetch('/api/conta/', { method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify(body) });
+      const data = await r.json().catch(() => ({}));
+      if (r.status === 401) { token = null; store.del('avisos_token'); show(false); throw new Error(data.error || 'Entre de novo.'); }
+      if (!r.ok) throw new Error(data.error || 'Erro ' + r.status);
+      return data;
+    }
+    function renderUsers(list) {
+      const ul = $('usersList');
+      ul.innerHTML = '';
+      if (!list.length) { ul.innerHTML = '<li>Ninguém tem usuário ainda.</li>'; return; }
+      for (const u of list) {
+        const li = document.createElement('li');
+        const name = document.createElement('span');
+        name.textContent = u.nome;
+        name.style.color = COLORS[u.cor] || '#fff';
+        const btn = document.createElement('button');
+        btn.textContent = '🗑️';
+        btn.title = 'Apagar ' + u.nome;
+        // Primeiro toque pergunta, segundo apaga
+        btn.addEventListener('click', async () => {
+          if (btn.dataset.armed !== '1') {
+            btn.dataset.armed = '1'; btn.textContent = 'Apagar?';
+            setTimeout(() => { btn.dataset.armed = ''; btn.textContent = '🗑️'; }, 4000);
+            return;
+          }
+          btn.disabled = true;
+          try {
+            const data = await usersApi({ action: 'admin-apagar', nome: u.nome });
+            $('usersMsg').textContent = '✅ ' + u.nome + ' foi apagado.';
+            renderUsers(data.usuarios || []);
+          } catch (err) { $('usersMsg').textContent = 'Não deu: ' + err.message; btn.disabled = false; }
+        });
+        li.append(name, btn);
+        ul.appendChild(li);
+      }
+    }
+    async function loadUsers() {
+      $('usersMsg').textContent = 'Carregando...';
+      try { renderUsers((await usersApi({ action: 'admin-lista' })).usuarios || []); $('usersMsg').textContent = ''; }
+      catch (err) { $('usersMsg').textContent = 'Não deu: ' + err.message; }
+    }
     show(!!token);
 
     // Entra com o mesmo nome e senha da Base Secreta

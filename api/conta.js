@@ -2,6 +2,20 @@
 // Guarda tudo no Redis (Upstash) do Vercel.
 const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+const SECRET = process.env.CHAT_SECRET || REDIS_TOKEN || '';
+const crypto = require('crypto');
+
+// Login da Base Secreta (o mesmo token da página de avisos): só Felipe e Dominic gerenciam usuários
+const ADMINS = { felipe: 'Felipe', dominique: 'Dominic', dominic: 'Dominic' };
+function isAdmin(req) {
+  const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  const parts = token.split('.');
+  if (parts.length !== 3) return false;
+  const [user, exp, sig] = parts;
+  if (!ADMINS[user] || Number(exp) < Date.now()) return false;
+  const want = Buffer.from(crypto.createHmac('sha256', SECRET).update(user + '.' + exp).digest('hex')), got = Buffer.from(sig);
+  return want.length === got.length && crypto.timingSafeEqual(want, got);
+}
 
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const MAX_POR_HORA = 30;
@@ -49,6 +63,28 @@ module.exports = async (req, res) => {
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
+
+    // Página de avisos: ver todos os usuários e apagar pelo nome (precisa do login)
+    if (body.action === 'admin-lista' || body.action === 'admin-apagar') {
+      if (!isAdmin(req)) return res.status(401).json({ error: 'Entre com o login da Base Secreta.' });
+      let [todos] = await redis(['SMEMBERS', 'aventura:users']);
+      let users = (todos || []).length ? await redis(...todos.map((e) => ['GET', 'aventura:user:' + e])) : [];
+      if (body.action === 'admin-apagar') {
+        // Procura pelo nome exato em todos (usuários antigos podem não estar na lista de nomes)
+        const nome = String(body.nome || '');
+        const alvos = todos.filter((e, i) => users[i] && JSON.parse(users[i]).nome === nome);
+        if (!alvos.length) return res.status(404).json({ error: 'Não achei esse usuário.' });
+        const [dono] = await redis(['HGET', 'aventura:nomes', nomeKey(nome)]);
+        const cmds = alvos.flatMap((e) => [['DEL', 'aventura:user:' + e], ['SREM', 'aventura:users', e], ['ZREM', 'aventura:online', e]]);
+        if (alvos.includes(dono)) cmds.push(['HDEL', 'aventura:nomes', nomeKey(nome)]);
+        await redis(...cmds);
+        users = users.filter((raw, i) => !alvos.includes(todos[i]));
+      }
+      const lista = users.filter(Boolean).map((raw) => { const u = JSON.parse(raw); return { nome: u.nome, cor: u.cor || 'branco' }; })
+        .sort((a, b) => a.nome.localeCompare(b.nome));
+      return res.status(200).json({ usuarios: lista });
+    }
+
     const email = String(body.email || '').trim().toLowerCase().slice(0, 120);
     if (!EMAIL_OK.test(email)) return res.status(400).json({ error: 'E-mail inválido.' });
     const action = body.action || 'salvar';
