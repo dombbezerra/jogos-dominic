@@ -11,8 +11,6 @@
   if (PERFIL) $('back-link').href = '../index.html?perfil=' + PERFIL;
 
   // ── Cartas ────────────────────────────────────────────────
-  const FIRST = ['Léo', 'Davi', 'Rafa', 'Gui', 'Theo', 'Enzo', 'Juca', 'Beto', 'Caio', 'Duda', 'Tito', 'Nico', 'Lipe', 'Vini', 'Kauã', 'Bento', 'Iago', 'Zeca', 'Maxi', 'Rudi', 'Pedrinho', 'Lucca'];
-  const LAST = ['Raio', 'Bala', 'Foguete', 'Trovão', 'Muralha', 'Furacão', 'Canhão', 'Mágico', 'Flecha', 'Tigre', 'Gelo', 'Chama', 'Onda', 'Cometa', 'Dragão', 'Faísca', 'Paredão', 'Tanque', 'Relâmpago', 'Ventania'];
   const FACES = ['😀', '😎', '🤠', '🧐', '😤', '🥶', '😄', '🦁', '🐯', '🦊', '🐺', '🤖', '👽', '🥷', '🧙', '🐲'];
   // Posições (sigla e nome), igual no FC
   const POSITIONS = [['ATA', 'Atacante'], ['PD', 'Ponta-direita'], ['PE', 'Ponta-esquerda'], ['MEI', 'Meia'], ['MC', 'Meia-central'],
@@ -22,38 +20,31 @@
   const TIERS = [[120, 'lenda', 'LENDA'], [105, 'elite', 'ELITE'], [90, 'ouro', 'OURO'], [75, 'prata', 'PRATA'], [0, 'bronze', 'BRONZE']];
   const tierOf = r => TIERS.find(t => r >= t[0]);
   const pick = a => a[Math.floor(Math.random() * a.length)];
-  // Nota sorteada: as baixas saem mais, as altas são raras
-  const roll = (min, max) => min + Math.floor((max - min + 1) * Math.pow(Math.random(), 1.6));
 
-  // Cartas especiais: o mesmo craque em times diferentes (nomes parecidos com os de verdade)
-  const SPECIALS = [];   // os craques do álbum quem coloca é você (➕)
+  const SPECIALS = [];   // os jogadores quem cria é você (➕ no álbum)
   const ALBUM = [['brasil', '🇧🇷 BRASIL'], ['argentina', '🇦🇷 ARGENTINA'], ['portugal', '🇵🇹 PORTUGAL'], ['franca', '🇫🇷 FRANÇA'],
     ['inglaterra', '🏴 INGLATERRA'], ['espanha', '🇪🇸 ESPANHA']];
-  const ALBUM_PRIZE = 1500;
+  const ALBUM_PRIZE = 1500;   // completou uma seleção: ganha moedas
   // Os craques do álbum: os do jogo e os que você adicionou (➕)
   const allSpecials = () => SPECIALS.concat((data && data.custom) || []);
-  const BADGES = { brasil: ['🇧🇷', 'Brasil'], argentina: ['🇦🇷', 'Argentina'], portugal: ['🇵🇹', 'Portugal'], franca: ['🇫🇷', 'França'], inglaterra: ['🏴', 'Inglaterra'], espanha: ['🇪🇸', 'Espanha'] };   // completou uma seleção: ganha moedas
+  const BADGES = { brasil: ['🇧🇷', 'Brasil'], argentina: ['🇦🇷', 'Argentina'], portugal: ['🇵🇹', 'Portugal'], franca: ['🇫🇷', 'França'], inglaterra: ['🏴', 'Inglaterra'], espanha: ['🇪🇸', 'Espanha'] };
   // Nome que aparece: o que você escreveu no ✏️, ou o da carta
   const nameOf = c => (data.renames && data.renames[c.key || c.id]) || c.nome;
   let data;
-  function newCard(min, max, pos) {
-    // De vez em quando sai um craque especial (os de nota alta são mais raros)
-    if (!pos && Math.random() < 0.15) {
-      const ok = allSpecials().filter(sp => sp.r >= min && sp.r <= max && Math.random() < 1.4 - sp.r / 130);
-      if (ok.length) return Object.assign({ id: data.next++ }, pick(ok));
-    }
-    return { id: data.next++, r: Math.min(MAX_R, roll(min, max)), pos: pos || pick(POS), nome: pick(FIRST) + ' ' + pick(LAST), face: pick(FACES) };
-  }
+
   function load() {
     try { data = JSON.parse(localStorage.getItem(KEY)); } catch (e) { data = null; }
     if (!data || !Array.isArray(data.cards)) {
-      data = { coins: 500, cards: [], team: [], next: 1, played: 0, wins: 0 };
-      // Time inicial: 5 cartas de bronze
-      for (const [pos, r] of [['GOL', 62], ['ZAG', 61], ['MEI', 63], ['ATA', 64], ['ATA', 60]]) {
-        const c = newCard(r, r, pos); data.cards.push(c); data.team.push(c.id);
-      }
+      data = { coins: 500, cards: [], team: [null, null, null, null, null], next: 1, played: 0, wins: 0, semFalsas: true };
       save();
     }
+    // Sem cartas inventadas: só ficam os jogadores que você criou (álbum ➕ ou 👑 CRIAR CARTA)
+    if (!data.semFalsas) {
+      data.cards = data.cards.filter(c => c.key || c.criada);
+      data.semFalsas = true;
+    }
+    data.team = [0, 1, 2, 3, 4].map(i => (data.team && cardById(data.team[i])) ? data.team[i] : null);
+    save();
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* sem salvar */ } }
   const cardById = id => data.cards.find(c => c.id === id);
@@ -101,7 +92,7 @@
     if (page === 'album') renderAlbum();
     if (page === 'name') { $('name-input').value = data.nome || ''; $('name-msg').textContent = ''; }
     if (page === 'create' && !$('create-form').childElementCount) $('create-form').append(...playerForm('CRIAR', (c) => {
-      data.cards.push(Object.assign({ id: data.next++ }, c));
+      data.cards.push(Object.assign({ id: data.next++, criada: true }, c));
       save(); render();
       $('create-msg').textContent = '✅ ' + c.nome + ' (' + c.r + ') foi pras suas cartas!';
     }));
@@ -118,11 +109,11 @@
         const slot = document.createElement('div');
         slot.className = 'slot' + (picking === i ? ' picking' : '');
         const c = cardById(data.team[i]);
-        const ce = cardEl(c);
+        const ce = c ? cardEl(c) : Object.assign(document.createElement('div'), { className: 'card slot-empty', textContent: '+' });
         ce.addEventListener('click', () => { picking = picking === i ? -1 : i; renderTeam(); });
         const lab = document.createElement('div');
         lab.className = 'slot-label';
-        lab.textContent = SLOTS[i].label + (effR(c, i) < c.r ? ' (fora da posição)' : '');
+        lab.textContent = SLOTS[i].label + (c && effR(c, i) < c.r ? ' (fora da posição)' : c ? '' : ' (vazio)');
         slot.append(ce, lab);
         row.appendChild(slot);
       }
@@ -132,6 +123,7 @@
     list.innerHTML = '';
     if (picking < 0) { $('team-hint').textContent = 'Toque num jogador do campo pra trocar.'; return; }
     $('team-hint').textContent = 'Escolha quem entra no ' + SLOTS[picking].label + ':';
+    if (!data.cards.length) { $('team-hint').textContent = 'Você ainda não tem jogadores. Abra pacotes ou crie no 📒 ÁLBUM!'; return; }
     const others = data.cards.filter(c => c.id !== data.team[picking]).sort((a, b) => effR(b, picking) - effR(a, picking));
     for (const c of others) {
       const where = data.team.indexOf(c.id);
@@ -171,13 +163,29 @@
     }
     $('pack-msg').textContent = 'Ganhe moedas jogando partidas! Vitória: 500 · Empate: 250 · Derrota: 100 · Gol: +50';
   }
+  // Os pacotes dão os jogadores que você criou no álbum (os de nota baixa saem mais)
+  function drawCard(min, max) {
+    const pool = allSpecials();
+    let ok = pool.filter(sp => sp.r >= min && sp.r <= max);
+    if (!ok.length) {   // nenhum nessa faixa: vem o de nota mais perto
+      const d = sp => sp.r < min ? min - sp.r : sp.r > max ? sp.r - max : 0;
+      const best = Math.min(...pool.map(d));
+      ok = pool.filter(sp => d(sp) === best);
+    }
+    const w = ok.map(sp => Math.pow(1.04, MAX_R - sp.r));
+    let x = Math.random() * w.reduce((a, b) => a + b, 0), i = 0;
+    while (i < ok.length - 1 && (x -= w[i]) > 0) i++;
+    const sp = ok[i];
+    return { id: data.next++, key: sp.key, nome: sp.nome, pos: sp.pos, r: sp.r, face: sp.face, club: sp.club, badge: sp.badge };
+  }
   function openPack(p) {
+    if (!allSpecials().length) { $('pack-msg').textContent = 'Primeiro crie seus jogadores no 📒 ÁLBUM (➕ ADICIONAR JOGADOR)!'; return; }
     if (!isAdm()) {   // o ADM abre de graça
       if (data.coins < p.price) return;
       data.coins -= p.price;
     }
     const got = [];
-    for (let i = 0; i < p.n; i++) got.push(i === 0 && p.best ? newCard(p.best[0], p.best[1]) : newCard(p.min, p.max));
+    for (let i = 0; i < p.n; i++) got.push(i === 0 && p.best ? drawCard(p.best[0], p.best[1]) : drawCard(p.min, p.max));
     data.cards.push(...got);
     save();
     const out = $('reveal-cards');
