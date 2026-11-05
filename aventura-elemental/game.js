@@ -1675,8 +1675,7 @@
     const r = await fetch('/api/conta/', { method: 'POST', headers, body: JSON.stringify(Object.assign({ email: meta.user && meta.user.email }, body)) });
     if (!r.ok) return null;
     const data = await r.json();
-    chatGuests = {};
-    for (const u of data.usuarios || []) chatGuests[u.nome] = u.chat;
+    if (data.usuarios) { chatGuests = {}; for (const u of data.usuarios) chatGuests[u.nome] = u.chat; }
     return data;
   }
   function chatInfo(text) {
@@ -1719,9 +1718,13 @@
       list.appendChild(li);
     }
     if (atBottom || chatBusy) list.scrollTop = list.scrollHeight;
+    // ADM: apagar todas as conversas (toca duas vezes)
+    const clear = $('chat-clear');
+    clear.style.display = adminToken() && chatMsgs.length ? '' : 'none';
   }
   function addChat(data) {
     chatMember = !!(data && data.membro);
+    if (data && data.limpo) chatMsgs = chatMsgs.filter(m => m.id > data.limpo);   // o ADM apagou as conversas
     for (const m of (data && data.msgs) || []) if (m.id > chatLast) { chatMsgs.push(m); chatLast = m.id; }
     chatMsgs = chatMsgs.slice(-100);
   }
@@ -1760,6 +1763,18 @@
     b.addEventListener('click', () => { $('chat-gifs').classList.remove('on'); sendChat('', id); });
     $('chat-gifs').appendChild(b);
   }
+  $('chat-clear').addEventListener('click', async () => {
+    const b = $('chat-clear');
+    if (b.dataset.armed !== '1') {
+      b.dataset.armed = '1'; b.textContent = '🗑️ APAGAR TUDO? Toque de novo';
+      setTimeout(() => { b.dataset.armed = ''; b.textContent = '🗑️ APAGAR CONVERSAS'; }, 4000);
+      return;
+    }
+    b.disabled = true;
+    const ok = await adminChat({ action: 'admin-limpar-chat' }).catch(() => null);
+    b.disabled = false; b.dataset.armed = ''; b.textContent = '🗑️ APAGAR CONVERSAS';
+    if (ok) { chatMsgs = []; renderChat(); } else $('chat-msg').textContent = 'Não deu pra apagar agora.';
+  });
   $('chat-gif-btn').addEventListener('click', () => $('chat-gifs').classList.toggle('on'));
 
   // ── Progresso online: o mesmo e-mail no computador, no celular e no Google tem o mesmo jogo ──

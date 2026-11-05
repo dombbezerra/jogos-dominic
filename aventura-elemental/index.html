@@ -209,6 +209,7 @@
     #chat-gifs { display: none; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 8px; }
     #chat-gifs.on { display: flex; }
     #chat-gifs button { background: #2e2366; border: 2px solid #4a3a8a; border-radius: 8px; width: 52px; height: 52px; cursor: pointer; }
+    #chat-clear { background: none; border: 2px solid #e04848; color: #ff8a8a; border-radius: 6px; padding: 5px 10px; font-weight: bold; font-size: 12px; cursor: pointer; font-family: inherit; margin-bottom: 8px; }
     #chat-msg { font-size: 12px; color: #ff8a8a; min-height: 16px; margin-top: 4px; }
     /* "GIFs": emojis grandes que se mexem */
     .gif { display: inline-block; font-size: 30px; line-height: 1; }
@@ -394,6 +395,7 @@
           <button type="submit" id="chat-send">➤</button>
         </form>
         <div id="chat-msg"></div>
+        <button type="button" id="chat-clear" style="display:none">🗑️ APAGAR CONVERSAS</button>
         <button class="mbtn yellow back" data-go="main">◀ VOLTAR</button>
       </div>
 
@@ -475,6 +477,6 @@
   </div>
 
   <div id="coop-modal"><div class="coop-box"><div id="coop-title"></div><div id="coop-sub"></div><div id="coop-btns"></div></div></div>
-  <script src="game.js?v=37"></script>
+  <script src="game.js?v=38"></script>
 </body>
 </html>

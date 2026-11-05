@@ -134,14 +134,20 @@ module.exports = async (req, res) => {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
 
     // Página de avisos: ver todos os usuários e apagar pelo nome (precisa do login)
-    if (body.action === 'admin-lista' || body.action === 'admin-apagar' || body.action === 'admin-chat' || body.action === 'admin-adm') {
+    if (['admin-lista', 'admin-apagar', 'admin-chat', 'admin-adm', 'admin-limpar-chat'].includes(body.action)) {
       // Login da Base Secreta pode tudo. Conta de ADM (marcada pelo login) só vê a lista e convida pro chat
       let ok = isAdmin(req);
-      if (!ok && (body.action === 'admin-lista' || body.action === 'admin-chat') && EMAIL_OK.test(String(body.email || ''))) {
+      if (!ok && ['admin-lista', 'admin-chat', 'admin-limpar-chat'].includes(body.action) && EMAIL_OK.test(String(body.email || ''))) {
         const [adm] = await redis(['SISMEMBER', 'aventura:adm', canon(String(body.email).trim().toLowerCase())]);
         ok = !!adm;
       }
       if (!ok) return res.status(401).json({ error: 'Entre com o login da Base Secreta.' });
+      // Apagar todas as conversas do chat (os aparelhos limpam a tela sozinhos)
+      if (body.action === 'admin-limpar-chat') {
+        const [ultimo] = await redis(['GET', 'aventura:chat:id']);
+        await redis(['DEL', 'aventura:chat:msgs'], ['SET', 'aventura:chat:limpo', Number(ultimo) || 0]);
+        return res.status(200).json({ ok: true });
+      }
       let [todos, membros, adms] = await redis(['SMEMBERS', 'aventura:users'], ['SMEMBERS', 'aventura:chat:membros'], ['SMEMBERS', 'aventura:adm']);
       let users = (todos || []).length ? await redis(...todos.map((e) => ['GET', 'aventura:user:' + e])) : [];
       if (body.action === 'admin-apagar') {
@@ -210,9 +216,9 @@ module.exports = async (req, res) => {
         const msg = { id, nome: u.nome, cor: u.cor || 'branco', foto: u.foto || 'skin:gotinha', moldura: u.moldura || 'nenhuma', texto, gif, t: Date.now() };
         await redis(['RPUSH', 'aventura:chat:msgs', JSON.stringify(msg)], ['LTRIM', 'aventura:chat:msgs', -100, -1]);
       }
-      const [lista] = await redis(['LRANGE', 'aventura:chat:msgs', 0, -1]);
+      const [lista, limpo] = await redis(['LRANGE', 'aventura:chat:msgs', 0, -1], ['GET', 'aventura:chat:limpo']);
       const desde = Number(body.desde) || 0;
-      return res.status(200).json({ membro: true, msgs: (lista || []).map((m) => JSON.parse(m)).filter((m) => m.id > desde) });
+      return res.status(200).json({ membro: true, limpo: Number(limpo) || 0, msgs: (lista || []).map((m) => JSON.parse(m)).filter((m) => m.id > desde) });
     }
 
     // ── Jogar junto: convite e "aperto de mão" entre os dois aparelhos (depois eles conversam direto) ──
