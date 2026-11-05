@@ -44,7 +44,16 @@
     .tile.play { grid-column: 1 / -1; background: linear-gradient(135deg, #2fe0a0, #1a9a6a); font-size: 26px; padding: 22px; }
     .tile.team { background: linear-gradient(135deg, #3a7aff, #2a4ab0); }
     .tile.packs { background: linear-gradient(135deg, #ffb02e, #e0662a); }
-    .tile.cards { background: linear-gradient(135deg, #b06cff, #6a3ab0); grid-column: 1 / -1; }
+    .tile.cards { background: linear-gradient(135deg, #b06cff, #6a3ab0); }
+    .tile.album { background: linear-gradient(135deg, #2fb060, #1a6a3a); }
+    .album-team { margin: 12px 0; background: rgba(0, 0, 0, 0.25); border-radius: 12px; padding: 10px; }
+    .album-title { font-weight: 900; font-size: 17px; margin-bottom: 8px; letter-spacing: 1px; }
+    .album-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .card.album-empty { background: rgba(255, 255, 255, 0.08); border: 2px dashed rgba(255, 255, 255, 0.35); color: #fff; box-shadow: none; cursor: default; }
+    .card-actions button.edit { background: #3a7aff; margin-right: 4px; }
+    .edit-box { display: flex; gap: 4px; margin-top: 4px; justify-content: center; }
+    .edit-box input { user-select: text; -webkit-user-select: text; width: 110px; padding: 4px; border-radius: 6px; border: 2px solid #3a7aff; font-family: inherit; }
+    .edit-box button { background: #2fb060; color: #fff; border: none; border-radius: 6px; padding: 4px 8px; font-weight: 900; }
     .back { position: sticky; bottom: 0; z-index: 5; display: block; margin: 14px auto 0 0; background: #ffd23a; color: #1a1a2a; border: none;
       border-radius: 8px; padding: 10px 18px; font-weight: 900; cursor: pointer; font-family: inherit; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6); }
     .msg { min-height: 18px; color: #ffd23a; font-size: 14px; margin: 6px 0; }
@@ -131,6 +140,7 @@
           <button class="tile team" data-go="team">👕 MEU TIME<small>Escolha os 5 titulares</small></button>
           <button class="tile packs" data-go="packs">🎁 PACOTES<small>Ganhe jogadores novos</small></button>
           <button class="tile cards" data-go="cards">🃏 MINHAS CARTAS<small id="n-cards"></small></button>
+          <button class="tile album" data-go="album">📒 ÁLBUM<small>Complete as seleções e ganhe 🪙 1500</small></button>
         </div>
         <div class="msg" id="main-msg"></div>
       </div>
@@ -151,9 +161,17 @@
         <button class="back" data-go="main">◀ VOLTAR</button>
       </div>
 
+      <div class="page" id="page-album">
+        <h2>📒 ÁLBUM DE SELEÇÕES</h2>
+        <div class="hint">Os craques saem nos pacotes (os melhores, nos pacotes Ouro e Lenda). Complete uma seleção e ganhe 🪙 1500!</div>
+        <div class="msg" id="album-msg"></div>
+        <div id="album-list"></div>
+        <button class="back" data-go="main">◀ VOLTAR</button>
+      </div>
+
       <div class="page" id="page-cards">
         <h2>🃏 MINHAS CARTAS</h2>
-        <div class="hint">Toque numa carta pra vender (quem está no time não pode).</div>
+        <div class="hint">✏️ muda o nome da carta (só no seu jogo). VENDER troca a carta por moedas (quem está no time não pode).</div>
         <div class="grid" id="card-list"></div>
         <button class="back" data-go="main">◀ VOLTAR</button>
       </div>
@@ -170,6 +188,6 @@
   </div>
   <div id="keys-help">Setas/WASD: andar · J: passe · K: chute (segure pra mais força) · Shift: correr</div>
 
-  <script src="game.js?v=2"></script>
+  <script src="game.js?v=3"></script>
 </body>
 </html>

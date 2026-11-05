@@ -27,8 +27,31 @@
     { key: 'neymaro-peixe', nome: 'Neymaro Jr', pos: 'ATA', r: 88, face: '😎', club: 'Peixe FC', badge: '⚪' },
     { key: 'neymaro-barca', nome: 'Neymaro Jr', pos: 'ATA', r: 100, face: '😎', club: 'Blaugrana FC', badge: '🔵' },
     { key: 'neymaro-paris', nome: 'Neymaro Jr', pos: 'ATA', r: 118, face: '😎', club: 'Paris Estrelas', badge: '🗼' },
-    { key: 'neymaro-brasil', nome: 'Neymaro Jr', pos: 'ATA', r: 128, face: '😎', club: 'Brasil', badge: '🇧🇷' },
+    { key: 'neymaro-brasil', nome: 'Neymaro Jr', pos: 'ATA', r: 128, face: '😎', club: 'Brasil', badge: '🇧🇷', album: 'brasil' },
+    // Álbum de seleções
+    { key: 'vinny-brasil', nome: 'Vinny Júnior', pos: 'ATA', r: 118, face: '🕺', club: 'Brasil', badge: '🇧🇷', album: 'brasil' },
+    { key: 'alissao-brasil', nome: 'Alissão', pos: 'GOL', r: 105, face: '🧤', club: 'Brasil', badge: '🇧🇷', album: 'brasil' },
+    { key: 'messy-arg', nome: 'Lionel Messy', pos: 'ATA', r: 130, face: '🐐', club: 'Argentina', badge: '🇦🇷', album: 'argentina' },
+    { key: 'dimariah-arg', nome: 'Di Mariah', pos: 'MEI', r: 108, face: '😁', club: 'Argentina', badge: '🇦🇷', album: 'argentina' },
+    { key: 'dibu-arg', nome: 'Dibu Martinéz', pos: 'GOL', r: 104, face: '🧤', club: 'Argentina', badge: '🇦🇷', album: 'argentina' },
+    { key: 'ronaldinho-por', nome: 'Cristiano Ronaldinho', pos: 'ATA', r: 127, face: '💪', club: 'Portugal', badge: '🇵🇹', album: 'portugal' },
+    { key: 'fernandao-por', nome: 'Bruno Fernandão', pos: 'MEI', r: 110, face: '😏', club: 'Portugal', badge: '🇵🇹', album: 'portugal' },
+    { key: 'rubem-por', nome: 'Rúbem Dias', pos: 'ZAG', r: 106, face: '🧱', club: 'Portugal', badge: '🇵🇹', album: 'portugal' },
+    { key: 'mbappo-fra', nome: 'Mbappô', pos: 'ATA', r: 126, face: '🐢', club: 'França', badge: '🇫🇷', album: 'franca' },
+    { key: 'grizma-fra', nome: 'Grizmã', pos: 'MEI', r: 108, face: '🥖', club: 'França', badge: '🇫🇷', album: 'franca' },
+    { key: 'saliba-fra', nome: 'Salibá', pos: 'ZAG', r: 104, face: '🧱', club: 'França', badge: '🇫🇷', album: 'franca' },
+    { key: 'kaine-ing', nome: 'Harry Kaine', pos: 'ATA', r: 122, face: '🎯', club: 'Inglaterra', badge: '🏴', album: 'inglaterra' },
+    { key: 'bellinghao-ing', nome: 'Bellinghão', pos: 'MEI', r: 116, face: '😤', club: 'Inglaterra', badge: '🏴', album: 'inglaterra' },
+    { key: 'pickfordo-ing', nome: 'Pickfordo', pos: 'GOL', r: 102, face: '🧤', club: 'Inglaterra', badge: '🏴', album: 'inglaterra' },
+    { key: 'yamal-esp', nome: 'Lamine Yamalzinho', pos: 'ATA', r: 120, face: '⚡', club: 'Espanha', badge: '🇪🇸', album: 'espanha' },
+    { key: 'pedri-esp', nome: 'Pedrí', pos: 'MEI', r: 112, face: '🎩', club: 'Espanha', badge: '🇪🇸', album: 'espanha' },
+    { key: 'rodri-esp', nome: 'Rodrigo Rodri', pos: 'MEI', r: 114, face: '🧠', club: 'Espanha', badge: '🇪🇸', album: 'espanha' },
   ];
+  const ALBUM = [['brasil', '🇧🇷 BRASIL'], ['argentina', '🇦🇷 ARGENTINA'], ['portugal', '🇵🇹 PORTUGAL'], ['franca', '🇫🇷 FRANÇA'],
+    ['inglaterra', '🏴 INGLATERRA'], ['espanha', '🇪🇸 ESPANHA']];
+  const ALBUM_PRIZE = 1500;   // completou uma seleção: ganha moedas
+  // Nome que aparece: o que você escreveu no ✏️, ou o da carta
+  const nameOf = c => (data.renames && data.renames[c.key || c.id]) || c.nome;
   let data;
   function newCard(min, max, pos) {
     // De vez em quando sai um craque especial (os de nota alta são mais raros)
@@ -67,7 +90,7 @@
     d.querySelector('.rt').textContent = c.r;
     d.querySelector('.ps').textContent = c.pos;
     d.querySelector('.face').textContent = c.face;
-    d.querySelector('.nm').textContent = c.nome;
+    d.querySelector('.nm').textContent = nameOf(c);
     d.querySelector('.tier').textContent = c.club ? c.club : t[2];
     return d;
   }
@@ -88,6 +111,7 @@
     if (page === 'team') renderTeam();
     if (page === 'packs') renderPacks();
     if (page === 'cards') renderCards();
+    if (page === 'album') renderAlbum();
   }
 
   function renderTeam() {
@@ -180,9 +204,16 @@
       const wrap = document.createElement('div');
       const ce = cardEl(c, inTeam ? 'in-team' : '');
       wrap.appendChild(ce);
+      const act = document.createElement('div');
+      act.className = 'card-actions';
+      const ed = document.createElement('button');
+      ed.className = 'edit';
+      ed.textContent = '✏️';
+      ed.title = 'Mudar o nome (só no seu jogo)';
+      ed.addEventListener('click', () => editName(c, wrap));
+      act.appendChild(ed);
+      wrap.appendChild(act);
       if (!inTeam) {
-        const act = document.createElement('div');
-        act.className = 'card-actions';
         const b = document.createElement('button');
         const val = Math.round(c.r * 1.2);
         b.textContent = 'VENDER 🪙' + val;
@@ -194,10 +225,72 @@
           save(); render();
         });
         act.appendChild(b);
-        wrap.appendChild(act);
       }
       list.appendChild(wrap);
     }
+  }
+
+  // ✏️ Muda o nome da carta (fica guardado só neste aparelho). Vale pra todas as cartas iguais
+  function editName(c, wrap) {
+    const box = document.createElement('div');
+    box.className = 'edit-box';
+    const inp = document.createElement('input');
+    inp.maxLength = 22;
+    inp.value = nameOf(c);
+    const ok = document.createElement('button');
+    ok.textContent = 'OK';
+    const done = () => {
+      data.renames = data.renames || {};
+      const v = inp.value.trim();
+      if (v && v !== c.nome) data.renames[c.key || c.id] = v; else delete data.renames[c.key || c.id];
+      save(); render();
+    };
+    ok.addEventListener('click', done);
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') done(); e.stopPropagation(); });
+    box.append(inp, ok);
+    wrap.appendChild(box);
+    inp.focus(); inp.select();
+  }
+
+  // ── Álbum de seleções ──
+  function renderAlbum() {
+    const list = $('album-list');
+    list.innerHTML = '';
+    const have = new Set(data.cards.map(c => c.key).filter(Boolean));
+    data.albumDone = data.albumDone || [];
+    for (const [id, title] of ALBUM) {
+      const players = SPECIALS.filter(sp => sp.album === id);
+      const got = players.filter(sp => have.has(sp.key)).length;
+      const sec = document.createElement('div');
+      sec.className = 'album-team';
+      const h = document.createElement('div');
+      h.className = 'album-title';
+      h.textContent = title + '  ' + got + '/' + players.length + (got === players.length ? '  ✅' : '');
+      const row = document.createElement('div');
+      row.className = 'album-row';
+      for (const sp of players) {
+        if (have.has(sp.key)) row.appendChild(cardEl(sp));
+        else {
+          const e = document.createElement('div');
+          e.className = 'card album-empty';
+          e.innerHTML = '<div class="rt"></div><div class="face">❔</div><div class="nm"></div>';
+          e.querySelector('.rt').textContent = sp.r;
+          e.querySelector('.nm').textContent = sp.pos;
+          row.appendChild(e);
+        }
+      }
+      sec.append(h, row);
+      list.appendChild(sec);
+      // Completou a seleção pela primeira vez: prêmio!
+      if (got === players.length && !data.albumDone.includes(id)) {
+        data.albumDone.push(id);
+        data.coins += ALBUM_PRIZE;
+        save();
+        $('album-msg').textContent = '🎉 Você completou ' + title + '! Ganhou 🪙 ' + ALBUM_PRIZE;
+        beep(1046, 0.4, 'triangle');
+      }
+    }
+    $('coins').textContent = data.coins;
   }
 
   // ── Som ───────────────────────────────────────────────────
