@@ -64,6 +64,8 @@
     .t-lenda { background: linear-gradient(135deg, #ff4a4a, #ffb02e, #ffe94a, #7ddf64, #5ccfff, #b06cff); background-size: 300% 300%;
       animation: lenda 3s linear infinite; color: #fff; text-shadow: 0 1px 2px #000; }
     @keyframes lenda { from { background-position: 0 0; } to { background-position: 300% 0; } }
+    .card .badge { position: absolute; top: 5px; right: 7px; font-size: 16px; }
+    .card.special { box-shadow: 0 0 0 2px #fff, 0 0 12px #ffd23a, 0 3px 8px rgba(0, 0, 0, 0.5); }
     .card.sel { outline: 4px solid #2fe0a0; outline-offset: 2px; }
     .card.in-team::after { content: '✓'; position: absolute; top: 4px; right: 6px; font-weight: 900; color: #0a6a3a; }
 
@@ -168,6 +170,6 @@
   </div>
   <div id="keys-help">Setas/WASD: andar · J: passe · K: chute (segure pra mais força) · Shift: correr</div>
 
-  <script src="game.js?v=1"></script>
+  <script src="game.js?v=2"></script>
 </body>
 </html>

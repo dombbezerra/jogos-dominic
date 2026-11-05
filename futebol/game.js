@@ -22,8 +22,20 @@
   // Nota sorteada: as baixas saem mais, as altas são raras
   const roll = (min, max) => min + Math.floor((max - min + 1) * Math.pow(Math.random(), 1.6));
 
+  // Cartas especiais: o mesmo craque em times diferentes (nomes parecidos com os de verdade)
+  const SPECIALS = [
+    { key: 'neymaro-peixe', nome: 'Neymaro Jr', pos: 'ATA', r: 88, face: '😎', club: 'Peixe FC', badge: '⚪' },
+    { key: 'neymaro-barca', nome: 'Neymaro Jr', pos: 'ATA', r: 100, face: '😎', club: 'Blaugrana FC', badge: '🔵' },
+    { key: 'neymaro-paris', nome: 'Neymaro Jr', pos: 'ATA', r: 118, face: '😎', club: 'Paris Estrelas', badge: '🗼' },
+    { key: 'neymaro-brasil', nome: 'Neymaro Jr', pos: 'ATA', r: 128, face: '😎', club: 'Brasil', badge: '🇧🇷' },
+  ];
   let data;
   function newCard(min, max, pos) {
+    // De vez em quando sai um craque especial (os de nota alta são mais raros)
+    if (!pos && Math.random() < 0.15) {
+      const ok = SPECIALS.filter(sp => sp.r >= min && sp.r <= max && Math.random() < 1.4 - sp.r / 130);
+      if (ok.length) return Object.assign({ id: data.next++ }, pick(ok));
+    }
     return { id: data.next++, r: Math.min(MAX_R, roll(min, max)), pos: pos || pick(POS), nome: pick(FIRST) + ' ' + pick(LAST), face: pick(FACES) };
   }
   function load() {
@@ -50,12 +62,13 @@
     const t = tierOf(c.r);
     const d = document.createElement('div');
     d.className = 'card t-' + t[1] + (extra ? ' ' + extra : '');
-    d.innerHTML = '<div class="rt"></div><div class="ps"></div><div class="face"></div><div><div class="nm"></div><div class="tier"></div></div>';
+    d.innerHTML = '<div class="rt"></div><div class="ps"></div><div class="badge"></div><div class="face"></div><div><div class="nm"></div><div class="tier"></div></div>';
+    if (c.club) { d.classList.add('special'); d.querySelector('.badge').textContent = c.badge || ''; }
     d.querySelector('.rt').textContent = c.r;
     d.querySelector('.ps').textContent = c.pos;
     d.querySelector('.face').textContent = c.face;
     d.querySelector('.nm').textContent = c.nome;
-    d.querySelector('.tier').textContent = t[2];
+    d.querySelector('.tier').textContent = c.club ? c.club : t[2];
     return d;
   }
 
