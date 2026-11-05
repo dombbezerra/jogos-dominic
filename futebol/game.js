@@ -23,12 +23,7 @@
   const roll = (min, max) => min + Math.floor((max - min + 1) * Math.pow(Math.random(), 1.6));
 
   // Cartas especiais: o mesmo craque em times diferentes (nomes parecidos com os de verdade)
-  const SPECIALS = [
-    { key: 'neymaro-peixe', nome: 'Neymaro Jr', pos: 'ATA', r: 88, face: '😎', club: 'Peixe FC', badge: '⚪' },
-    { key: 'neymaro-barca', nome: 'Neymaro Jr', pos: 'ATA', r: 100, face: '😎', club: 'Blaugrana FC', badge: '🔵' },
-    { key: 'neymaro-paris', nome: 'Neymaro Jr', pos: 'ATA', r: 118, face: '😎', club: 'Paris Estrelas', badge: '🗼' },
-    { key: 'neymaro-brasil', nome: 'Neymaro Jr', pos: 'ATA', r: 128, face: '😎', club: 'Brasil', badge: '🇧🇷', album: 'brasil' },
-  ];
+  const SPECIALS = [];   // os craques do álbum quem coloca é você (➕)
   const ALBUM = [['brasil', '🇧🇷 BRASIL'], ['argentina', '🇦🇷 ARGENTINA'], ['portugal', '🇵🇹 PORTUGAL'], ['franca', '🇫🇷 FRANÇA'],
     ['inglaterra', '🏴 INGLATERRA'], ['espanha', '🇪🇸 ESPANHA']];
   const ALBUM_PRIZE = 1500;
