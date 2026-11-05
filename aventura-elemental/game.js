@@ -232,9 +232,62 @@
     { id: 'arcoiris', name: 'Arco-íris',  color: 'rainbow', price: 60 },
   ];
   const colorOf = id => NAME_COLORS.find(c => c.id === id) || NAME_COLORS[0];
+  // Fotos de perfil: os bichos do jogo (comprados com Moeda Elemental) e o rosto de cada personagem que você liberou
+  const BICHOS = [
+    { id: 'slime',     name: 'Slime',       price: 10 },
+    { id: 'morcego',   name: 'Morcego',     price: 20 },
+    { id: 'esqueleto', name: 'Esqueleto',   price: 30 },
+    { id: 'rei',       name: 'Rei Sombrio', price: 100 },
+  ];
+  // 'skin:gotinha' = rosto de personagem; 'bicho:slime' = bicho
+  const hasAvatar = id => {
+    const [kind, v] = String(id || '').split(':');
+    return kind === 'skin' ? meta.skins.includes(v) : kind === 'bicho' && meta.avatars.includes(v);
+  };
+  function avatarCanvas(id, cls) {
+    const c = document.createElement('canvas');
+    c.className = 'avatar' + (cls ? ' ' + cls : '');
+    const [kind, v] = String(id || 'skin:gotinha').split(':');
+    const g = c.getContext('2d');
+    const p = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+    if (kind === 'skin') {
+      c.width = c.height = 16;   // só o rosto e o peito, igual foto
+      const sk = SKINS.some(s => s.id === v) ? v : 'gotinha';
+      drawHero(g, 8, 15, sk, elemOf(sk), 0, 1, 0);
+    } else if (v === 'slime') {
+      c.width = c.height = 16;
+      p(2, 5, 12, 8, '#55d655'); p(4, 3, 8, 2, '#55d655');
+      p(4, 7, 2, 2, '#000'); p(9, 7, 2, 2, '#000'); p(4, 5, 2, 1, '#b6ffb6');
+    } else if (v === 'morcego') {
+      c.width = c.height = 16;
+      p(5, 4, 6, 6, '#7a3fb0'); p(0, 5, 5, 3, '#7a3fb0'); p(11, 5, 5, 3, '#7a3fb0');
+      p(6, 6, 1, 1, '#ff3030'); p(9, 6, 1, 1, '#ff3030');
+    } else if (v === 'esqueleto') {
+      c.width = c.height = 16;
+      p(4, 1, 8, 6, '#ecebe2'); p(5, 3, 2, 2, '#000'); p(9, 3, 2, 2, '#000');
+      p(5, 7, 6, 5, '#ecebe2'); p(5, 8, 6, 1, '#888'); p(5, 10, 6, 1, '#888');
+      p(5, 12, 2, 3, '#ecebe2'); p(9, 12, 2, 3, '#ecebe2');
+    } else {   // Rei Sombrio
+      c.width = c.height = 28;
+      p(0, 18, 28, 10, '#3a1f5c'); p(4, 8, 20, 12, '#5a3a8a');
+      p(8, 12, 4, 3, '#ff3030'); p(16, 12, 4, 3, '#ff3030');
+      p(4, 2, 20, 5, '#ffd23a'); p(4, 0, 3, 3, '#ffd23a'); p(12, 0, 4, 3, '#ffd23a'); p(21, 0, 3, 3, '#ffd23a');
+      p(13, 3, 2, 2, '#ff3030');
+    }
+    return c;
+  }
+  // Nome com a foto do lado (no canto do menu e na lista de amigos)
+  function paintTag(node, nome, colorId, avatarId) {
+    node.innerHTML = '';
+    if (!nome) return;
+    const txt = el('span');
+    paintName(txt, nome, '', colorId);
+    node.append(avatarCanvas(avatarId), txt);
+  }
+  const paintMyTag = () => paintTag($('m-user'), meta.user ? meta.user.nome : '', meta.nameColor, meta.avatar);
   // meta.coins = Gemas Elementais (ganhas jogando); meta.gems = Moedas Elementais (especiais)
   const meta = { coins: 0, gems: 0, skins: FREE_SKINS.slice(), skin: 'gotinha', up: { vida: 0, forca: 0, rapido: 0, veloz: 0 },
-    colors: ['branco'], nameColor: 'branco', user: null };
+    colors: ['branco'], nameColor: 'branco', avatars: [], avatar: 'skin:gotinha', user: null };
   let chestHearts = 0;   // corações ganhos nos baús desta aventura
   function loadMeta() {
     let m = null;
@@ -259,6 +312,8 @@
     meta.codes = Array.isArray(m.codes) ? m.codes : [];
     meta.colors = Array.isArray(m.colors) ? [...new Set(['branco', ...m.colors.filter(id => NAME_COLORS.some(c => c.id === id))])] : ['branco'];
     meta.nameColor = meta.colors.includes(m.nameColor) ? m.nameColor : 'branco';
+    meta.avatars = Array.isArray(m.avatars) ? m.avatars.filter(id => BICHOS.some(b => b.id === id)) : [];
+    meta.avatar = hasAvatar(m.avatar) ? m.avatar : 'skin:' + meta.skin;
     meta.updatedAt = m.updatedAt || 0;
     if (refund) writeMeta();   // devolve uma vez só
   }
@@ -1145,7 +1200,7 @@
   function renderMenu() {
     $('m-coins').textContent = meta.coins;   // Gemas Elementais
     $('m-gems').textContent = meta.gems;
-    paintName($('m-user'), meta.user ? meta.user.nome : '', '👤 ');
+    paintMyTag();
     renderFriends();
     if (menuPage === 'main') {
       heroCanvas($('hero'), meta.skin, player.elem, HERO_DIRS[heroTurn % 4]);
@@ -1210,7 +1265,7 @@
 
   // Loja com 3 abas: melhorias do personagem, recursos elementais e cor do nome
   let shopTab = 'melhorias';
-  const SHOP_TABS = [['melhorias', 'MELHORIAS'], ['gemas', 'RECURSOS ELEMENTAIS'], ['cores', 'COR DO NOME']];
+  const SHOP_TABS = [['melhorias', 'MELHORIAS'], ['gemas', 'RECURSOS ELEMENTAIS'], ['fotos', 'FOTOS DE PERFIL']];
   function renderShop() {
     const tabs = $('shop-tabs');
     tabs.innerHTML = '';
@@ -1223,7 +1278,7 @@
     grid.innerHTML = '';
     if (shopTab === 'melhorias') shopUpgrades(grid);
     else if (shopTab === 'gemas') shopGems(grid);
-    else shopColors(grid);
+    else shopAvatars(grid);
   }
 
   function shopUpgrades(grid) {
@@ -1270,24 +1325,23 @@
     grid.appendChild(el('small', 'O chefão dá ' + BOSS_GEMS + ' Moedas Elementais quando você vence.', 'shop-note'));
   }
 
-  function shopColors(grid) {
-    for (const c of NAME_COLORS) {
-      const have = meta.colors.includes(c.id), on = meta.nameColor === c.id;
+  function shopAvatars(grid) {
+    for (const b of BICHOS) {
+      const id = 'bicho:' + b.id, have = meta.avatars.includes(b.id), on = meta.avatar === id;
       const btn = el('button', on ? 'USANDO' : 'USAR', on ? 'cyan' : have ? 'green' : 'purple');
-      if (!on && !have) priced(btn, '', 'moeda', c.price);
-      btn.disabled = on || (!have && meta.gems < c.price);
+      if (!on && !have) priced(btn, '', 'moeda', b.price);
+      btn.disabled = on || (!have && meta.gems < b.price);
       btn.addEventListener('click', () => {
-        if (!have) { meta.gems -= c.price; meta.colors.push(c.id); }
-        meta.nameColor = c.id;
+        if (!have) { meta.gems -= b.price; meta.avatars.push(b.id); }
+        meta.avatar = id;
         writeMeta(); renderMenu();
         syncUser();
       });
       const d = card(on);
-      const sample = el('div', null, 'name-sample');
-      paintName(sample, meta.user ? meta.user.nome : 'Seu nome', '', c.id);
-      d.append(sample, el('b', c.name), el('small', have ? 'Sua' : 'Custa ' + c.price + ' Moedas Elementais'), btn);
+      d.append(avatarCanvas(id), el('b', b.name), el('small', have ? 'Sua' : 'Custa ' + b.price + ' Moedas Elementais'), btn);
       grid.appendChild(d);
     }
+    grid.appendChild(el('p', 'Cada personagem que você libera também vira foto de perfil. Escolha a sua em USUÁRIO!', 'shop-note'));
   }
 
   // Escreve um nome com a cor escolhida (o arco-íris é animado pelo CSS)
@@ -1302,7 +1356,7 @@
   function syncUser() {
     if (!meta.user) return;
     fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: meta.user.email, nome: meta.user.nome, cor: meta.nameColor }) }).catch(() => {});
+      body: JSON.stringify({ email: meta.user.email, nome: meta.user.nome, cor: meta.nameColor, foto: meta.avatar }) }).catch(() => {});
   }
 
   // Usuário: e-mail e nome, guardados neste aparelho e no servidor do site
@@ -1315,23 +1369,41 @@
     $('u-msg').className = '';
     renderUserColors();
   }
-  // As cores de nome que você já tem: toca numa e o nome já muda
+  // Foto de perfil e cor do nome: toca numa e já muda. Cor que você não tem aparece com o preço
   function renderUserColors() {
+    const pics = $('u-avatars');
+    pics.innerHTML = '';
+    const mine = [...meta.skins.filter(id => SKINS.some(s => s.id === id)).map(id => 'skin:' + id),
+      ...BICHOS.filter(b => meta.avatars.includes(b.id)).map(b => 'bicho:' + b.id)];
+    for (const id of mine) {
+      const b = el('button', null, 'u-pic' + (meta.avatar === id ? ' on' : ''));
+      b.type = 'button';
+      b.appendChild(avatarCanvas(id));
+      b.addEventListener('click', () => {
+        meta.avatar = id;
+        writeMeta(); syncUser(); paintMyTag(); renderUserColors();
+      });
+      pics.appendChild(b);
+    }
     const box = $('u-colors');
     box.innerHTML = '';
     const nome = $('u-name').value.trim() || (meta.user ? meta.user.nome : 'Seu nome');
-    for (const c of NAME_COLORS.filter(c => meta.colors.includes(c.id))) {
-      const b = el('button', null, 'u-color' + (meta.nameColor === c.id ? ' on' : ''));
+    for (const c of NAME_COLORS) {
+      const have = meta.colors.includes(c.id);
+      const b = el('button', null, 'u-color' + (meta.nameColor === c.id ? ' on' : '') + (have ? '' : ' locked'));
       b.type = 'button';
       b.title = c.name;
       const txt = el('span');   // o nome vai num span: o fundo do botão não apaga o arco-íris
       paintName(txt, nome, '', c.id);
       b.appendChild(txt);
+      if (!have) { const price = el('small'); priced(price, '🔒', 'moeda', c.price); b.appendChild(price); }
       b.addEventListener('click', () => {
+        if (!have) {
+          if (meta.gems < c.price) { $('u-msg').textContent = 'Faltam Moedas Elementais pra essa cor (custa ' + c.price + ').'; $('u-msg').className = 'err'; return; }
+          meta.gems -= c.price; meta.colors.push(c.id);
+        }
         meta.nameColor = c.id;
-        writeMeta(); syncUser();
-        paintName($('m-user'), meta.user ? meta.user.nome : '', '👤 ');
-        renderUserColors();
+        writeMeta(); syncUser(); renderMenu();
       });
       box.appendChild(b);
     }
@@ -1355,7 +1427,7 @@
     meta.user = { email, nome };
     writeMeta();
     try {
-      const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, nome, cor: meta.nameColor }) });
+      const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, nome, cor: meta.nameColor, foto: meta.avatar }) });
       const data = await r.json().catch(() => ({}));
       if (r.status === 409) {   // nome de outra pessoa: não troca
         meta.user = before; writeMeta();
@@ -1367,7 +1439,7 @@
     } catch (err) {
       msg.textContent = 'Salvo neste aparelho. O servidor não respondeu agora; tenta de novo mais tarde.'; msg.className = 'err';
     }
-    paintName($('m-user'), nome, '👤 ');
+    paintMyTag();
     renderFriends();
     syncDown();
     if (playAfterUser) {
@@ -1404,7 +1476,7 @@
     if (coop && coop.begun) {
       const li = el('li', null, 'friend-on friend-coop');
       const name = el('span', null, 'friend-name');
-      paintName(name, '🤝 ' + coop.friend.nome, '', coop.friend.cor);
+      paintTag(name, '🤝 ' + coop.friend.nome, coop.friend.cor, coop.friend.foto);
       const b = el('button', 'SAIR', 'friend-btn friend-leave');
       b.addEventListener('click', () => endCoop('Você saiu do jogo junto.'));
       li.append(name, b);
@@ -1413,7 +1485,7 @@
     for (const f of friends) {
       const li = el('li', null, f.online ? 'friend-on' : 'friend-off');
       const name = el('span', null, 'friend-name');
-      paintName(name, f.nome, '', f.cor);
+      paintTag(name, f.nome, f.cor, f.foto);
       li.appendChild(name);
       // Amigo online: ENTRAR chama ele pra jogar junto
       if (f.online && !coop) {
@@ -1445,7 +1517,7 @@
     const m = Object.assign({}, a);
     m.coins = Math.max(a.coins || 0, b.coins || 0);
     m.gems = Math.max(a.gems || 0, b.gems || 0);
-    for (const k of ['skins', 'colors', 'codes']) m[k] = [...new Set([...(a[k] || []), ...(b[k] || [])])];
+    for (const k of ['skins', 'colors', 'codes', 'avatars']) m[k] = [...new Set([...(a[k] || []), ...(b[k] || [])])];
     m.up = Object.assign({}, a.up);
     for (const k in b.up || {}) m.up[k] = Math.max((a.up || {})[k] || 0, b.up[k] || 0);
     m.seenHelp = a.seenHelp || b.seenHelp;
@@ -1613,7 +1685,7 @@
     if (!coop) return;
     coop.last = Date.now();
     if (m.t === 'hi') {
-      coop.friend = { nome: m.nome, cor: m.cor, level: m.level };
+      coop.friend = { nome: m.nome, cor: m.cor, foto: m.foto, level: m.level };
       if (!coop.begun) { coop.begun = true; coopBegin(); }
       return;
     }
@@ -1705,7 +1777,7 @@
       joining = null;
       hideModal();
       coop = { host, pc, dc, open: true, begun: false, last: Date.now(), gone: {}, friend: { nome, level: 0 } };
-      coopSend({ t: 'hi', level: myLevel(), nome: meta.user.nome, cor: meta.nameColor });
+      coopSend({ t: 'hi', level: myLevel(), nome: meta.user.nome, cor: meta.nameColor, foto: meta.avatar });
     };
     dc.onmessage = e => { try { onCoopMsg(JSON.parse(e.data)); } catch (err) { /* mensagem estranha */ } };
     dc.onclose = () => { if (coop && coop.dc === dc) endCoop(nome + ' saiu do jogo junto.'); };

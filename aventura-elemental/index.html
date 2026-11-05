@@ -177,7 +177,18 @@
     .u-colors-title { font-weight: bold; font-size: 14px; margin-bottom: -6px; }
     #u-colors { display: flex; flex-wrap: wrap; gap: 6px; }
     .u-color { background: rgba(20, 14, 50, 0.85); border: 2px solid #4a3a8a; border-radius: 6px; padding: 5px 9px; font-weight: 900; font-size: 13px; cursor: pointer; font-family: inherit; }
-    .u-color.on { border-color: #f5c518; box-shadow: 0 0 0 2px #f5c518; }
+    .u-color.on, .u-pic.on { border-color: #f5c518; box-shadow: 0 0 0 2px #f5c518; }
+    .u-color.locked { opacity: 0.75; }
+    .u-color small { display: block; font-size: 10px; color: #fff; margin-top: 2px; }
+    .u-color small .ic { width: 10px; height: 10px; }
+    #u-avatars { display: flex; flex-wrap: wrap; gap: 6px; }
+    .u-pic { background: rgba(20, 14, 50, 0.85); border: 2px solid #4a3a8a; border-radius: 6px; padding: 3px; cursor: pointer; line-height: 0; }
+    .u-pic canvas { width: 34px; height: 34px; }
+    /* Foto de perfil do lado do nome */
+    canvas.avatar { image-rendering: pixelated; width: 18px; height: 18px; vertical-align: middle; margin-right: 4px; background: rgba(255, 255, 255, 0.08); border-radius: 3px; flex: none; }
+    .friend-name { display: flex; align-items: center; }
+    .friend-name span { overflow: hidden; text-overflow: ellipsis; }
+    .shop-note { grid-column: 1 / -1; font-size: 12px; color: #c9c3e6; margin-top: 6px; }
     /* Janelinha do jogar junto (convite, esperando, conectando) */
     #coop-modal { position: fixed; inset: 0; z-index: 70; display: none; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, 0.6); font-family: Arial, Helvetica, sans-serif; }
     #coop-modal.on { display: flex; }
@@ -385,6 +396,8 @@
         <form id="user-form" autocomplete="on" novalidate>
           <label>E-mail<input id="u-email" type="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="seu@email.com" required></label>
           <label>Nome como quer ficar<input id="u-name" type="text" placeholder="Seu nome no jogo" required></label>
+          <div class="u-colors-title">Foto de perfil</div>
+          <div id="u-avatars"></div>
           <div class="u-colors-title">Cor do nome</div>
           <div id="u-colors"></div>
           <div id="u-msg"></div>
@@ -396,6 +409,6 @@
   </div>
 
   <div id="coop-modal"><div class="coop-box"><div id="coop-title"></div><div id="coop-sub"></div><div id="coop-btns"></div></div></div>
-  <script src="game.js?v=25"></script>
+  <script src="game.js?v=26"></script>
 </body>
 </html>

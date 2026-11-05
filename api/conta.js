@@ -51,7 +51,7 @@ async function listarJogadores(email) {
   return outros.map((e, i) => {
     if (!users[i]) return null;
     const u = JSON.parse(users[i]);
-    return { nome: u.nome, cor: u.cor || 'branco', online: on.has(e) };
+    return { nome: u.nome, cor: u.cor || 'branco', foto: u.foto || 'skin:gotinha', online: on.has(e) };
   }).filter(Boolean).sort((x, y) => (y.online - x.online) || x.nome.localeCompare(y.nome));
 }
 
@@ -164,6 +164,7 @@ module.exports = async (req, res) => {
     // Salvar usuário (e-mail, nome e cor do nome)
     const nome = String(body.nome || '').trim().slice(0, 40);
     const cor = CORES.includes(body.cor) ? body.cor : 'branco';
+    const foto = /^(skin|bicho):[a-z]{1,20}$/.test(String(body.foto || '')) ? body.foto : 'skin:gotinha';
     if (!nome) return res.status(400).json({ error: 'Falta o nome.' });
 
     // Evita alguém mandando milhares de cadastros
@@ -176,7 +177,7 @@ module.exports = async (req, res) => {
     const [old, dono] = await redis(['GET', key], ['HGET', 'aventura:nomes', nomeKey(nome)]);
     if (dono && dono !== email) return res.status(409).json({ error: 'Esse nome já é de outra pessoa. Escolha outro!' });
     const prev = old ? JSON.parse(old) : null;
-    const user = { email, nome, cor, criado: prev ? prev.criado : Date.now(), atualizado: Date.now() };
+    const user = { email, nome, cor, foto, criado: prev ? prev.criado : Date.now(), atualizado: Date.now() };
     const cmds = [['SET', key, JSON.stringify(user)], ['SADD', 'aventura:users', email], ['HSET', 'aventura:nomes', nomeKey(nome), email]];
     if (prev && nomeKey(prev.nome) !== nomeKey(nome)) cmds.push(['HDEL', 'aventura:nomes', nomeKey(prev.nome)]);   // trocou de nome
     await redis(...cmds);
