@@ -1335,11 +1335,12 @@
     }
   }
 
-  // Abas da loja. Fotos e cores somem quando você já tem todas (e aí ficam as molduras)
+  // Abas da loja. Fotos, cores e molduras somem quando você já tem todas
   let shopTab = 'melhorias';
   const SHOP_TABS = [['melhorias', 'MELHORIAS'], ['gemas', 'RECURSOS ELEMENTAIS'], ['fotos', 'FOTOS DE PERFIL'], ['cores', 'COR DO NOME'], ['molduras', 'MOLDURAS']];
   const tabDone = id => id === 'fotos' ? BICHOS.every(b => meta.avatars.includes(b.id))
-    : id === 'cores' ? NAME_COLORS.every(c => meta.colors.includes(c.id)) : false;
+    : id === 'cores' ? NAME_COLORS.every(c => meta.colors.includes(c.id))
+    : id === 'molduras' ? FRAMES.every(f => f.price === 0 || meta.frames.includes(f.id)) : false;
   function renderShop() {
     const tabs = $('shop-tabs');
     tabs.innerHTML = '';
