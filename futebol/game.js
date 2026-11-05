@@ -278,7 +278,7 @@
     for (const c of data.clubs || []) { const o = document.createElement('option'); o.value = c.nome; $('clubs-dl').appendChild(o); }
   }
   const myClub = () => findClub(data.myClub || '');
-  // Escudo: a foto que você escolheu, ou o emoji
+  // Escudo: o que você montou no 🎨, ou o emoji
   function logoImg(cl, cls) {
     if (!cl.logo) return document.createTextNode(cl.badge);
     const im = new Image();
@@ -347,28 +347,6 @@
     $('club-msg').textContent = '🎨 Escudo do ' + crest.cl.nome + ' pronto!';
   });
 
-  // 📷 Escolhe uma foto do aparelho e diminui pra caber (64x64)
-  function pickLogo(cl) {
-    const inp = document.createElement('input');
-    inp.type = 'file'; inp.accept = 'image/*';
-    inp.addEventListener('change', () => {
-      const file = inp.files[0];
-      if (!file) return;
-      const im = new Image();
-      im.onload = () => {
-        const cv = document.createElement('canvas');
-        cv.width = cv.height = 64;
-        const g = cv.getContext('2d'), k = Math.min(im.width, im.height);
-        g.drawImage(im, (im.width - k) / 2, (im.height - k) / 2, k, k, 0, 0, 64, 64);
-        cl.logo = cv.toDataURL('image/png');
-        URL.revokeObjectURL(im.src);
-        save(); render();
-        $('club-msg').textContent = '📷 Escudo do ' + cl.nome + ' trocado!';
-      };
-      im.src = URL.createObjectURL(file);
-    });
-    inp.click();
-  }
   function renderClubs() {
     const c = myClub();
     const now = $('club-now');
@@ -389,12 +367,7 @@
       paint.textContent = '🎨';
       paint.title = 'Personalizar o escudo';
       paint.addEventListener('click', () => openCrest(cl));
-      const ph = document.createElement('button');
-      ph.className = 'photo';
-      ph.textContent = '📷';
-      ph.title = 'Colocar a foto do escudo';
-      ph.addEventListener('click', () => pickLogo(cl));
-      chip.append(b, paint, ph);
+      chip.append(b, paint);
       chips.appendChild(chip);
     }
   }
