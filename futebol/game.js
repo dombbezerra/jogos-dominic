@@ -55,8 +55,22 @@
       }
     }
     data.team = data.team.map(id => cardById(id) ? id : null);
+    takeNovos();
     save();
   }
+  // Jogadores que chegaram de fora (guardados em <KEY>:novos): entram no álbum sem atrapalhar quem está jogando
+  function takeNovos() {
+    let novos;
+    try { novos = JSON.parse(localStorage.getItem(KEY + ':novos')); } catch (e) { novos = null; }
+    if (!Array.isArray(novos) || !novos.length) return false;
+    data.custom = data.custom || [];
+    const have = new Set(data.custom.map(c => c.key));
+    for (const c of novos) if (c && c.key && !have.has(c.key)) data.custom.push(c);
+    try { localStorage.removeItem(KEY + ':novos'); } catch (e) { /* ok */ }
+    return true;
+  }
+  // Chegaram jogadores novos enquanto o jogo está aberto (outra aba): junta na hora
+  addEventListener('storage', e => { if (e.key === KEY + ':novos' && e.newValue && takeNovos()) { save(); render(); } });
   function save() { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* sem salvar */ } }
   const cardById = id => data.cards.find(c => c.id === id);
 
