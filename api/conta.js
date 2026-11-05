@@ -57,6 +57,33 @@ function filtrar(texto) {
   });
 }
 
+// No Gmail, ponto não conta: dom.bbezerra.@gmail.com e dombbezerra@gmail.com são o mesmo e-mail.
+// Então a conta fica guardada no jeito "sem ponto", e quem digitar com ou sem ponto cai na mesma conta
+function canon(e) {
+  const [local, dom] = e.split('@');
+  if (dom === 'gmail.com' || dom === 'googlemail.com') return local.split('+')[0].replace(/\./g, '') + '@gmail.com';
+  return e;
+}
+async function emailDaConta(raw) {
+  const e = canon(raw);
+  const [existe] = await redis(['EXISTS', 'aventura:user:' + e]);
+  if (existe) return e;
+  // Conta antiga guardada com ponto: muda pro jeito novo (uma vez só)
+  const [todos] = await redis(['SMEMBERS', 'aventura:users']);
+  const velho = (todos || []).find((x) => x !== e && canon(x) === e);
+  if (!velho) return e;
+  const [user, save, membro] = await redis(['GET', 'aventura:user:' + velho], ['GET', 'aventura:save:' + velho], ['SISMEMBER', 'aventura:chat:membros', velho]);
+  if (!user) return e;
+  const u = JSON.parse(user);
+  u.email = e;
+  const cmds = [['SET', 'aventura:user:' + e, JSON.stringify(u)], ['DEL', 'aventura:user:' + velho], ['SREM', 'aventura:users', velho],
+    ['SADD', 'aventura:users', e], ['HSET', 'aventura:nomes', nomeKey(u.nome), e], ['ZREM', 'aventura:online', velho]];
+  if (save) cmds.push(['SET', 'aventura:save:' + e, save], ['DEL', 'aventura:save:' + velho]);
+  if (membro) cmds.push(['SREM', 'aventura:chat:membros', velho], ['SADD', 'aventura:chat:membros', e]);
+  await redis(...cmds);
+  return e;
+}
+
 const ONLINE_SECS = 75;   // sem sinal por mais que isso, a pessoa sai do "online"
 const nomeKey = (n) => n.trim().toLowerCase();
 
@@ -118,8 +145,9 @@ module.exports = async (req, res) => {
       return res.status(200).json({ usuarios: lista });
     }
 
-    const email = String(body.email || '').trim().toLowerCase().slice(0, 120);
-    if (!EMAIL_OK.test(email)) return res.status(400).json({ error: 'E-mail inválido.' });
+    const rawEmail = String(body.email || '').trim().toLowerCase().slice(0, 120);
+    if (!EMAIL_OK.test(rawEmail)) return res.status(400).json({ error: 'E-mail inválido.' });
+    const email = await emailDaConta(rawEmail);
     const action = body.action || 'salvar';
 
     // Sinal de "estou jogando" + lista de amigos (o jogo chama a cada pouco)

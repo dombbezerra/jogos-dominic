@@ -1558,15 +1558,21 @@
     if (!EMAIL_OK.test(email)) { msg.textContent = 'E-mail errado. O @ fica no meio, assim: seunome@gmail.com'; msg.className = 'err'; return; }
     if (!nome) { msg.textContent = 'Escreva o nome como você quer ficar.'; msg.className = 'err'; return; }
     msg.textContent = 'Salvando...'; msg.className = '';
-    const before = meta.user;
+    const before = meta.user, beforeAt = meta.updatedAt;
     meta.user = { email, nome };
-    writeMeta();
+    if (!before || before.email !== email) {
+      // Entrou numa conta (talvez de outro aparelho): o progresso de lá vale mais que o deste aparelho.
+      // Sem isso, o celular novo, vazio, apagava a conta salva na internet
+      meta.updatedAt = 0;
+      try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch (err) { /* sem salvar */ }
+    } else writeMeta();
     try {
       const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, nome, cor: meta.nameColor, foto: meta.avatar, moldura: meta.frame }) });
       const data = await r.json().catch(() => ({}));
       if (r.status === 409) {   // nome de outra pessoa: não troca
-        meta.user = before; writeMeta();
-        msg.textContent = data.error; msg.className = 'err';
+        meta.user = before; meta.updatedAt = beforeAt;
+        try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch (err) { /* sem salvar */ }
+        msg.textContent = data.error + ' Se a conta é sua, confira se o e-mail está igualzinho.'; msg.className = 'err';
         return;
       }
       if (!r.ok) throw new Error(data.error || 'erro');
@@ -1784,8 +1790,8 @@
     if (!remote || !remote.meta) { cloudDirty = true; return syncUp(); }   // primeira vez: manda o deste aparelho
     const user = meta.user;
     if (!meta.updatedAt) {
-      // Aparelho que já tinha jogo antes de ligar o online: junta os dois
-      const merged = mergeMeta(readJSON(META_KEY) || {}, remote.meta);
+      // Aparelho que acabou de entrar na conta (ou já tinha jogo antes do online): junta os dois
+      const merged = mergeMeta(remote.meta, readJSON(META_KEY) || {});   // a conta manda; junta o que este aparelho tinha
       merged.user = user;
       localStorage.setItem(META_KEY, JSON.stringify(merged));
       const ls = readJSON(SAVE_KEY), rs = remote.save;
@@ -1798,6 +1804,7 @@
     loadMeta();
     if (!meta.updatedAt) writeMeta();
     started = false;   // o JOGAR carrega a fase de novo, já com o progresso novo
+    syncUser();        // a cor do nome e a foto da conta voltam pro servidor
     if (state === 'title') renderMenu();
     if (!meta.updatedAt || (remote.atualizado || 0) >= meta.updatedAt) { cloudDirty = true; syncUp(); }
   }
