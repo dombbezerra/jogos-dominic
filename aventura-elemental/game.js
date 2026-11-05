@@ -1773,8 +1773,10 @@
     cloudDirty = false;
     const local = readJSON(META_KEY) || {};
     delete local.user;   // o usuário de cada aparelho fica só nele
-    try { await contaApi({ action: 'salvarJogo', email: meta.user.email, dados: { meta: local, save: readJSON(SAVE_KEY), atualizado: meta.updatedAt } }, keepalive); }
-    catch (e) { cloudDirty = true; }
+    try {
+      const r = await contaApi({ action: 'salvarJogo', email: meta.user.email, dados: { meta: local, save: readJSON(SAVE_KEY), atualizado: meta.updatedAt } }, keepalive);
+      if (r && r.juntou && !keepalive) syncDown();   // a conta tinha coisas que este aparelho não tinha: puxa
+    } catch (e) { cloudDirty = true; }
   }
   // Juntar dois progressos (aparelho que ainda não tinha progresso online): fica o maior de cada coisa
   function mergeMeta(a, b) {

@@ -84,6 +84,26 @@ async function emailDaConta(raw) {
   return e;
 }
 
+// Nada comprado some: um aparelho velho (ou com o jogo antigo guardado) não apaga o que a conta já tinha.
+// Se o aparelho está sem alguma coisa que a conta tem, ele está atrasado: fica o maior de cada coisa
+const ITENS = ['skins', 'avatars', 'frames', 'colors', 'codes'];
+function protegerSave(novo, velho) {
+  const a = (velho && velho.meta) || null, b = novo.meta;
+  if (!a || !b || typeof b !== 'object') return false;
+  const atrasado = ITENS.some((k) => (a[k] || []).some((x) => !(b[k] || []).includes(x)));
+  for (const k of ITENS) b[k] = [...new Set([...(a[k] || []), ...(b[k] || [])])];
+  b.up = Object.assign({}, a.up, b.up);
+  for (const k in a.up || {}) b.up[k] = Math.max(a.up[k] || 0, (b.up || {})[k] || 0);
+  if (!atrasado) return false;
+  for (const k of ['coins', 'gems']) b[k] = Math.max(a[k] || 0, b[k] || 0);
+  for (const k of ['skin', 'nameColor', 'avatar', 'frame']) if (a[k] != null) b[k] = a[k];
+  b.seenHelp = !!(a.seenHelp || b.seenHelp);
+  if (velho.save && (!novo.save || (velho.save.level || 0) > (novo.save.level || 0))) novo.save = velho.save;
+  novo.atualizado = Date.now();   // os aparelhos puxam a versão juntada
+  b.updatedAt = novo.atualizado;
+  return true;
+}
+
 const ONLINE_SECS = 75;   // sem sinal por mais que isso, a pessoa sai do "online"
 const nomeKey = (n) => n.trim().toLowerCase();
 
@@ -235,12 +255,12 @@ module.exports = async (req, res) => {
     // Progresso do jogo na nuvem: o mesmo e-mail em outro aparelho traz as mesmas gemas, personagens e fase
     if (action === 'salvarJogo') {
       const dados = body.dados;
-      const txt = JSON.stringify(dados || null);
-      if (!dados || typeof dados !== 'object' || txt.length > 50000) return res.status(400).json({ error: 'Dados inválidos.' });
-      const [exists] = await redis(['EXISTS', 'aventura:user:' + email]);
+      if (!dados || typeof dados !== 'object' || JSON.stringify(dados).length > 50000) return res.status(400).json({ error: 'Dados inválidos.' });
+      const [exists, oldRaw] = await redis(['EXISTS', 'aventura:user:' + email], ['GET', 'aventura:save:' + email]);
       if (!exists) return res.status(404).json({ error: 'Usuário não encontrado.' });
-      await redis(['SET', 'aventura:save:' + email, txt]);
-      return res.status(200).json({ ok: true });
+      const juntou = protegerSave(dados, oldRaw ? JSON.parse(oldRaw) : null);
+      await redis(['SET', 'aventura:save:' + email, JSON.stringify(dados)]);
+      return res.status(200).json({ ok: true, juntou });
     }
     if (action === 'carregarJogo') {
       const [raw] = await redis(['GET', 'aventura:save:' + email]);
