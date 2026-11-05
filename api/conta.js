@@ -39,7 +39,7 @@ async function redis(...commands) {
 const CHAT_GIFS = ['rindo', 'fogo', 'festa', 'joinha', 'oculos', 'caveira', 'coracao', 'trofeu', 'raio', 'chorando', 'susto', 'danca'];
 // GIFs comprados na loja: só manda quem tem (está no progresso salvo da conta)
 const GIFS_LOJA = ['dragao', 'foguete', 'alien', 'robo', 'unicornio', 'coroa', 'diamante', 'ninja',
-  'rindoarco', 'fogoarco', 'coracaoarco', 'joinhaarco', 'estrelaarco', 'oculosarco', 'arcoiris', 'dragaoarco'];
+  'rindoarco', 'fogoarco', 'coracaoarco', 'joinhaarco', 'estrelaarco', 'oculosarco', 'arcoiris', 'dragaoarco', 'coroaarco'];
 const PALAVROES = ['porra', 'caralho', 'merda', 'bosta', 'puta', 'puto', 'putaria', 'fdp', 'vsf', 'vtnc', 'tnc', 'pqp', 'cu', 'cuzao', 'buceta', 'piroca',
   'foda', 'fodase', 'foder', 'fudeu', 'arrombado', 'arrombada', 'viado', 'otario', 'otaria', 'idiota', 'imbecil', 'desgraca', 'desgracado', 'cacete',
   'babaca', 'retardado', 'retardada', 'corno', 'vagabundo', 'vagabunda', 'piranha', 'safado', 'safada', 'sexo', 'nude', 'nudes', 'pinto', 'rola',

@@ -1688,6 +1688,7 @@
     ['coracaoarco', '❤️', 'bate', 30, 'moeda', true], ['joinhaarco', '👍', 'bate', 30, 'moeda', true],
     ['estrelaarco', '⭐', 'gira', 40, 'moeda', true], ['oculosarco', '😎', 'balanca', 40, 'moeda', true],
     ['arcoiris', '🌈', 'pula', 40, 'moeda', true], ['dragaoarco', '🐉', 'balanca', 60, 'moeda', true],
+    ['coroaarco', '👑', 'bate', 60, 'moeda', true],
   ];
   const SHOP_GIFS = CHAT_GIFS.filter(g => g[3]);
   const hasGif = id => { const g = CHAT_GIFS.find(x => x[0] === id); return !!g && (!g[3] || meta.gifs.includes(id)); };
