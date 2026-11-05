@@ -3,7 +3,8 @@
   const $ = id => document.getElementById(id);
   const canvas = $('game');
   const ctx = canvas.getContext('2d');
-  const W = 480, H = 300;
+  let W = 480;   // a largura acompanha a tela (celular deitado é mais comprido); a altura é fixa
+  const H = 300;
 
   // Perfil: ?perfil=teste guarda tudo separado (aba de teste)
   const PERFIL = (new URLSearchParams(location.search).get('perfil') || '').replace(/[^a-z0-9]/gi, '').slice(0, 20);
@@ -613,7 +614,6 @@
       }
       if (!players.length) row.appendChild(Object.assign(document.createElement('div'), { className: 'hint', textContent: 'Ainda sem jogadores.' }));
       sec.append(h, row);
-      if (isAdm()) sec.appendChild(addForm(id));   // só o ADM adiciona jogador
       list.appendChild(sec);
       // Completou a seleção pela primeira vez: prêmio!
       if (full && !data.albumDone.includes(id)) {
@@ -643,25 +643,6 @@
     w.append(el, b);
     return w;
   }
-  // ➕ Adicionar um jogador seu na seleção: ele passa a sair nos pacotes
-  function addForm(id) {
-    const wrap = document.createElement('div');
-    wrap.className = 'album-add';
-    const open = document.createElement('button');
-    open.className = 'add-open';
-    open.textContent = '➕ ADICIONAR JOGADOR';
-    const form = document.createElement('div');
-    form.className = 'add-form';
-    form.style.display = 'none';
-    form.append(...playerForm('ADICIONAR', (c) => {
-      data.custom = data.custom || [];
-      data.custom.push(Object.assign({ key: 'meu-' + Date.now(), custom: true, club: BADGES[id][1], badge: BADGES[id][0], album: id }, c));
-      save(); render();
-    }));
-    open.addEventListener('click', () => { form.style.display = form.style.display === 'none' ? 'flex' : 'none'; });
-    wrap.append(open, form);
-    return wrap;
-  }
 
   // ── Som ───────────────────────────────────────────────────
   let audio = null;
@@ -678,7 +659,15 @@
   }
 
   // ── Partida ───────────────────────────────────────────────
-  const FX0 = 24, FX1 = 456, FY0 = 34, FY1 = 286;          // campo
+  const FX0 = 24, FY0 = 34, FY1 = 286;          // campo
+  let FX1 = W - 24;
+  // Tela cheia: o campo estica pro formato da tela (sem esticar o desenho)
+  function fitScreen() {
+    const a = innerWidth / Math.max(1, innerHeight);
+    if (!M) { W = Math.round(clamp(H * a, 420, 720)); FX1 = W - 24; canvas.width = W; }
+    document.body.classList.toggle('portrait', a < 1);
+  }
+  addEventListener('resize', fitScreen);
   const MIDY = (FY0 + FY1) / 2, GOAL_H = 70;
   const GY0 = MIDY - GOAL_H / 2, GY1 = MIDY + GOAL_H / 2;   // boca do gol
   const MATCH_FRAMES = 60 * 120;                            // 2 minutos
@@ -717,6 +706,9 @@
   }
 
   function startMatch() {
+    fitScreen();
+    // No celular, entra em tela cheia (esconde a barra do navegador)
+    if (isTouch && document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
     const myOvr = teamOvr();
     const opp = clamp(myOvr + Math.floor(Math.random() * 11) - 4, MIN_R, MAX_R);
     const players = [];
