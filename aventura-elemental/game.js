@@ -1702,10 +1702,10 @@
   };
   let chatMsgs = [], chatLast = 0, chatMember = null, chatBusy = false;
   // ADM: quem entrou na página de avisos neste aparelho pode convidar direto pelo jogo
-  // ADM: login da página de avisos neste aparelho, ou conta marcada como ADM (vale em todo aparelho)
+  // ADM: conta marcada como ADM na página de avisos e com o nome de ADM (vale em todo aparelho)
   let amAdm = false;
   const avisosToken = () => { try { return localStorage.getItem('avisos_token'); } catch (e) { return null; } };
-  const adminToken = () => !!(avisosToken() || amAdm);
+  const adminToken = () => amAdm;   // só a conta de ADM (com o nome de ADM) vê os botões
   let chatGuests = {};   // nome → está no chat (só pro ADM)
   async function adminChat(body) {
     const headers = { 'Content-Type': 'application/json' };

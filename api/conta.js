@@ -107,6 +107,15 @@ function protegerSave(novo, velho) {
   return true;
 }
 
+// ADM: a conta precisa estar marcada (na página de avisos) E estar com o nome de ADM.
+// Trocou o nome pra outro, deixa de ser ADM até voltar pro nome
+const NOMES_ADM = ['endrick'];
+const admPeloNome = (raw) => !!raw && NOMES_ADM.includes(nomeKey(JSON.parse(raw).nome));
+async function ehAdm(email) {
+  const [marcado, raw] = await redis(['SISMEMBER', 'aventura:adm', email], ['GET', 'aventura:user:' + email]);
+  return !!marcado && admPeloNome(raw);
+}
+
 const ONLINE_SECS = 75;   // sem sinal por mais que isso, a pessoa sai do "online"
 const nomeKey = (n) => n.trim().toLowerCase();
 
@@ -141,8 +150,7 @@ module.exports = async (req, res) => {
       // Login da Base Secreta pode tudo. Conta de ADM (marcada pelo login) só vê a lista e convida pro chat
       let ok = isAdmin(req);
       if (!ok && ['admin-lista', 'admin-chat', 'admin-limpar-chat'].includes(body.action) && EMAIL_OK.test(String(body.email || ''))) {
-        const [adm] = await redis(['SISMEMBER', 'aventura:adm', canon(String(body.email).trim().toLowerCase())]);
-        ok = !!adm;
+        ok = await ehAdm(canon(String(body.email).trim().toLowerCase()));
       }
       if (!ok) return res.status(401).json({ error: 'Entre com o login da Base Secreta.' });
       // Apagar todas as conversas do chat (os aparelhos limpam a tela sozinhos)
@@ -182,7 +190,7 @@ module.exports = async (req, res) => {
         if (body.convidar) { await redis(['SADD', 'aventura:chat:membros', todos[i]]); membros.add(todos[i]); }
         else { await redis(['SREM', 'aventura:chat:membros', todos[i]]); membros.delete(todos[i]); }
       }
-      const lista = users.map((raw, i) => { if (!raw) return null; const u = JSON.parse(raw); return { nome: u.nome, cor: u.cor || 'branco', chat: membros.has(todos[i]) || adms.has(todos[i]), adm: adms.has(todos[i]) }; })
+      const lista = users.map((raw, i) => { if (!raw) return null; const u = JSON.parse(raw); return { nome: u.nome, cor: u.cor || 'branco', chat: membros.has(todos[i]) || (adms.has(todos[i]) && admPeloNome(raw)), adm: adms.has(todos[i]) && admPeloNome(raw) }; })
         .filter(Boolean)
         .sort((a, b) => a.nome.localeCompare(b.nome));
       return res.status(200).json({ usuarios: lista });
@@ -200,13 +208,14 @@ module.exports = async (req, res) => {
       const u = JSON.parse(raw);
       // Usuários de antes da lista de nomes entram nela aqui (se o nome ainda estiver livre)
       await redis(['ZADD', 'aventura:online', Date.now(), email], ['HSETNX', 'aventura:nomes', nomeKey(u.nome), email]);
-      const [adm] = await redis(['SISMEMBER', 'aventura:adm', email]);
+      const adm = await ehAdm(email);
       return res.status(200).json({ jogadores: await listarJogadores(email), adm: !!adm });
     }
 
     // Chat de amigos (só convidados)
     if (action === 'chatLer' || action === 'chatEnviar') {
-      const [membro, raw, adm] = await redis(['SISMEMBER', 'aventura:chat:membros', email], ['GET', 'aventura:user:' + email], ['SISMEMBER', 'aventura:adm', email]);
+      const [membro, raw, marcado] = await redis(['SISMEMBER', 'aventura:chat:membros', email], ['GET', 'aventura:user:' + email], ['SISMEMBER', 'aventura:adm', email]);
+      const adm = !!marcado && admPeloNome(raw);
       if (!(membro || adm) || !raw) return res.status(200).json({ membro: false });
       if (action === 'chatEnviar') {
         const texto = filtrar(body.texto);
