@@ -14,7 +14,10 @@
   const FIRST = ['Léo', 'Davi', 'Rafa', 'Gui', 'Theo', 'Enzo', 'Juca', 'Beto', 'Caio', 'Duda', 'Tito', 'Nico', 'Lipe', 'Vini', 'Kauã', 'Bento', 'Iago', 'Zeca', 'Maxi', 'Rudi', 'Pedrinho', 'Lucca'];
   const LAST = ['Raio', 'Bala', 'Foguete', 'Trovão', 'Muralha', 'Furacão', 'Canhão', 'Mágico', 'Flecha', 'Tigre', 'Gelo', 'Chama', 'Onda', 'Cometa', 'Dragão', 'Faísca', 'Paredão', 'Tanque', 'Relâmpago', 'Ventania'];
   const FACES = ['😀', '😎', '🤠', '🧐', '😤', '🥶', '😄', '🦁', '🐯', '🦊', '🐺', '🤖', '👽', '🥷', '🧙', '🐲'];
-  const POS = ['GOL', 'ZAG', 'MEI', 'ATA'];
+  // Posições (sigla e nome), igual no FC
+  const POSITIONS = [['ATA', 'Atacante'], ['PD', 'Ponta-direita'], ['PE', 'Ponta-esquerda'], ['MEI', 'Meia'], ['MC', 'Meia-central'],
+    ['MD', 'Meia-direita'], ['ME', 'Meia-esquerda'], ['LD', 'Lateral direito'], ['LE', 'Lateral esquerdo'], ['ZAG', 'Zagueiro'], ['GOL', 'Goleiro']];
+  const POS = POSITIONS.map(p => p[0]);
   const MIN_R = 60, MAX_R = 130;
   const TIERS = [[120, 'lenda', 'LENDA'], [105, 'elite', 'ELITE'], [90, 'ouro', 'OURO'], [75, 'prata', 'PRATA'], [0, 'bronze', 'BRONZE']];
   const tierOf = r => TIERS.find(t => r >= t[0]);
@@ -295,7 +298,7 @@
     form.className = 'add-form';
     form.style.display = 'none';
     form.innerHTML = '<input class="a-nome" maxlength="22" placeholder="Nome do jogador">' +
-      '<select class="a-pos"><option>ATA</option><option>MEI</option><option>ZAG</option><option>GOL</option></select>' +
+      '<select class="a-pos">' + POSITIONS.map(([sg, nm]) => '<option value="' + sg + '">' + nm + ' (' + sg + ')</option>').join('') + '</select>' +
       '<input class="a-r" type="number" min="60" max="130" value="100" title="Nota (60 a 130)">' +
       '<select class="a-face">' + FACES.concat(['⚽', '🐐', '👑', '🔥', '⚡', '🧤']).map(f => '<option>' + f + '</option>').join('') + '</select>' +
       '<button class="a-ok">ADICIONAR</button><div class="a-msg"></div>';
