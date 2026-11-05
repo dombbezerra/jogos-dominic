@@ -302,7 +302,8 @@
     .mbtn.big { font-size: 20px; min-width: 140px; }
     .cyan { background: #5ccfff; } .orange { background: #ff9a2e; } .green { background: #2fd15a; color: #fff; }
     .purple { background: #b06cff; color: #fff; } .yellow { background: #f5c518; }
-    .back { margin-top: 14px; min-width: 140px; }
+    /* VOLTAR fica no canto de baixo e vai junto quando você desce a tela */
+    .back { position: sticky; bottom: 0; z-index: 5; display: block; margin: 14px auto 0 0; min-width: 140px; box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.2), 0 4px 14px rgba(0, 0, 0, 0.6); }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
     .card {
       background: rgba(20, 14, 50, 0.85); border: 2px solid #4a3a8a; border-radius: 8px; padding: 10px 6px;
