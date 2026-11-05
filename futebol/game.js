@@ -367,7 +367,18 @@
       paint.textContent = '🎨';
       paint.title = 'Personalizar o escudo';
       paint.addEventListener('click', () => openCrest(cl));
-      chip.append(b, paint);
+      // 🗑️ apagar o time (toca duas vezes)
+      const del = document.createElement('button');
+      del.className = 'del';
+      del.textContent = '🗑️';
+      del.addEventListener('click', () => {
+        if (del.dataset.armed !== '1') { del.dataset.armed = '1'; del.textContent = 'Apagar?'; setTimeout(() => { del.dataset.armed = ''; del.textContent = '🗑️'; }, 3000); return; }
+        data.clubs = data.clubs.filter(x => x !== cl);
+        if (data.myClub === cl.nome) data.myClub = null;
+        save(); fillClubList(); render();
+        $('club-msg').textContent = '🗑️ ' + cl.nome + ' foi apagado.';
+      });
+      chip.append(b, paint, del);
       chips.appendChild(chip);
     }
   }
