@@ -1581,20 +1581,13 @@
     if (!EMAIL_OK.test(email)) { msg.textContent = 'E-mail errado. O @ fica no meio, assim: seunome@gmail.com'; msg.className = 'err'; return; }
     if (!nome) { msg.textContent = 'Escreva o nome como você quer ficar.'; msg.className = 'err'; return; }
     msg.textContent = 'Salvando...'; msg.className = '';
-    const before = meta.user, beforeAt = meta.updatedAt;
-    meta.user = { email, nome };
-    if (!before || before.email !== email) {
-      // Entrou numa conta (talvez de outro aparelho): o progresso de lá vale mais que o deste aparelho.
-      // Sem isso, o celular novo, vazio, apagava a conta salva na internet
-      meta.updatedAt = 0;
-      try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch (err) { /* sem salvar */ }
-    } else writeMeta();
+    const before = meta.user;
+    const switching = !!before && before.email !== email;
     try {
-      const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, nome, cor: meta.nameColor, foto: meta.avatar, moldura: meta.frame }) });
+      const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(switching ? { email, nome } : { email, nome, cor: meta.nameColor, foto: meta.avatar, moldura: meta.frame }) });
       const data = await r.json().catch(() => ({}));
-      if (r.status === 409) {   // nome de outra pessoa: não troca
-        meta.user = before; meta.updatedAt = beforeAt;
-        try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch (err) { /* sem salvar */ }
+      if (r.status === 409) {   // nome de outra pessoa: não troca nada
         msg.textContent = data.error + ' Se a conta é sua, confira se o e-mail está igualzinho.'; msg.className = 'err';
         return;
       }
@@ -1603,9 +1596,26 @@
     } catch (err) {
       msg.textContent = 'Salvo neste aparelho. O servidor não respondeu agora; tenta de novo mais tarde.'; msg.className = 'err';
     }
+    if (switching) {
+      // Trocou de conta: este aparelho começa do zero e puxa só o que a outra conta tem
+      // (sem isso, as coisas da conta antiga iam junto pra conta nova)
+      try {
+        localStorage.setItem(META_KEY, JSON.stringify({ user: { email, nome }, seenHelp: true, updatedAt: 0 }));
+        localStorage.removeItem(SAVE_KEY);
+      } catch (err) { /* sem salvar */ }
+      loadMeta(); meta.user = { email, nome }; meta.updatedAt = 0;
+      started = false;
+      chatMsgs = []; chatLast = 0; chatMember = null; amAdm = false;
+    } else if (!before) {
+      // Primeira conta neste aparelho: o progresso da internet (de outro aparelho) vale mais que o daqui
+      meta.user = { email, nome }; meta.updatedAt = 0;
+      try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch (err) { /* sem salvar */ }
+    } else { meta.user = { email, nome }; writeMeta(); }
+    renderMenu();
     paintMyTag();
     renderFriends();
     syncDown();
+    heartbeat();   // amigos e ADM da conta nova
     if (playAfterUser) {
       playAfterUser = false;
       setTimeout(() => { showPage('main'); startPlaying(); }, 1200);
