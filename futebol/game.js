@@ -172,8 +172,26 @@
     if (picking < 0) { $('team-hint').textContent = 'Toque num jogador do campo pra trocar.'; return; }
     $('team-hint').textContent = 'Escolha quem entra no ' + SLOTS[picking].label + ':';
     if (!data.cards.length) { $('team-hint').textContent = 'Você ainda não tem jogadores. Abra pacotes ou crie no 📒 ÁLBUM!'; return; }
-    const others = data.cards.filter(c => c.id !== data.team[picking]).sort((a, b) => effR(b, picking) - effR(a, picking));
-    for (const c of others) {
+    // Primeiro os da posição da vaga (do melhor pro pior), depois os outros
+    const pos = SLOTS[picking].pos, posName = (POSITIONS.find(p => p[0] === pos) || [pos, pos])[1];
+    const others = data.cards.filter(c => c.id !== data.team[picking]);
+    const same = others.filter(c => c.pos === pos).sort((a, b) => b.r - a.r);
+    const rest = others.filter(c => c.pos !== pos).sort((a, b) => effR(b, picking) - effR(a, picking));
+    const head = t => { const h = document.createElement('div'); h.className = 'pick-head'; h.textContent = t; list.appendChild(h); };
+    head(same.length ? '⭐ ' + posName.toUpperCase() + ' (' + same.length + ')' : 'Nenhum ' + posName.toLowerCase() + ' ainda');
+    // Separado por país (na ordem do álbum); quem não tem país vai no fim
+    const order = c => { const i = ALBUM.findIndex(([id]) => BADGES[id][1] === c.club); return i < 0 ? 99 : i; };
+    same.sort((a, b) => order(a) - order(b) || b.r - a.r);
+    let lastCountry;
+    for (const c of [...same, null, ...rest]) {
+      if (c === null) { if (rest.length) head('Outras posições (jogam pior aqui)'); lastCountry = undefined; continue; }
+      if (c.pos === pos && c.club !== lastCountry) {
+        lastCountry = c.club;
+        const sub = document.createElement('div');
+        sub.className = 'pick-country';
+        sub.textContent = c.club ? (c.badge || '') + ' ' + c.club : 'Sem país';
+        list.appendChild(sub);
+      }
       const where = data.team.indexOf(c.id);
       const ce = cardEl(c, where >= 0 ? 'in-team' : '');
       ce.addEventListener('click', () => {
