@@ -244,6 +244,9 @@
     { id: 'cubo',      name: 'Cubo de Gelo',      price: 15 },
     { id: 'raio',      name: 'Raio',              price: 15 },
     { id: 'arcoiris',  name: 'Chama Arco-íris',   price: 150 },
+    { id: 'gotaarcoiris', name: 'Gota Arco-íris', price: 150 },
+    { id: 'raioarcoiris', name: 'Raio Arco-íris', price: 150 },
+    { id: 'cuboarcoiris', name: 'Cubo Arco-íris', price: 150 },
   ];
   // 'skin:gotinha' = rosto de personagem; 'bicho:slime' = bicho
   const hasAvatar = id => {
@@ -253,7 +256,10 @@
   function avatarCanvas(id, cls) {
     const c = document.createElement('canvas');
     c.className = 'avatar' + (cls ? ' ' + cls : '');
-    const [kind, v] = String(id || 'skin:gotinha').split(':');
+    const [kind, full] = String(id || 'skin:gotinha').split(':');
+    // Gota/Raio/Cubo arco-íris: desenha o normal e pinta cada faixa de uma cor
+    const rainbowed = /^(gota|raio|cubo)arcoiris$/.test(full);
+    const v = rainbowed ? full.replace('arcoiris', '') : full;
     const g = c.getContext('2d');
     const p = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
     if (kind === 'skin') {
@@ -279,13 +285,32 @@
       p(5, 12, 6, 2, '#1f6fd0'); p(5, 7, 2, 3, '#cfeeff');
     } else if (v === 'chama' || v === 'arcoiris') {
       c.width = c.height = 16;
-      // Chama de fogo; a do arco-íris tem uma faixa de cada cor
+      // Fogo de verdade: várias pontas, vermelho por fora e amarelo no meio. O arco-íris pinta cada faixa de uma cor
+      const FLAME = [
+        '.......R........',
+        '......RR.....R..',
+        '..R...RR....RR..',
+        '..RR..ROR...RR..',
+        '..RR.ROOR..ROR..',
+        '.RRR.ROOOR.ROR.R',
+        '.ROR.ROOOORROORR',
+        '.ROORROYOOOROOR.',
+        '.ROOOOYYOOOOOOR.',
+        'RROOOYYYYOOOORR.',
+        'ROOOYYYYYYOOOOR.',
+        'ROOYYYWWYYYOOOR.',
+        'ROOYYWWWWYYYOOR.',
+        '.ROOYYWWWYYOOR..',
+        '..RROOYYYOORR...',
+        '....RRRRRRR.....',
+      ];
       const rb = v === 'arcoiris';
-      const col = k => rb ? RAINBOW[k % RAINBOW.length] : ['#ff3a1a', '#ff7a1a', '#ffb02e', '#ffe94a'][Math.min(k, 3)];
-      p(7, 0, 2, 2, col(rb ? 0 : 0)); p(6, 2, 4, 2, col(rb ? 1 : 0)); p(5, 4, 6, 2, col(rb ? 2 : 1));
-      p(4, 6, 8, 2, col(rb ? 3 : 1)); p(3, 8, 10, 3, col(rb ? 4 : 2)); p(4, 11, 8, 3, col(rb ? 5 : 2)); p(5, 14, 6, 1, col(rb ? 0 : 1));
-      if (!rb) { p(6, 9, 4, 4, '#ffe94a'); p(7, 7, 2, 2, '#ffb02e'); }
-      else { p(6, 9, 4, 4, '#fff'); }
+      const FIRE = { R: '#d8261a', O: '#ff7a1a', Y: '#ffd23a', W: '#fff6b0' };
+      FLAME.forEach((row, y) => [...row].forEach((ch, x) => {
+        if (ch === '.') return;
+        const col = !rb ? FIRE[ch] : ch === 'R' || ch === 'O' ? RAINBOW[Math.floor(y / 3) % RAINBOW.length] : '#fff';
+        p(x, y, 1, 1, col);
+      }));
     } else if (v === 'cubo') {
       c.width = c.height = 16;
       p(2, 4, 12, 10, '#9fe0ff'); p(4, 2, 12, 2, '#cff4ff'); p(14, 4, 2, 10, '#6cc4ef'); p(2, 2, 2, 2, '#cff4ff');
@@ -300,6 +325,15 @@
       p(8, 12, 4, 3, '#ff3030'); p(16, 12, 4, 3, '#ff3030');
       p(4, 2, 20, 5, '#ffd23a'); p(4, 0, 3, 3, '#ffd23a'); p(12, 0, 4, 3, '#ffd23a'); p(21, 0, 3, 3, '#ffd23a');
       p(13, 3, 2, 2, '#ff3030');
+    }
+    if (rainbowed) {
+      const img = g.getImageData(0, 0, c.width, c.height), d = img.data;
+      for (let i = 0; i < d.length; i += 4) {
+        if (!d[i + 3] || (d[i] > 235 && d[i + 1] > 235 && d[i + 2] > 235)) continue;   // brilho branco fica
+        const y = Math.floor(i / 4 / c.width), hex = RAINBOW[Math.floor(y / 3) % RAINBOW.length];
+        d[i] = parseInt(hex.slice(1, 3), 16); d[i + 1] = parseInt(hex.slice(3, 5), 16); d[i + 2] = parseInt(hex.slice(5, 7), 16);
+      }
+      g.putImageData(img, 0, 0);
     }
     return c;
   }
