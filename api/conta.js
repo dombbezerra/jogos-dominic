@@ -37,6 +37,9 @@ async function redis(...commands) {
 
 // ── Chat de amigos: só entra quem o ADM convidou (na página de avisos). Escreve livre, mas com filtro ──
 const CHAT_GIFS = ['rindo', 'fogo', 'festa', 'joinha', 'oculos', 'caveira', 'coracao', 'trofeu', 'raio', 'chorando', 'susto', 'danca'];
+// GIFs comprados na loja: só manda quem tem (está no progresso salvo da conta)
+const GIFS_LOJA = ['dragao', 'foguete', 'alien', 'robo', 'unicornio', 'coroa', 'diamante', 'ninja',
+  'rindoarco', 'fogoarco', 'coracaoarco', 'joinhaarco', 'estrelaarco', 'oculosarco', 'arcoiris', 'dragaoarco'];
 const PALAVROES = ['porra', 'caralho', 'merda', 'bosta', 'puta', 'puto', 'putaria', 'fdp', 'vsf', 'vtnc', 'tnc', 'pqp', 'cu', 'cuzao', 'buceta', 'piroca',
   'foda', 'fodase', 'foder', 'fudeu', 'arrombado', 'arrombada', 'viado', 'otario', 'otaria', 'idiota', 'imbecil', 'desgraca', 'desgracado', 'cacete',
   'babaca', 'retardado', 'retardada', 'corno', 'vagabundo', 'vagabunda', 'piranha', 'safado', 'safada', 'sexo', 'nude', 'nudes', 'pinto', 'rola',
@@ -86,7 +89,7 @@ async function emailDaConta(raw) {
 
 // Nada comprado some: um aparelho velho (ou com o jogo antigo guardado) não apaga o que a conta já tinha.
 // Se o aparelho está sem alguma coisa que a conta tem, ele está atrasado: fica o maior de cada coisa
-const ITENS = ['skins', 'avatars', 'frames', 'colors', 'codes'];
+const ITENS = ['skins', 'avatars', 'frames', 'colors', 'codes', 'gifs'];
 function protegerSave(novo, velho) {
   const a = (velho && velho.meta) || null, b = novo.meta;
   if (!a || !b || typeof b !== 'object') return false;
@@ -207,7 +210,12 @@ module.exports = async (req, res) => {
       if (!(membro || adm) || !raw) return res.status(200).json({ membro: false });
       if (action === 'chatEnviar') {
         const texto = filtrar(body.texto);
-        const gif = CHAT_GIFS.includes(body.gif) ? body.gif : null;
+        let gif = CHAT_GIFS.includes(body.gif) || GIFS_LOJA.includes(body.gif) ? body.gif : null;
+        if (gif && GIFS_LOJA.includes(gif) && !adm) {
+          const [save] = await redis(['GET', 'aventura:save:' + email]);
+          const tem = save && ((JSON.parse(save).meta || {}).gifs || []).includes(gif);
+          if (!tem) return res.status(403).json({ error: 'Esse GIF é da loja. Compre lá primeiro!' });
+        }
         if (!texto && !gif) return res.status(400).json({ error: 'Mensagem vazia.' });
         const [ok] = await redis(['SET', 'aventura:chat:rl:' + email, '1', 'PX', 1200, 'NX']);
         if (!ok) return res.status(429).json({ error: 'Calma! Espera um pouquinho.' });

@@ -357,7 +357,7 @@
   const paintMyTag = () => paintTag($('m-user'), meta.user ? meta.user.nome : '', meta.nameColor, meta.avatar, meta.frame);
   // meta.coins = Gemas Elementais (ganhas jogando); meta.gems = Moedas Elementais (especiais)
   const meta = { coins: 0, gems: 0, skins: FREE_SKINS.slice(), skin: 'gotinha', up: { vida: 0, forca: 0, rapido: 0, veloz: 0 },
-    colors: ['branco'], nameColor: 'branco', avatars: [], avatar: 'skin:gotinha', frames: [], frame: 'nenhuma', user: null };
+    colors: ['branco'], nameColor: 'branco', avatars: [], avatar: 'skin:gotinha', frames: [], frame: 'nenhuma', gifs: [], user: null };
   let chestHearts = 0;   // corações ganhos nos baús desta aventura
   function loadMeta() {
     let m = null;
@@ -386,6 +386,7 @@
     meta.avatar = hasAvatar(m.avatar) ? m.avatar : 'skin:' + meta.skin;
     meta.frames = Array.isArray(m.frames) ? m.frames.filter(id => FRAMES.some(f => f.id === id)) : [];
     meta.frame = meta.frames.includes(m.frame) ? m.frame : 'nenhuma';
+    meta.gifs = Array.isArray(m.gifs) ? m.gifs.filter(id => typeof id === 'string') : [];
     meta.updatedAt = m.updatedAt || 0;
     if (refund) writeMeta();   // devolve uma vez só
   }
@@ -1339,10 +1340,11 @@
 
   // Abas da loja. Fotos, cores e molduras somem quando você já tem todas
   let shopTab = 'melhorias';
-  const SHOP_TABS = [['melhorias', 'MELHORIAS'], ['gemas', 'RECURSOS ELEMENTAIS'], ['fotos', 'FOTOS DE PERFIL'], ['cores', 'COR DO NOME'], ['molduras', 'MOLDURAS']];
+  const SHOP_TABS = [['melhorias', 'MELHORIAS'], ['gemas', 'RECURSOS ELEMENTAIS'], ['fotos', 'FOTOS DE PERFIL'], ['cores', 'COR DO NOME'], ['molduras', 'MOLDURAS'], ['gifs', 'GIFS DO CHAT']];
   const tabDone = id => id === 'fotos' ? BICHOS.every(b => meta.avatars.includes(b.id))
     : id === 'cores' ? NAME_COLORS.every(c => meta.colors.includes(c.id))
-    : id === 'molduras' ? FRAMES.every(f => f.price === 0 || meta.frames.includes(f.id)) : false;
+    : id === 'molduras' ? FRAMES.every(f => f.price === 0 || meta.frames.includes(f.id))
+    : id === 'gifs' ? SHOP_GIFS.every(g => meta.gifs.includes(g[0])) : false;
   function renderShop() {
     const tabs = $('shop-tabs');
     tabs.innerHTML = '';
@@ -1359,7 +1361,28 @@
     else if (shopTab === 'gemas') shopGems(grid);
     else if (shopTab === 'fotos') shopAvatars(grid);
     else if (shopTab === 'cores') shopColors(grid);
-    else shopFrames(grid);
+    else if (shopTab === 'molduras') shopFrames(grid);
+    else shopGifs(grid);
+  }
+
+  // GIFs do chat: uns com Gema Elemental, os arco-íris com Moeda Elemental
+  function shopGifs(grid) {
+    for (const [id, , , price, kind, arco] of SHOP_GIFS) {
+      const have = meta.gifs.includes(id), wallet = kind === 'gema' ? 'coins' : 'gems';
+      const btn = el('button', 'SEU', have ? 'cyan' : kind === 'gema' ? 'orange' : 'purple');
+      if (!have) priced(btn, '', kind, price);
+      btn.disabled = have || meta[wallet] < price;
+      btn.addEventListener('click', () => {
+        meta[wallet] -= price; meta.gifs.push(id);
+        writeMeta(); renderMenu();
+        syncUp();   // o servidor confere que você tem o GIF antes de deixar mandar
+      });
+      const d = card(false);
+      const pic = el('div', null, 'icon gif-shop');
+      pic.appendChild(gifEl(id));
+      d.append(pic, el('b', arco ? 'Arco-íris' : 'GIF'), el('small', have ? 'Já é seu! Use no 💬 CHAT' : 'Custa ' + price + (kind === 'gema' ? ' Gemas' : ' Moedas') + ' Elementais'), btn);
+      grid.appendChild(d);
+    }
   }
 
   function shopColors(grid) {
@@ -1657,10 +1680,25 @@
     ['rindo', '😂', 'pula'], ['fogo', '🔥', 'treme'], ['festa', '🎉', 'gira'], ['joinha', '👍', 'bate'],
     ['oculos', '😎', 'balanca'], ['caveira', '💀', 'treme'], ['coracao', '❤️', 'bate'], ['trofeu', '🏆', 'pula'],
     ['raio', '⚡', 'pisca'], ['chorando', '😭', 'treme'], ['susto', '😱', 'bate'], ['danca', '🕺', 'balanca'],
+    // GIFs da loja: [id, emoji, jeito de mexer, preço, 'gema' ou 'moeda', arco-íris?]
+    ['dragao', '🐉', 'balanca', 60, 'gema'], ['foguete', '🚀', 'pula', 60, 'gema'], ['alien', '👽', 'treme', 60, 'gema'],
+    ['robo', '🤖', 'balanca', 60, 'gema'], ['unicornio', '🦄', 'pula', 100, 'gema'], ['coroa', '👑', 'bate', 100, 'gema'],
+    ['diamante', '💎', 'gira', 100, 'gema'], ['ninja', '🥷', 'treme', 100, 'gema'],
+    ['rindoarco', '😂', 'pula', 30, 'moeda', true], ['fogoarco', '🔥', 'treme', 30, 'moeda', true],
+    ['coracaoarco', '❤️', 'bate', 30, 'moeda', true], ['joinhaarco', '👍', 'bate', 30, 'moeda', true],
+    ['estrelaarco', '⭐', 'gira', 40, 'moeda', true], ['oculosarco', '😎', 'balanca', 40, 'moeda', true],
+    ['arcoiris', '🌈', 'pula', 40, 'moeda', true], ['dragaoarco', '🐉', 'balanca', 60, 'moeda', true],
   ];
+  const SHOP_GIFS = CHAT_GIFS.filter(g => g[3]);
+  const hasGif = id => { const g = CHAT_GIFS.find(x => x[0] === id); return !!g && (!g[3] || meta.gifs.includes(id)); };
   const gifEl = id => {
     const g = CHAT_GIFS.find(x => x[0] === id);
-    return g ? el('span', g[1], 'gif gif-' + g[2]) : el('span', '');
+    if (!g) return el('span', '');
+    const inner = el('span', g[1], 'gif gif-' + g[2]);
+    if (!g[5]) return inner;
+    const wrap = el('span', null, 'gif gif-arco');   // arco-íris: as cores vão girando
+    wrap.appendChild(inner);
+    return wrap;
   };
   let chatMsgs = [], chatLast = 0, chatMember = null, chatBusy = false;
   // ADM: quem entrou na página de avisos neste aparelho pode convidar direto pelo jogo
@@ -1756,12 +1794,18 @@
     const t = $('chat-input').value.trim();
     if (t) sendChat(t, null);
   });
-  for (const [id, emoji, anim] of CHAT_GIFS) {
-    const b = el('button');
-    b.type = 'button';
-    b.appendChild(gifEl(id));
-    b.addEventListener('click', () => { $('chat-gifs').classList.remove('on'); sendChat('', id); });
-    $('chat-gifs').appendChild(b);
+  // Os GIFs que você tem (os de graça e os comprados na loja)
+  function renderGifPicker() {
+    const box = $('chat-gifs');
+    box.innerHTML = '';
+    for (const [id] of CHAT_GIFS.filter(g => hasGif(g[0]))) {
+      const b = el('button');
+      b.type = 'button';
+      b.appendChild(gifEl(id));
+      b.addEventListener('click', () => { box.classList.remove('on'); sendChat('', id); });
+      box.appendChild(b);
+    }
+    if (SHOP_GIFS.some(g => !meta.gifs.includes(g[0]))) box.appendChild(el('div', 'Mais GIFs na LOJA! 🛒', 'gif-more'));
   }
   $('chat-clear').addEventListener('click', async () => {
     const b = $('chat-clear');
@@ -1775,7 +1819,7 @@
     b.disabled = false; b.dataset.armed = ''; b.textContent = '🗑️ APAGAR CONVERSAS';
     if (ok) { chatMsgs = []; renderChat(); } else $('chat-msg').textContent = 'Não deu pra apagar agora.';
   });
-  $('chat-gif-btn').addEventListener('click', () => $('chat-gifs').classList.toggle('on'));
+  $('chat-gif-btn').addEventListener('click', () => { renderGifPicker(); $('chat-gifs').classList.toggle('on'); });
 
   // ── Progresso online: o mesmo e-mail no computador, no celular e no Google tem o mesmo jogo ──
   function readJSON(key) { try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; } }
@@ -1798,7 +1842,7 @@
     const m = Object.assign({}, a);
     m.coins = Math.max(a.coins || 0, b.coins || 0);
     m.gems = Math.max(a.gems || 0, b.gems || 0);
-    for (const k of ['skins', 'colors', 'codes', 'avatars', 'frames']) m[k] = [...new Set([...(a[k] || []), ...(b[k] || [])])];
+    for (const k of ['skins', 'colors', 'codes', 'avatars', 'frames', 'gifs']) m[k] = [...new Set([...(a[k] || []), ...(b[k] || [])])];
     m.up = Object.assign({}, a.up);
     for (const k in b.up || {}) m.up[k] = Math.max((a.up || {})[k] || 0, b.up[k] || 0);
     m.seenHelp = a.seenHelp || b.seenHelp;
