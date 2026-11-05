@@ -142,6 +142,11 @@
   let camX = 0;
   let state = 'title';   // title (menu), play, dead, clear, win
   let started = false;    // já tem uma aventura rodando (o JOGAR do menu só continua)
+  // Jogar junto: coop = a conexão com o amigo (null jogando sozinho); remote = o herói do amigo.
+  // Quem chamou (host) manda nos inimigos e no chefão; o outro só mostra e avisa quando acerta
+  let coop = null, remote = null;
+  const isGuest = () => !!(coop && !coop.host);
+  let nextEnemyId = 0, nextPickupId = 0;
   function setState(s) {
     state = s;
     document.body.classList.toggle('in-menu', s === 'title');
@@ -282,7 +287,7 @@
   function writeSave() {
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify({
-        v: 3, level: levelIdx, checkpoint, chestHearts, heartBlocks,
+        v: 3, level: coop ? coop.soloLevel : levelIdx, checkpoint: coop ? coop.soloCp : checkpoint, chestHearts, heartBlocks,
       }));
     } catch (e) { /* sem salvar */ }
     writeMeta();
@@ -317,6 +322,7 @@
       if (+l === levelIdx && grid[+y][+x] === 'C') grid[+y][+x] = 'U';
     }
     if (checkpoint) for (const row of grid) for (let x = 0; x <= checkpoint.x && x < row.length; x++) if (row[x] === 'K') row[x] = 'k';
+    nextEnemyId = 0;   // os dois aparelhos dão o mesmo número pros mesmos inimigos
     enemies = lv.ents.map(([type, x, y]) => makeEnemy(type, x * T + 8, y * T + 16));
     shots = []; pickups = []; parts = [];
     boss = null; bossStarted = false;
@@ -331,7 +337,13 @@
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const tileAt = (x, y) => (y < 0 ? ' ' : y >= ROWS ? ' ' : x < 0 || x >= lv.width ? 'T' : grid[y][x]);
   const isSolid = (x, y) => SOLID.has(tileAt(x, y));
-  function setTile(x, y, ch) { if (y >= 0 && y < ROWS && x >= 0 && x < lv.width) grid[y][x] = ch; }
+  function setTile(x, y, ch) {
+    if (y < 0 || y >= ROWS || x < 0 || x >= lv.width) return;
+    const old = grid[y][x];
+    grid[y][x] = ch;
+    // Jogando junto, o amigo vê a pedra quebrar e a gema sumir (bloco de coração e checkpoint são de cada um)
+    if (old !== 'C' && old !== 'K') coopSend({ t: 'tile', lvl: levelIdx, x, y, ch });
+  }
 
   // Move uma caixa (x, y, w, h) e para nos blocos; devolve os blocos que bateu
   function moveBody(o, dx, dy) {
@@ -377,21 +389,28 @@
   const hardness = () => Math.min(1, ((lv && lv.n) || 1) / 500);
   function makeEnemy(type, x, y) {
     const d = ENEMY[type];
-    return { type, x: x - d.w / 2, y: y - d.h, w: d.w, h: d.h, hp: d.hp, vx: -d.speed * (1 + hardness() * 0.8), vy: 0, baseY: y - d.h,
+    return { id: nextEnemyId++, type, x: x - d.w / 2, y: y - d.h, w: d.w, h: d.h, hp: d.hp, vx: -d.speed * (1 + hardness() * 0.8), vy: 0, baseY: y - d.h,
       t: Math.random() * 100, stun: 0, hurt: 0, shoot: 80 + Math.random() * 80 };
   }
 
+  // O herói mais perto (jogando junto, pode ser o do amigo)
+  function nearest(o) {
+    if (!remote || remote.dead) return player;
+    return Math.abs(remote.x - o.x) + Math.abs(remote.y - o.y) < Math.abs(player.x - o.x) + Math.abs(player.y - o.y) ? remote : player;
+  }
   function updateEnemies() {
+    if (isGuest()) return guestEnemies();
     for (const e of enemies) {
       const def = ENEMY[e.type];
       if (e.hurt > 0) e.hurt--;
-      if (Math.abs(e.x - player.x) > W * 1.2) continue;   // longe da tela fica parado
+      const tg = nearest(e);
+      if (Math.abs(e.x - tg.x) > W * 1.2) continue;   // longe da tela fica parado
       if (e.stun > 0) { e.stun--; }
       else if (e.type === 'bat') {
         e.t++;
-        const dx = player.x - e.x;
+        const dx = tg.x - e.x;
         if (Math.abs(dx) < 120) e.x += Math.sign(dx) * def.speed * (1 + hardness() * 0.8);
-        e.y = e.baseY + Math.sin(e.t / 20) * 20 + (Math.abs(dx) < 120 ? clamp(player.y - e.baseY, -30, 40) * 0.5 : 0);
+        e.y = e.baseY + Math.sin(e.t / 20) * 20 + (Math.abs(dx) < 120 ? clamp(tg.y - e.baseY, -30, 40) * 0.5 : 0);
       } else {
         // Anda e vira na parede ou na beira do buraco
         const hit = moveBody(e, e.vx, 0);
@@ -400,7 +419,7 @@
         if (hit.x || (e.vy === 0 && !isSolid(ahead, below))) e.vx = -e.vx;
         if (e.type === 'skeleton') {
           e.shoot--;
-          const dx = player.x - e.x;
+          const dx = tg.x - e.x;
           if (e.shoot <= 0 && Math.abs(dx) < 150) {
             e.shoot = Math.round(120 - hardness() * 60);
             shots.push({ x: e.x + 5, y: e.y + 2, vx: Math.sign(dx) * 1.6, vy: -3, enemy: true, bone: true, life: 160 });
@@ -435,14 +454,20 @@
   function killEnemy(e, color) {
     e.dead = true;
     burst(e.x + e.w / 2, e.y + e.h / 2, color, 12);
+    if (isGuest()) { coopSend({ t: 'kill', lvl: levelIdx, id: e.id, color }); coop.gone[e.id] = frame; return; }   // quem chamou decide o prêmio
     const r = Math.random();
-    if (r < 0.15) pickups.push({ type: 'heart', x: e.x + e.w / 2 - 4, y: e.y, vy: -3, life: 600 });
-    else if (r < 0.55) pickups.push({ type: 'gem', x: e.x + e.w / 2 - 4, y: e.y, vy: -3, life: 600 });
+    const drop = r < 0.15 ? 'heart' : r < 0.55 ? 'gem' : null;
+    if (!drop) return;
+    const pk = { pid: nextPickupId++, type: drop, x: e.x + e.w / 2 - 4, y: e.y, vy: -3, life: 600 };
+    pickups.push(pk);
+    coopSend({ t: 'drop', pid: pk.pid, type: drop, x: pk.x, y: pk.y });
   }
 
   // ── Chefão ────────────────────────────────────────────────
   function startBoss() {
     bossStarted = true;
+    coopSend({ t: 'bossStart' });
+    if (player.x < ARENA_X * T + 8) { player.x = ARENA_X * T + 16; camX = clamp(player.x - 130, 0, lv.width * T - W); }   // o amigo entrou: vem junto
     for (let y = 5; y <= 9; y++) setTile(ARENA_X - 1, y, 'T');   // a porta fecha atrás de você
     const b = lv.bossAt;
     const hp = Math.min(30 + Math.round(lv.n * 0.6), 300);
@@ -455,6 +480,10 @@
     if (!boss) return;
     const b = boss;
     if (b.hurt > 0) b.hurt--;
+    if (isGuest()) {   // quem chamou é que mexe o chefão; aqui ele só desliza até onde está lá
+      b.x += (b.tx - b.x) * 0.4; b.y += (b.ty - b.y) * 0.4;
+      return bossContact(b);
+    }
     if (b.stun > 0) { b.stun--; return; }
     b.t++;
     const fast = b.hp < b.maxHp / 2;
@@ -471,7 +500,8 @@
       if (b.shoot <= 0) {
         const f = hardness();
         b.shoot = Math.round((fast ? 75 : 105) - f * 35);
-        const base = Math.atan2(player.y - b.y, player.x - b.x);
+        const tg = nearest(b);
+        const base = Math.atan2(tg.y - b.y, tg.x - b.x);
         const n = (fast ? 7 : 5) + Math.floor(f * 4);
         for (let i = 0; i < n; i++) {
           const a = base + (i - (n - 1) / 2) * 0.25;
@@ -488,18 +518,26 @@
         }
       }
     }
-    if (overlap(player, b)) {
-      const fromAbove = player.vy > 0 && player.y + player.h - player.vy <= b.y + 6;
-      if (fromAbove) { damageBoss(4, '#fff'); player.vy = -6; }
-      else hurtPlayer(b.x + b.w / 2);
-    }
+    bossContact(b);
+  }
+  function bossContact(b) {
+    if (!overlap(player, b)) return;
+    const fromAbove = player.vy > 0 && player.y + player.h - player.vy <= b.y + 6;
+    if (fromAbove) { damageBoss(4, '#fff'); player.vy = -6; }
+    else hurtPlayer(b.x + b.w / 2);
   }
 
-  function damageBoss(dmg, color) {
-    if (!boss || boss.hurt > 0) return;
-    boss.hp -= dmg; boss.hurt = 10;
+  // shot = tiro (acerta sempre); pisão espera o chefão parar de piscar
+  function damageBoss(dmg, color, stun, shot) {
+    if (!boss) return;
+    if (shot) boss.hurt = 0;
+    if (boss.hurt > 0) return;
     burst(boss.x + boss.w / 2, boss.y + boss.h / 2, color, 8);
     beep(220, 0.05, 'square');
+    boss.hurt = 10;
+    if (isGuest()) { coopSend({ t: 'boss', lvl: levelIdx, dmg, color, stun, shot }); return; }
+    boss.hp -= dmg;
+    if (stun) boss.stun = stun;
     if (boss.hp <= 0) bossDefeated();
   }
 
@@ -520,8 +558,10 @@
     // Tiro triplo do Ultra Divino: um reto e dois abertos
     for (const vyOff of b.triple ? [0, -1.1, 1.1] : [0]) {
       const arc = player.elem === 'gelo';   // a bola de gelo cai num arco
-      shots.push({ x: sx, y: sy, vx: player.face * el.speed, vy: (arc ? -2.2 : 0) + vyOff, grav: arc ? 0.13 : 0,
-        elem: player.elem, life: 90, pierce: !!b.pierce });
+      const s = { x: sx, y: sy, vx: player.face * el.speed, vy: (arc ? -2.2 : 0) + vyOff, grav: arc ? 0.13 : 0,
+        elem: player.elem, life: 90, pierce: !!b.pierce };
+      shots.push(s);
+      coopSend({ t: 'shot', x: s.x, y: s.y, vx: s.vx, vy: s.vy, grav: s.grav, elem: s.elem });
     }
     beep({ agua: 520, fogo: 300, gelo: 880, raio: 1200 }[player.elem], 0.06, player.elem === 'raio' ? 'square' : 'triangle');
   }
@@ -532,6 +572,7 @@
       s.x += s.vx; s.y += s.vy; s.life--;
       if (s.life <= 0) continue;
       const tx = Math.floor(s.x / T), ty = Math.floor(s.y / T), ch = tileAt(tx, ty);
+      if (s.ghost) { if (SOLID.has(ch) || ch === '~') s.life = 0; continue; }   // tiro do amigo: só pra ver
       if (!s.enemy) {
         if (ch === '~') { if (s.elem === 'gelo') freeze(tx, ty, Math.sign(s.vx) || 1); else burst(s.x, s.y, '#6cb4ff', 4); s.life = 0; continue; }
         if (SOLID.has(ch)) { hitTile(s, tx, ty, ch); s.life = 0; continue; }
@@ -547,26 +588,29 @@
         }
         enemies = enemies.filter(e => !e.dead);
         if (boss && s.life > 0 && s.x > boss.x && s.x < boss.x + boss.w && s.y > boss.y && s.y < boss.y + boss.h) {
-          boss.hurt = 0;
-          damageBoss(dmgOf(s.elem), ELEMS[s.elem].color);
-          if (s.elem === 'gelo' && boss) boss.stun = 20;
+          damageBoss(dmgOf(s.elem), ELEMS[s.elem].color, s.elem === 'gelo' ? 20 : 0, true);
           s.life = 0;
         }
       } else {
         if (SOLID.has(ch)) { s.life = 0; continue; }
         if (s.x > player.x && s.x < player.x + player.w && s.y > player.y && s.y < player.y + player.h) { hurtPlayer(s.x - s.vx * 4); s.life = 0; }
       }
-      if (s.y > ROWS * T + 20 || s.x < camX - 40 || s.x > camX + W + 40) s.life = 0;
+      if (s.y > ROWS * T + 20 || (!(coop && s.enemy) && (s.x < camX - 40 || s.x > camX + W + 40))) s.life = 0;
     }
     shots = shots.filter(s => s.life > 0);
   }
 
   function damageEnemy(e, s) {
-    e.hp -= dmgOf(s.elem); e.hurt = 8;
-    if (s.elem === 'gelo') e.stun = 150;
+    hitEnemy(e, dmgOf(s.elem), s.elem);
     burst(s.x, s.y, ELEMS[s.elem].color, 6);
     beep(330, 0.05, 'square');
-    if (e.hp <= 0) killEnemy(e, ELEMS[s.elem].color);
+  }
+  function hitEnemy(e, dmg, elem) {
+    e.hurt = 8;
+    if (isGuest()) { coopSend({ t: 'hit', lvl: levelIdx, id: e.id, dmg, elem }); return; }
+    e.hp -= dmg;
+    if (elem === 'gelo') e.stun = 150;
+    if (e.hp <= 0) killEnemy(e, ELEMS[elem].color);
   }
 
   // Fogo queima arbusto, raio quebra pedra; o resto do grudado vai junto, um por um
@@ -684,12 +728,15 @@
         writeSave();
       } else if (ch === 'P') { levelClear(); return; }
     }
-    if (lv.bossAt && !bossStarted && p.x > ARENA_X * T + 8) startBoss();
+    if (lv.bossAt && !bossStarted && !isGuest() && (p.x > ARENA_X * T + 8 || (remote && !remote.dead && remote.x > ARENA_X * T + 8))) startBoss();
     if (keys.attack) fire();
   }
 
   let clearGems = 0, clearMsg = '';
-  function levelClear(msg) {
+  function levelClear(msg, fromFriend) {
+    if (!fromFriend) coopSend({ t: 'clear', lvl: levelIdx, msg: msg || '' });
+    // Jogando junto, seu progresso só anda se essa fase for a sua
+    if (coop && levelIdx === coop.soloLevel) { coop.soloLevel++; coop.soloCp = null; }
     clearGems = levelGems(levelIdx + 1);
     meta.coins += clearGems;
     clearMsg = msg || 'FASE ' + (levelIdx + 1) + ' COMPLETA!';
@@ -711,6 +758,7 @@
       p.y = body.y;
       if (overlap(player, body)) {
         p.life = 0;
+        if (p.pid != null) coopSend({ t: 'pick', pid: p.pid });
         if (p.type === 'heart') player.hp = Math.min(player.maxHp, player.hp + 1);
         else meta.coins++;
         beep(p.type === 'heart' ? 700 : 990, 0.06, 'triangle');
@@ -757,7 +805,9 @@
     frame++;
     // No menu, a prévia do herói vai girando
     if (state === 'title' && menuPage === 'main' && frame % 45 === 0) { heroTurn++; heroCanvas($('hero'), meta.skin, player.elem, HERO_DIRS[heroTurn % 4]); }
+    if (modalOn && !coop && state === 'play') return;   // convite na tela: o jogo espera
     if (toastTimer > 0) toastTimer--;
+    coopTick();
     if (levelTitleTimer > 0) levelTitleTimer--;
     for (const p of parts) { p.x += p.vx; p.y += p.vy; p.vx *= 0.92; p.vy *= 0.92; p.life--; }
     parts = parts.filter(p => p.life > 0);
@@ -775,7 +825,8 @@
     } else if (state === 'dead') {
       stateTimer++;
       if (stateTimer > 100) {
-        startLevel();   // volta do começo da fase (ou do checkpoint) com a vida cheia
+        if (coop) respawn();   // jogando junto: a fase continua, só você volta
+        else startLevel();   // volta do começo da fase (ou do checkpoint) com a vida cheia
         player.inv = 60;
         state = 'play';
       }
@@ -1327,9 +1378,26 @@
       list.appendChild(li);
       return;
     }
+    if (coop && coop.begun) {
+      const li = el('li', null, 'friend-on friend-coop');
+      const name = el('span', null, 'friend-name');
+      paintName(name, '🤝 ' + coop.friend.nome, '', coop.friend.cor);
+      const b = el('button', 'SAIR', 'friend-btn friend-leave');
+      b.addEventListener('click', () => endCoop('Você saiu do jogo junto.'));
+      li.append(name, b);
+      list.appendChild(li);
+    }
     for (const f of friends) {
       const li = el('li', null, f.online ? 'friend-on' : 'friend-off');
-      paintName(li, f.nome, '', f.cor);
+      const name = el('span', null, 'friend-name');
+      paintName(name, f.nome, '', f.cor);
+      li.appendChild(name);
+      // Amigo online: ENTRAR chama ele pra jogar junto
+      if (f.online && !coop) {
+        const b = el('button', 'ENTRAR', 'friend-btn');
+        b.addEventListener('click', () => invite(f));
+        li.appendChild(b);
+      }
       list.appendChild(li);
     }
     if (!friends.length) list.appendChild(el('li', 'Ninguém mais tem usuário ainda', 'friends-empty'));
@@ -1361,7 +1429,7 @@
     return m;
   }
   async function syncDown() {
-    if (!meta.user) return;
+    if (!meta.user || coop) return;
     let data;
     try { data = await contaApi({ action: 'carregarJogo', email: meta.user.email }); } catch (e) { return; }
     const remote = data && data.dados;
@@ -1413,6 +1481,306 @@
   });
 
 
+  // ── Jogar junto ───────────────────────────────────────────
+  // O convite e o "aperto de mão" passam pelo servidor; depois os dois aparelhos conversam direto (WebRTC).
+  // Jogam a fase de quem está mais longe; quem chamou manda nos inimigos e no chefão
+  const RTC_CFG = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
+  let joining = null;   // conectando agora (antes do canal abrir)
+  let modalOn = false;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  function coopSend(m) {
+    if (!coop || !coop.open) return;
+    try { coop.dc.send(JSON.stringify(m)); } catch (e) { /* caiu: o tempo esgotado fecha */ }
+  }
+
+  // A fase em que você está (sem contar a do amigo)
+  function myLevel() {
+    if (started) return levelIdx;
+    loadSave();
+    return save && save.v === 3 ? Math.min(save.level || 0, MAX_LEVEL - 1) : 0;
+  }
+
+  function coopBegin() {
+    if (!started) { const c = coop; coop = null; newGame(!!save); coop = c; }   // carrega a sua aventura primeiro
+    coop.soloLevel = levelIdx; coop.soloCp = checkpoint;
+    levelIdx = Math.max(levelIdx, coop.friend.level);   // a fase de quem tem mais
+    checkpoint = null;
+    remote = null;
+    startLevel();
+    started = true;
+    showPage('main');
+    setState('play');
+    say('Jogando junto com ' + coop.friend.nome + ' na fase ' + (levelIdx + 1) + '!');
+    beep(660, 0.1, 'triangle'); setTimeout(() => beep(990, 0.15, 'triangle'), 120);
+  }
+
+  function endCoop(msg) {
+    if (!coop) return;
+    const c = coop;
+    coopSend({ t: 'bye' });
+    coop = null; remote = null;
+    try { c.pc.close(); } catch (e) { /* ok */ }
+    if (c.begun) {
+      levelIdx = c.soloLevel; checkpoint = c.soloCp;   // volta pra sua fase
+      startLevel();
+      if (state !== 'title') state = 'play';
+      writeSave();
+    }
+    say(msg);
+    if (state === 'title') { renderFriends(); showModal(msg, '', [['OK', hideModal]]); }
+  }
+
+  // Morreu jogando junto: a fase continua, você volta do checkpoint (ou da porta do chefão)
+  function respawn() {
+    const sp = bossStarted ? { x: ARENA_X + 1, y: 9 } : checkpoint || lv.start;
+    player.x = sp.x * T + 3; player.y = sp.y * T + T - player.h;
+    player.vx = player.vy = 0; player.face = 1;
+    player.maxHp = maxHpNow(); player.hp = player.maxHp;
+    camX = clamp(player.x - 130, 0, lv.width * T - W);
+  }
+
+  // Manda a posição 20 vezes por segundo (e quem chamou manda os inimigos junto)
+  function coopTick() {
+    if (!coop || !coop.begun || frame % 3) return;
+    if (state === 'play' || state === 'dead') {
+      const p = player;
+      coopSend({ t: 'me', lvl: levelIdx, x: Math.round(p.x), y: Math.round(p.y), f: p.face, w: p.walk, g: p.onGround ? 1 : 0,
+        i: p.inv, d: state === 'dead' ? 1 : 0, s: meta.skin, e: p.elem });
+    }
+    if (coop.host && state === 'play') {
+      coopSend({ t: 'world', lvl: levelIdx,
+        en: enemies.map(e => [e.id, e.type, Math.round(e.x), Math.round(e.y), e.hp, e.stun, e.vx < 0 ? -1 : 1]),
+        b: boss ? [Math.round(boss.x), Math.round(boss.y), boss.hp, boss.maxHp, boss.stun] : null,
+        sh: shots.filter(s => s.enemy).map(s => [Math.round(s.x), Math.round(s.y), s.vx, s.vy, s.bone ? 1 : 0, s.life]) });
+    }
+  }
+
+  // Quem foi chamado: os inimigos deslizam até onde estão no aparelho de quem chamou
+  function guestEnemies() {
+    for (const e of enemies) {
+      if (e.hurt > 0) e.hurt--;
+      if (e.stun > 0) e.stun--;
+      if (e.tx == null) continue;   // ainda não chegou notícia desse
+      e.x += (e.tx - e.x) * 0.4; e.y += (e.ty - e.y) * 0.4;
+    }
+  }
+  function applyWorld(m) {
+    if (m.lvl !== levelIdx || state !== 'play') return;
+    const old = new Map(enemies.map(e => [e.id, e]));
+    enemies = [];
+    for (const [id, type, x, y, hp, stun, dir] of m.en) {
+      if (coop.gone[id] && frame - coop.gone[id] < 60) continue;   // acabou de morrer aqui
+      let e = old.get(id);
+      if (!e) { const d = ENEMY[type]; e = { id, type, x, y, w: d.w, h: d.h, hurt: 0, vy: 0 }; }
+      if (e.tx == null) { e.x = x; e.y = y; }
+      Object.assign(e, { tx: x, ty: y, hp, stun, vx: dir });
+      enemies.push(e);
+    }
+    if (m.b) {
+      const [x, y, hp, maxHp, stun] = m.b;
+      if (!boss) boss = { x, y, w: 28, h: 30, hurt: 0 };
+      Object.assign(boss, { tx: x, ty: y, hp, maxHp, stun });
+    } else boss = null;
+    shots = shots.filter(s => !s.enemy).concat(m.sh.map(([x, y, vx, vy, bone, life]) =>
+      bone ? { x, y, vx, vy, enemy: true, bone: true, life } : { x, y, vx, vy, enemy: true, dark: true, life }));
+  }
+
+  function onCoopMsg(m) {
+    if (!coop) return;
+    coop.last = Date.now();
+    if (m.t === 'hi') {
+      coop.friend = { nome: m.nome, cor: m.cor, level: m.level };
+      if (!coop.begun) { coop.begun = true; coopBegin(); }
+      return;
+    }
+    if (!coop.begun) return;
+    if (m.t === 'bye') { endCoop(coop.friend.nome + ' saiu do jogo junto.'); return; }
+    if (m.t === 'me') {
+      if (m.lvl !== levelIdx) { if (remote) remote.dead = true; return; }
+      if (!remote) remote = { x: m.x, y: m.y, w: 10, h: 14 };
+      Object.assign(remote, { tx: m.x, ty: m.y, face: m.f, walk: m.w, onGround: !!m.g, inv: m.i, dead: !!m.d, skin: m.s, elem: m.e });
+      if (Math.abs(remote.x - m.x) > 60) { remote.x = m.x; remote.y = m.y; }   // voltou do checkpoint
+      return;
+    }
+    if (m.t === 'world') { if (!coop.host) applyWorld(m); return; }
+    if (m.t === 'tile') { if (m.lvl === levelIdx && grid && y_ok(m.y) && m.x >= 0 && m.x < lv.width) grid[m.y][m.x] = m.ch; return; }
+    if (m.t === 'shot') {
+      if (state === 'play') shots.push({ x: m.x, y: m.y, vx: m.vx, vy: m.vy, grav: m.grav, elem: m.elem, life: 90, ghost: true });
+      return;
+    }
+    if (m.t === 'clear') {
+      if (m.lvl === levelIdx && (state === 'play' || state === 'dead')) {
+        if (m.msg.startsWith('CHEFÃO')) { meta.gems += BOSS_GEMS; boss = null; enemies = []; }
+        levelClear(m.msg || undefined, true);
+      }
+      return;
+    }
+    if (m.t === 'drop') { pickups.push({ pid: m.pid, type: m.type, x: m.x, y: m.y, vy: -3, life: 600 }); return; }
+    if (m.t === 'pick') { pickups = pickups.filter(p => p.pid !== m.pid); return; }
+    if (m.t === 'bossStart') {
+      bossStarted = true;
+      if (player.x < ARENA_X * T + 8) { player.x = ARENA_X * T + 16; camX = clamp(player.x - 130, 0, lv.width * T - W); }
+      say(lv.n === BOSS_EVERY ? 'O Rei Sombrio! Atire nele ou pule na cabeça quando ele descer!' : 'O Rei Sombrio voltou, mais forte!');
+      beep(110, 0.4, 'sawtooth');
+      return;
+    }
+    // Daqui pra baixo só quem chamou: o amigo acertou alguma coisa
+    if (!coop.host || state !== 'play' || m.lvl !== levelIdx) return;
+    const e = enemies.find(x => x.id === m.id);
+    if (m.t === 'hit' && e) { burst(e.x + e.w / 2, e.y + e.h / 2, ELEMS[m.elem].color, 6); hitEnemy(e, m.dmg, m.elem); enemies = enemies.filter(x => !x.dead); }
+    else if (m.t === 'kill' && e) { killEnemy(e, m.color); enemies = enemies.filter(x => !x.dead); }
+    else if (m.t === 'boss') damageBoss(m.dmg, m.color, m.stun, m.shot);
+  }
+  const y_ok = y => y >= 0 && y < ROWS;
+
+  // O herói do amigo, com o nome em cima
+  function drawRemote() {
+    const r = remote;
+    if (!r || r.dead || !r.skin) return;
+    r.x += (r.tx - r.x) * 0.5; r.y += (r.ty - r.y) * 0.5;
+    if (r.inv > 0 && Math.floor(r.inv / 4) % 2 === 0) return;
+    const x = Math.round(r.x + 5 - camX), y = Math.round(r.y + 14 - 8) + HUD;
+    if (x < -30 || x > W + 30) return;
+    drawHero(ctx, x, y, r.skin, ELEMS[r.elem] ? r.elem : 'agua', r.face, 0, !r.onGround ? 1 : r.walk % 16 < 8 ? 0 : 1);
+    const c = colorOf(coop && coop.friend.cor).color;
+    ctx.font = 'bold 7px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#000'; ctx.fillText(coop ? coop.friend.nome : '', x + 1, y - 18);
+    ctx.fillStyle = c === 'rainbow' ? rainbow(0) : c; ctx.fillText(coop ? coop.friend.nome : '', x, y - 19);
+    ctx.textAlign = 'left';
+  }
+
+  // Sem notícia do amigo por 10 segundos: a conexão caiu
+  setInterval(() => {
+    if (!coop) return;
+    coopSend({ t: 'ping' });
+    if (Date.now() - coop.last > 10000) endCoop('A conexão com ' + coop.friend.nome + ' caiu.');
+  }, 1000);
+
+  // ── Janelinha de convite ──
+  function showModal(title, sub, btns) {
+    $('coop-title').textContent = title;
+    $('coop-sub').textContent = sub || '';
+    const box = $('coop-btns');
+    box.innerHTML = '';
+    for (const [label, fn, cls] of btns) {
+      const b = el('button', label, 'mbtn ' + (cls || 'yellow'));
+      b.addEventListener('click', fn);
+      box.appendChild(b);
+    }
+    $('coop-modal').classList.add('on');
+    modalOn = true;
+    for (const k in keys) keys[k] = false;
+  }
+  function hideModal() { $('coop-modal').classList.remove('on'); modalOn = false; }
+
+  function startChannel(dc, pc, host, nome) {
+    pc.addEventListener('connectionstatechange', () => {
+      if (coop && coop.pc === pc && (pc.connectionState === 'failed' || pc.connectionState === 'closed')) endCoop('A conexão com ' + nome + ' caiu.');
+    });
+    const opened = () => {
+      joining = null;
+      hideModal();
+      coop = { host, pc, dc, open: true, begun: false, last: Date.now(), gone: {}, friend: { nome, level: 0 } };
+      coopSend({ t: 'hi', level: myLevel(), nome: meta.user.nome, cor: meta.nameColor });
+    };
+    dc.onmessage = e => { try { onCoopMsg(JSON.parse(e.data)); } catch (err) { /* mensagem estranha */ } };
+    dc.onclose = () => { if (coop && coop.dc === dc) endCoop(nome + ' saiu do jogo junto.'); };
+    if (dc.readyState === 'open') opened(); else dc.onopen = opened;
+  }
+  // Espera o aparelho descobrir os caminhos de internet (no máximo 3 segundos)
+  function waitIce(pc) {
+    return new Promise(res => {
+      if (pc.iceGatheringState === 'complete') return res();
+      const t = setTimeout(res, 3000);
+      pc.addEventListener('icegatheringstatechange', () => { if (pc.iceGatheringState === 'complete') { clearTimeout(t); res(); } });
+    });
+  }
+  function failJoin(msg) {
+    if (joining && joining.pc) try { joining.pc.close(); } catch (e) { /* ok */ }
+    joining = null;
+    showModal(msg, '', [['OK', hideModal]]);
+  }
+  function cancelJoin() {
+    if (joining && joining.pc) try { joining.pc.close(); } catch (e) { /* ok */ }
+    joining = null;
+    hideModal();
+  }
+  function connectTimeout(my) { setTimeout(() => { if (joining === my) failJoin('Não deu pra conectar. Tenta de novo!'); }, 25000); }
+
+  // Você aperta ENTRAR no nome do amigo
+  async function invite(f) {
+    if (coop || joining || !meta.user) return;
+    const my = joining = {};
+    showModal('Chamando ' + f.nome + '...', 'Esperando ' + f.nome + ' aceitar', [['CANCELAR', cancelJoin]]);
+    const email = meta.user.email;
+    try {
+      const r = await contaApi({ action: 'convidar', email, para: f.nome });
+      if (!r || !r.sala) throw new Error('sem sala');
+      const pc = my.pc = new RTCPeerConnection(RTC_CFG);
+      startChannel(pc.createDataChannel('jogo'), pc, true, f.nome);
+      await pc.setLocalDescription(await pc.createOffer());
+      await waitIce(pc);
+      if (joining !== my) return;
+      await contaApi({ action: 'sinal', email, sala: r.sala, tipo: 'offer', sdp: pc.localDescription.sdp });
+      const until = Date.now() + 50000;
+      while (joining === my && Date.now() < until) {
+        await sleep(1500);
+        const s = await contaApi({ action: 'lerSinal', email, sala: r.sala, tipo: 'answer' }).catch(() => null);
+        if (joining !== my) return;
+        if (s && s.recusado) return failJoin(f.nome + ' não pode agora.');
+        if (s && s.sdp) {
+          showModal('Conectando com ' + f.nome + '...', '', [['CANCELAR', cancelJoin]]);
+          await pc.setRemoteDescription({ type: 'answer', sdp: s.sdp });
+          return connectTimeout(my);
+        }
+      }
+      if (joining === my) failJoin(f.nome + ' não respondeu.');
+    } catch (e) { if (joining === my) failJoin('Não deu pra chamar agora. Tenta de novo!'); }
+  }
+
+  // O amigo te chamou: ACEITAR ou AGORA NÃO
+  const seenInvites = new Set();
+  async function checkInvite() {
+    if (!meta.user || coop || joining || modalOn || document.hidden) return;
+    const r = await contaApi({ action: 'convites', email: meta.user.email }).catch(() => null);
+    const c = r && r.convite;
+    if (!c || seenInvites.has(c.sala) || coop || joining || modalOn) return;
+    seenInvites.add(c.sala);
+    beep(880, 0.1, 'triangle'); setTimeout(() => beep(1175, 0.15, 'triangle'), 120);
+    showModal(c.de + ' te chamou pra jogar junto!', 'Vocês jogam a fase de quem está mais longe', [
+      ['ACEITAR', () => accept(c), 'green'],
+      ['AGORA NÃO', () => { hideModal(); contaApi({ action: 'responder', email: meta.user.email, sala: c.sala, aceitar: false }).catch(() => {}); }],
+    ]);
+  }
+  setInterval(checkInvite, 5000);
+
+  async function accept(c) {
+    const my = joining = {};
+    const email = meta.user.email;
+    showModal('Entrando no jogo de ' + c.de + '...', '', [['CANCELAR', cancelJoin]]);
+    try {
+      await contaApi({ action: 'responder', email, sala: c.sala, aceitar: true });
+      let sdp = null;
+      for (let i = 0; i < 15 && !sdp && joining === my; i++) {
+        const s = await contaApi({ action: 'lerSinal', email, sala: c.sala, tipo: 'offer' }).catch(() => null);
+        sdp = s && s.sdp;
+        if (!sdp) await sleep(1000);
+      }
+      if (joining !== my) return;
+      if (!sdp) return failJoin(c.de + ' não está mais chamando.');
+      const pc = my.pc = new RTCPeerConnection(RTC_CFG);
+      pc.ondatachannel = e => startChannel(e.channel, pc, false, c.de);
+      await pc.setRemoteDescription({ type: 'offer', sdp });
+      await pc.setLocalDescription(await pc.createAnswer());
+      await waitIce(pc);
+      if (joining !== my) return;
+      await contaApi({ action: 'sinal', email, sala: c.sala, tipo: 'answer', sdp: pc.localDescription.sdp });
+      connectTimeout(my);
+    } catch (e) { if (joining === my) failJoin('Não deu pra entrar agora. Tenta de novo!'); }
+  }
+
+
   function draw() {
     if (state === 'title' || !lv) { px(0, 0, W, H, '#10141f'); return; }
     drawBackground();
@@ -1433,6 +1801,7 @@
     }
     for (const e of enemies) drawEnemy(e);
     drawBoss();
+    drawRemote();
     drawPlayer();
     for (const s of shots) drawShot(s);
     for (const p of parts) px(Math.round(p.x - camX), Math.round(p.y) + HUD, 2, 2, p.color);

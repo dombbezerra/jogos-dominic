@@ -99,6 +99,43 @@ module.exports = async (req, res) => {
       return res.status(200).json({ jogadores: await listarJogadores(email) });
     }
 
+    // ── Jogar junto: convite e "aperto de mão" entre os dois aparelhos (depois eles conversam direto) ──
+    if (action === 'convidar') {
+      const [eu, outro] = await redis(['GET', 'aventura:user:' + email], ['HGET', 'aventura:nomes', nomeKey(String(body.para || ''))]);
+      if (!eu) return res.status(404).json({ error: 'Usuário não encontrado.' });
+      if (!outro || outro === email) return res.status(404).json({ error: 'Não achei esse amigo.' });
+      const sala = crypto.randomBytes(6).toString('hex');
+      const me = JSON.parse(eu);
+      await redis(['SET', 'aventura:convite:' + outro, JSON.stringify({ sala, de: me.nome, cor: me.cor || 'branco' }), 'EX', 45],
+        ['SET', 'aventura:sala:' + sala + ':host', email, 'EX', 300]);
+      return res.status(200).json({ sala });
+    }
+    if (action === 'convites') {
+      const [raw] = await redis(['GET', 'aventura:convite:' + email]);
+      return res.status(200).json({ convite: raw ? JSON.parse(raw) : null });
+    }
+    const salaOk = (v) => /^[0-9a-f]{12}$/.test(String(v || ''));
+    if (action === 'responder') {
+      if (!salaOk(body.sala)) return res.status(400).json({ error: 'Sala inválida.' });
+      const cmds = [['DEL', 'aventura:convite:' + email]];
+      if (!body.aceitar) cmds.push(['SET', 'aventura:sala:' + body.sala + ':recusado', '1', 'EX', 60]);
+      await redis(...cmds);
+      return res.status(200).json({ ok: true });
+    }
+    if (action === 'sinal' || action === 'lerSinal') {
+      const tipo = body.tipo === 'offer' ? 'offer' : 'answer';
+      if (!salaOk(body.sala)) return res.status(400).json({ error: 'Sala inválida.' });
+      const key = 'aventura:sala:' + body.sala + ':' + tipo;
+      if (action === 'sinal') {
+        const sdp = String(body.sdp || '');
+        if (!sdp || sdp.length > 20000) return res.status(400).json({ error: 'Sinal inválido.' });
+        await redis(['SET', key, sdp, 'EX', 300]);
+        return res.status(200).json({ ok: true });
+      }
+      const [sdp, recusado] = await redis(['GET', key], ['GET', 'aventura:sala:' + body.sala + ':recusado']);
+      return res.status(200).json({ sdp: sdp || null, recusado: !!recusado });
+    }
+
     // Progresso do jogo na nuvem: o mesmo e-mail em outro aparelho traz as mesmas gemas, personagens e fase
     if (action === 'salvarJogo') {
       const dados = body.dados;
