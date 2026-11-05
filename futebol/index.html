@@ -114,6 +114,18 @@
     img.logo { width: 18px; height: 18px; vertical-align: middle; border-radius: 4px; object-fit: cover; }
     img.logo-big { width: 40px; height: 40px; vertical-align: middle; border-radius: 8px; object-fit: cover; }
     img.card-logo { width: 16px; height: 16px; vertical-align: middle; border-radius: 3px; object-fit: cover; }
+    .crest { position: fixed; inset: 0; z-index: 80; background: rgba(0, 0, 0, 0.8); display: none; align-items: center; justify-content: center; padding: 10px; }
+    .crest.on { display: flex; }
+    .crest-box { background: #13284a; border: 3px solid #ffd23a; border-radius: 14px; padding: 12px; width: min(420px, 100%); max-height: 100%; overflow-y: auto; text-align: center; }
+    #crest-prev { width: 110px; height: 110px; display: block; margin: 6px auto; }
+    .crest-label { font-weight: 900; font-size: 13px; margin-top: 8px; color: #9fc8ff; }
+    .crest-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 4px; }
+    .crest-row button { min-width: 34px; height: 34px; border-radius: 8px; border: 3px solid transparent; cursor: pointer; font-size: 18px; background: #2a3a6a; color: #fff; font-family: inherit; }
+    .crest-row button.on { border-color: #ffd23a; transform: scale(1.1); }
+    .crest-btns { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
+    .crest-btns button { border: none; border-radius: 8px; padding: 10px 16px; font-weight: 900; cursor: pointer; font-family: inherit; }
+    #crest-save { background: #2fb060; color: #fff; } #crest-cancel { background: #888; color: #fff; }
+    .club-chips button.paint { background: #e0a810; border-color: #ffd23a; padding: 4px 8px; }
     .card.slot-empty { background: rgba(255, 255, 255, 0.12); border: 2px dashed #fff; color: #fff; font-size: 40px; justify-content: center; box-shadow: none; }
     .slot.picking .card { outline: 4px solid #ffd23a; outline-offset: 2px; }
     .grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
@@ -233,6 +245,18 @@
   </div>
 
   <datalist id="clubs-dl"></datalist>
+  <!-- 🎨 Personalizar escudo -->
+  <div id="crest" class="crest">
+    <div class="crest-box">
+      <h3 id="crest-title">🎨 ESCUDO</h3>
+      <canvas id="crest-prev" width="128" height="128"></canvas>
+      <div class="crest-label">Cor 1</div><div class="crest-row" id="crest-c1"></div>
+      <div class="crest-label">Cor 2</div><div class="crest-row" id="crest-c2"></div>
+      <div class="crest-label">Desenho</div><div class="crest-row" id="crest-pat"></div>
+      <div class="crest-label">Símbolo</div><div class="crest-row" id="crest-sym"></div>
+      <div class="crest-btns"><button id="crest-save">SALVAR ✅</button><button id="crest-cancel">CANCELAR</button></div>
+    </div>
+  </div>
   <div id="reveal"><h3 id="reveal-title">NOVOS JOGADORES!</h3><div class="cards-out" id="reveal-cards"></div><button class="back" id="reveal-ok" style="position:static;margin:0">OK!</button></div>
 
   <div id="touch">
@@ -243,6 +267,6 @@
   </div>
   <div id="keys-help">Setas/WASD: andar · J: passe · K: chute (segure pra mais força) · Shift: correr</div>
 
-  <script src="game.js?v=12"></script>
+  <script src="game.js?v=13"></script>
 </body>
 </html>

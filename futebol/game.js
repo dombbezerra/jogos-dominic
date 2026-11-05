@@ -285,6 +285,68 @@
     im.src = cl.logo; im.className = cls || 'logo'; im.alt = cl.nome;
     return im;
   }
+  // 🎨 Personalizar escudo: 2 cores, um desenho e um símbolo
+  const CREST_COLORS = ['#ffffff', '#111111', '#e02020', '#1a4ad0', '#2fb060', '#ffd23a', '#ff8a1a', '#8a2ab0', '#5ccfff', '#8a1a1a', '#0a2a6a', '#a9b2c3'];
+  const CREST_PATS = [['liso', '⬛'], ['listras', '║'], ['faixas', '☰'], ['metade', '◧'], ['diagonal', '◩'], ['xadrez', '▦'], ['cruz', '✚'], ['borda', '▣']];
+  const CREST_SYMS = ['', '⭐', '🦁', '🐟', '👑', '⚡', '🔥', '🦅', '🐍', '⚽', '🐯', '🐉', '🛡️', '🏰', '🌙', '💎', '🐺', '🦈'];
+  let crest = null;
+  function drawCrest(g, size, st) {
+    const z = size / 64;
+    g.clearRect(0, 0, size, size);
+    g.save(); g.scale(z, z);
+    // Formato de escudo
+    const shape = () => { g.beginPath(); g.moveTo(8, 6); g.lineTo(56, 6); g.lineTo(56, 34); g.quadraticCurveTo(56, 52, 32, 60); g.quadraticCurveTo(8, 52, 8, 34); g.closePath(); };
+    shape(); g.fillStyle = st.c1; g.fill();
+    g.save(); shape(); g.clip();
+    g.fillStyle = st.c2;
+    if (st.pat === 'listras') for (let x = 8; x < 56; x += 12) g.fillRect(x + 6, 0, 6, 64);
+    else if (st.pat === 'faixas') for (let y = 6; y < 64; y += 12) g.fillRect(0, y + 6, 64, 6);
+    else if (st.pat === 'metade') g.fillRect(32, 0, 32, 64);
+    else if (st.pat === 'diagonal') { g.beginPath(); g.moveTo(8, 60); g.lineTo(56, 6); g.lineTo(56, 64); g.closePath(); g.fill(); }
+    else if (st.pat === 'xadrez') for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if ((x + y) % 2) g.fillRect(x * 8, y * 8, 8, 8);
+    else if (st.pat === 'cruz') { g.fillRect(27, 0, 10, 64); g.fillRect(0, 24, 64, 10); }
+    else if (st.pat === 'borda') { g.lineWidth = 8; g.strokeStyle = st.c2; shape(); g.stroke(); }
+    g.restore();
+    shape(); g.lineWidth = 3; g.strokeStyle = '#000'; g.stroke();
+    if (st.sym) { g.font = '26px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(st.sym, 32, 32); }
+    g.restore();
+  }
+  function crestButtons(boxId, items, key, label) {
+    const box = $(boxId);
+    box.innerHTML = '';
+    for (const it of items) {
+      const v = Array.isArray(it) ? it[0] : it;
+      const b = document.createElement('button');
+      if (key === 'c1' || key === 'c2') b.style.background = v;
+      else b.textContent = Array.isArray(it) ? it[1] : (v || '∅');
+      if (crest.st[key] === v) b.className = 'on';
+      b.addEventListener('click', () => { crest.st[key] = v; renderCrest(); });
+      box.appendChild(b);
+    }
+  }
+  function renderCrest() {
+    crestButtons('crest-c1', CREST_COLORS, 'c1'); crestButtons('crest-c2', CREST_COLORS, 'c2');
+    crestButtons('crest-pat', CREST_PATS, 'pat'); crestButtons('crest-sym', CREST_SYMS, 'sym');
+    drawCrest($('crest-prev').getContext('2d'), 128, crest.st);
+  }
+  function openCrest(cl) {
+    crest = { cl, st: Object.assign({ c1: '#ffffff', c2: '#111111', pat: 'listras', sym: '⭐' }, cl.crest || {}) };
+    $('crest-title').textContent = '🎨 ESCUDO DO ' + cl.nome.toUpperCase();
+    renderCrest();
+    $('crest').classList.add('on');
+  }
+  $('crest-cancel').addEventListener('click', () => $('crest').classList.remove('on'));
+  $('crest-save').addEventListener('click', () => {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 64;
+    drawCrest(cv.getContext('2d'), 64, crest.st);
+    crest.cl.crest = crest.st;
+    crest.cl.logo = cv.toDataURL('image/png');
+    save(); render();
+    $('crest').classList.remove('on');
+    $('club-msg').textContent = '🎨 Escudo do ' + crest.cl.nome + ' pronto!';
+  });
+
   // 📷 Escolhe uma foto do aparelho e diminui pra caber (64x64)
   function pickLogo(cl) {
     const inp = document.createElement('input');
@@ -322,12 +384,17 @@
       b.append(logoImg(cl), document.createTextNode(' ' + cl.nome));
       if (c && c.nome === cl.nome) b.className = 'on';
       b.addEventListener('click', () => { data.myClub = cl.nome; save(); renderClubs(); });
+      const paint = document.createElement('button');
+      paint.className = 'paint';
+      paint.textContent = '🎨';
+      paint.title = 'Personalizar o escudo';
+      paint.addEventListener('click', () => openCrest(cl));
       const ph = document.createElement('button');
       ph.className = 'photo';
       ph.textContent = '📷';
       ph.title = 'Colocar a foto do escudo';
       ph.addEventListener('click', () => pickLogo(cl));
-      chip.append(b, ph);
+      chip.append(b, paint, ph);
       chips.appendChild(chip);
     }
   }
@@ -338,7 +405,8 @@
     data.myClub = addClub(v);
     save(); renderClubs();
     $('club-search').value = '';
-    $('club-msg').textContent = isNew ? '✨ Time novo criado: ' + data.myClub + '!' : '✅ Agora você joga com o ' + data.myClub + '!';
+    $('club-msg').textContent = isNew ? '✨ Time novo criado: ' + data.myClub + '! Agora monte o escudo 🎨' : '✅ Agora você joga com o ' + data.myClub + '!';
+    if (isNew) openCrest(findClub(data.myClub));
   });
   $('club-search').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') $('club-go').click(); });
 
