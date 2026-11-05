@@ -40,6 +40,9 @@
     .users { list-style: none; display: flex; flex-direction: column; gap: 6px; }
     .users li { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(0, 0, 0, 0.3); border-radius: 10px; padding: 8px 12px; font-weight: bold; }
     .users li button { padding: 6px 12px; font-size: 13px; letter-spacing: 0; background: #ff5a5a; color: #fff; }
+    .users li span { flex: 1; }
+    .users li button.chat-off { background: #2fd15a; }
+    .users li button.chat-on { background: #6a5aa8; }
     a { color: rgba(255, 255, 255, 0.5); font-size: 13px; text-align: center; text-decoration: none; }
   </style>
 </head>
@@ -70,6 +73,7 @@
   <div class="card hidden" id="usersCard">
     <h1>👤 USUÁRIOS</h1>
     <p>Quem tem usuário na Aventura Elemental. Toque no 🗑️ e depois em <b>Apagar?</b> pra tirar alguém.</p>
+    <p>💬 <b>Chat de amigos:</b> só entra quem você convidar. Toque em <b>Convidar</b> (não esqueça de você mesmo!).</p>
     <ul id="usersList" class="users"></ul>
     <div class="msg" id="usersMsg"></div>
   </div>
@@ -124,7 +128,19 @@
             renderUsers(data.usuarios || []);
           } catch (err) { $('usersMsg').textContent = 'Não deu: ' + err.message; btn.disabled = false; }
         });
-        li.append(name, btn);
+        // Chat: convidar ou tirar
+        const chat = document.createElement('button');
+        chat.textContent = u.chat ? '💬 Tirar do chat' : '💬 Convidar';
+        chat.className = u.chat ? 'chat-on' : 'chat-off';
+        chat.addEventListener('click', async () => {
+          chat.disabled = true;
+          try {
+            const data = await usersApi({ action: 'admin-chat', nome: u.nome, convidar: !u.chat });
+            $('usersMsg').textContent = u.chat ? '✅ ' + u.nome + ' saiu do chat.' : '✅ ' + u.nome + ' foi convidado pro chat!';
+            renderUsers(data.usuarios || []);
+          } catch (err) { $('usersMsg').textContent = 'Não deu: ' + err.message; chat.disabled = false; }
+        });
+        li.append(name, chat, btn);
         ul.appendChild(li);
       }
     }

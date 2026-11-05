@@ -35,6 +35,28 @@ async function redis(...commands) {
   });
 }
 
+// ── Chat de amigos: só entra quem o ADM convidou (na página de avisos). Escreve livre, mas com filtro ──
+const CHAT_GIFS = ['rindo', 'fogo', 'festa', 'joinha', 'oculos', 'caveira', 'coracao', 'trofeu', 'raio', 'chorando', 'susto', 'danca'];
+const PALAVROES = ['porra', 'caralho', 'merda', 'bosta', 'puta', 'puto', 'putaria', 'fdp', 'vsf', 'vtnc', 'tnc', 'pqp', 'cu', 'cuzao', 'buceta', 'piroca',
+  'foda', 'fodase', 'foder', 'fudeu', 'arrombado', 'arrombada', 'viado', 'otario', 'otaria', 'idiota', 'imbecil', 'desgraca', 'desgracado', 'cacete',
+  'babaca', 'retardado', 'retardada', 'corno', 'vagabundo', 'vagabunda', 'piranha', 'safado', 'safada', 'sexo', 'nude', 'nudes', 'pinto', 'rola',
+  'xota', 'xoxota', 'punheta', 'pau', 'peito', 'bunda', 'burro', 'burra', 'lixo', 'nojento', 'nojenta', 'feio', 'feia', 'gordo', 'gorda', 'odeio', 'matar', 'morre'];
+const semAcento = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const juntar = (t) => t.replace(/(.)\1+/g, '$1');   // letras repetidas viram uma só
+const PALAVROES_J = PALAVROES.map(juntar);
+// Troca palavrão por ***, e não deixa passar telefone, e-mail, link nem endereço
+function filtrar(texto) {
+  let t = String(texto || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 200);
+  t = t.replace(/(?:\d[\s.\-()]*){7,}/g, '🚫');                                   // telefone
+  t = t.replace(/\S+@\S+/g, '🚫');                                                  // e-mail
+  t = t.replace(/(https?:\/\/|www\.)\S*|\S+\.(com|br|net|org|gg|me|io|tv|app)\b\S*/gi, '🚫');   // link
+  t = t.replace(/\b(rua|avenida|av\.|endere[cç]o|whats\S*|zap|insta\S*|tiktok|telefone|celular|cpf|senha)\b/gi, '🚫');
+  return t.replace(/[\p{L}\p{N}]+/gu, (w) => {
+    const n = juntar(semAcento(w));   // "merdaaa" vira "merda"
+    return PALAVROES_J.some((p) => n === p || n === p + 's') ? '*'.repeat(w.length) : w;
+  });
+}
+
 const ONLINE_SECS = 75;   // sem sinal por mais que isso, a pessoa sai do "online"
 const nomeKey = (n) => n.trim().toLowerCase();
 
@@ -65,9 +87,9 @@ module.exports = async (req, res) => {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
 
     // Página de avisos: ver todos os usuários e apagar pelo nome (precisa do login)
-    if (body.action === 'admin-lista' || body.action === 'admin-apagar') {
+    if (body.action === 'admin-lista' || body.action === 'admin-apagar' || body.action === 'admin-chat') {
       if (!isAdmin(req)) return res.status(401).json({ error: 'Entre com o login da Base Secreta.' });
-      let [todos] = await redis(['SMEMBERS', 'aventura:users']);
+      let [todos, membros] = await redis(['SMEMBERS', 'aventura:users'], ['SMEMBERS', 'aventura:chat:membros']);
       let users = (todos || []).length ? await redis(...todos.map((e) => ['GET', 'aventura:user:' + e])) : [];
       if (body.action === 'admin-apagar') {
         // Procura pelo nome exato em todos (usuários antigos podem não estar na lista de nomes)
@@ -77,10 +99,21 @@ module.exports = async (req, res) => {
         const [dono] = await redis(['HGET', 'aventura:nomes', nomeKey(nome)]);
         const cmds = alvos.flatMap((e) => [['DEL', 'aventura:user:' + e], ['DEL', 'aventura:save:' + e], ['SREM', 'aventura:users', e], ['ZREM', 'aventura:online', e]]);
         if (alvos.includes(dono)) cmds.push(['HDEL', 'aventura:nomes', nomeKey(nome)]);
+        cmds.push(...alvos.map((e) => ['SREM', 'aventura:chat:membros', e]));
         await redis(...cmds);
         users = users.filter((raw, i) => !alvos.includes(todos[i]));
+        todos = todos.filter((e) => !alvos.includes(e));
       }
-      const lista = users.filter(Boolean).map((raw) => { const u = JSON.parse(raw); return { nome: u.nome, cor: u.cor || 'branco' }; })
+      // Convidar pro chat (ou tirar), pelo nome
+      membros = new Set(membros || []);
+      if (body.action === 'admin-chat') {
+        const i = users.findIndex((raw) => raw && JSON.parse(raw).nome === String(body.nome || ''));
+        if (i < 0) return res.status(404).json({ error: 'Não achei esse usuário.' });
+        if (body.convidar) { await redis(['SADD', 'aventura:chat:membros', todos[i]]); membros.add(todos[i]); }
+        else { await redis(['SREM', 'aventura:chat:membros', todos[i]]); membros.delete(todos[i]); }
+      }
+      const lista = users.map((raw, i) => { if (!raw) return null; const u = JSON.parse(raw); return { nome: u.nome, cor: u.cor || 'branco', chat: membros.has(todos[i]) }; })
+        .filter(Boolean)
         .sort((a, b) => a.nome.localeCompare(b.nome));
       return res.status(200).json({ usuarios: lista });
     }
@@ -97,6 +130,26 @@ module.exports = async (req, res) => {
       // Usuários de antes da lista de nomes entram nela aqui (se o nome ainda estiver livre)
       await redis(['ZADD', 'aventura:online', Date.now(), email], ['HSETNX', 'aventura:nomes', nomeKey(u.nome), email]);
       return res.status(200).json({ jogadores: await listarJogadores(email) });
+    }
+
+    // Chat de amigos (só convidados)
+    if (action === 'chatLer' || action === 'chatEnviar') {
+      const [membro, raw] = await redis(['SISMEMBER', 'aventura:chat:membros', email], ['GET', 'aventura:user:' + email]);
+      if (!membro || !raw) return res.status(200).json({ membro: false });
+      if (action === 'chatEnviar') {
+        const texto = filtrar(body.texto);
+        const gif = CHAT_GIFS.includes(body.gif) ? body.gif : null;
+        if (!texto && !gif) return res.status(400).json({ error: 'Mensagem vazia.' });
+        const [ok] = await redis(['SET', 'aventura:chat:rl:' + email, '1', 'PX', 1200, 'NX']);
+        if (!ok) return res.status(429).json({ error: 'Calma! Espera um pouquinho.' });
+        const u = JSON.parse(raw);
+        const [id] = await redis(['INCR', 'aventura:chat:id']);
+        const msg = { id, nome: u.nome, cor: u.cor || 'branco', foto: u.foto || 'skin:gotinha', moldura: u.moldura || 'nenhuma', texto, gif, t: Date.now() };
+        await redis(['RPUSH', 'aventura:chat:msgs', JSON.stringify(msg)], ['LTRIM', 'aventura:chat:msgs', -100, -1]);
+      }
+      const [lista] = await redis(['LRANGE', 'aventura:chat:msgs', 0, -1]);
+      const desde = Number(body.desde) || 0;
+      return res.status(200).json({ membro: true, msgs: (lista || []).map((m) => JSON.parse(m)).filter((m) => m.id > desde) });
     }
 
     // ── Jogar junto: convite e "aperto de mão" entre os dois aparelhos (depois eles conversam direto) ──

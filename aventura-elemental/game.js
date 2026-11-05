@@ -1258,6 +1258,7 @@
   function showPage(name) {
     menuPage = name;
     document.querySelectorAll('#menu .page').forEach(p => p.classList.toggle('on', p.id === 'page-' + name));
+    if (name === 'chat') { chatBusy = false; setTimeout(pollChat, 0); }
     renderMenu();
   }
   document.querySelectorAll('#menu [data-go]').forEach(b => b.addEventListener('click', () => showPage(b.dataset.go)));
@@ -1284,6 +1285,7 @@
     } else if (menuPage === 'skins') renderSkins();
     else if (menuPage === 'shop') renderShop();
     else if (menuPage === 'user') renderUser();
+    else if (menuPage === 'chat') renderChat();
   }
 
   function card(sel) {
@@ -1630,6 +1632,89 @@
     }
     if (!friends.length) list.appendChild(el('li', 'Ninguém mais tem usuário ainda', 'friends-empty'));
   }
+
+  // ── Chat de amigos ────────────────────────────────────────
+  // Só quem o ADM convidou (na página de avisos) entra. O servidor filtra palavrão, telefone e link
+  const CHAT_GIFS = [
+    ['rindo', '😂', 'pula'], ['fogo', '🔥', 'treme'], ['festa', '🎉', 'gira'], ['joinha', '👍', 'bate'],
+    ['oculos', '😎', 'balanca'], ['caveira', '💀', 'treme'], ['coracao', '❤️', 'bate'], ['trofeu', '🏆', 'pula'],
+    ['raio', '⚡', 'pisca'], ['chorando', '😭', 'treme'], ['susto', '😱', 'bate'], ['danca', '🕺', 'balanca'],
+  ];
+  const gifEl = id => {
+    const g = CHAT_GIFS.find(x => x[0] === id);
+    return g ? el('span', g[1], 'gif gif-' + g[2]) : el('span', '');
+  };
+  let chatMsgs = [], chatLast = 0, chatMember = null, chatBusy = false;
+  function chatInfo(text) {
+    const list = $('chat-list');
+    list.innerHTML = '';
+    list.appendChild(el('li', text, 'chat-info'));
+  }
+  function renderChat() {
+    const can = !!meta.user && chatMember === true;
+    $('chat-form').style.display = can ? '' : 'none';
+    if (!can) $('chat-gifs').classList.remove('on');
+    if (!meta.user) return chatInfo('Coloque seu usuário (em USUÁRIO) pra usar o chat.');
+    if (chatMember === null) { chatInfo('Carregando...'); return pollChat(); }
+    if (!chatMember) return chatInfo('🔒 O chat é só pra convidados. Peça pro ADM te convidar!');
+    const list = $('chat-list');
+    const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+    list.innerHTML = '';
+    if (!chatMsgs.length) list.appendChild(el('li', 'Ninguém falou nada ainda. Diga oi! 👋', 'chat-info'));
+    for (const m of chatMsgs) {
+      const li = el('li', null, m.nome === meta.user.nome ? 'mine' : '');
+      const who = el('div', null, 'chat-who');
+      paintTag(who, m.nome, m.cor, m.foto, m.moldura);
+      const d = new Date(m.t);
+      who.appendChild(el('span', String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'), 'chat-time'));
+      const body = el('div', m.texto || null, 'chat-text');
+      if (m.gif) body.appendChild(gifEl(m.gif));
+      li.append(who, body);
+      list.appendChild(li);
+    }
+    if (atBottom || chatBusy) list.scrollTop = list.scrollHeight;
+  }
+  function addChat(data) {
+    chatMember = !!(data && data.membro);
+    for (const m of (data && data.msgs) || []) if (m.id > chatLast) { chatMsgs.push(m); chatLast = m.id; }
+    chatMsgs = chatMsgs.slice(-100);
+  }
+  async function pollChat() {
+    if (!meta.user) return;
+    try { addChat(await contaApi({ action: 'chatLer', email: meta.user.email, desde: chatLast })); } catch (e) { return; }
+    if (state === 'title' && menuPage === 'chat') renderChat();
+  }
+  // Com o chat aberto, olha mensagem nova a cada 2,5 segundos
+  setInterval(() => { if (state === 'title' && menuPage === 'chat' && !document.hidden) pollChat(); }, 2500);
+
+  async function sendChat(texto, gif) {
+    if (!meta.user || chatBusy) return;
+    chatBusy = true;
+    $('chat-msg').textContent = '';
+    try {
+      const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'chatEnviar', email: meta.user.email, texto, gif, desde: chatLast }) });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || 'Não deu pra mandar.');
+      addChat(data);
+      $('chat-input').value = '';
+      renderChat();
+    } catch (e) { $('chat-msg').textContent = e.message; }
+    chatBusy = false;
+  }
+  $('chat-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const t = $('chat-input').value.trim();
+    if (t) sendChat(t, null);
+  });
+  for (const [id, emoji, anim] of CHAT_GIFS) {
+    const b = el('button');
+    b.type = 'button';
+    b.appendChild(gifEl(id));
+    b.addEventListener('click', () => { $('chat-gifs').classList.remove('on'); sendChat('', id); });
+    $('chat-gifs').appendChild(b);
+  }
+  $('chat-gif-btn').addEventListener('click', () => $('chat-gifs').classList.toggle('on'));
 
   // ── Progresso online: o mesmo e-mail no computador, no celular e no Google tem o mesmo jogo ──
   function readJSON(key) { try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; } }

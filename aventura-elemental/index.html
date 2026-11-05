@@ -190,6 +190,39 @@
     canvas.avatar { image-rendering: pixelated; width: 22px; height: 22px; vertical-align: middle; margin-right: 4px; background: rgba(255, 255, 255, 0.08); border-radius: 3px; flex: none; }
     .friend-name { display: flex; align-items: center; }
     .friend-name span { overflow: hidden; text-overflow: ellipsis; }
+    /* Chat de amigos */
+    .pink { background: #ff6ad5; color: #fff; }
+    #chat-list { list-style: none; height: min(300px, 45vh); overflow-y: auto; text-align: left; background: rgba(10, 8, 30, 0.6); border: 2px solid #4a3a8a; border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+    #chat-list li { max-width: 80%; align-self: flex-start; background: #2e2366; border-radius: 10px; padding: 6px 9px; }
+    #chat-list li.mine { align-self: flex-end; background: #1f5a3a; }
+    #chat-list li.chat-info { max-width: 100%; align-self: center; background: none; color: #c9b8ff; font-size: 13px; text-align: center; }
+    .chat-who { display: flex; align-items: center; font-weight: 900; font-size: 12px; }
+    .chat-text { font-size: 15px; color: #fff; margin-top: 3px; word-wrap: break-word; }
+    .chat-time { font-size: 10px; color: #a99fd8; margin-left: 6px; font-weight: normal; }
+    #chat-form { display: flex; gap: 6px; margin-top: 8px; }
+    #chat-input { flex: 1; min-width: 0; padding: 10px; font-size: 15px; border-radius: 6px; border: 2px solid #4a3a8a; background: #140e32; color: #fff; font-family: inherit; }
+    #chat-form button { border: none; border-radius: 6px; font-weight: 900; padding: 0 12px; cursor: pointer; font-family: inherit; }
+    #chat-gif-btn { background: #b06cff; color: #fff; }
+    #chat-send { background: #2fd15a; color: #fff; font-size: 18px; }
+    #chat-gifs { display: none; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 8px; }
+    #chat-gifs.on { display: flex; }
+    #chat-gifs button { background: #2e2366; border: 2px solid #4a3a8a; border-radius: 8px; width: 52px; height: 52px; cursor: pointer; }
+    #chat-msg { font-size: 12px; color: #ff8a8a; min-height: 16px; margin-top: 4px; }
+    /* "GIFs": emojis grandes que se mexem */
+    .gif { display: inline-block; font-size: 30px; line-height: 1; }
+    .chat-text .gif { font-size: 54px; margin: 4px 6px; }
+    .gif-pula { animation: gif-pula 0.6s ease-in-out infinite alternate; }
+    .gif-treme { animation: gif-treme 0.25s linear infinite; }
+    .gif-gira { animation: gif-gira 1.2s linear infinite; }
+    .gif-bate { animation: gif-bate 0.8s ease-in-out infinite; }
+    .gif-balanca { animation: gif-balanca 0.9s ease-in-out infinite alternate; }
+    .gif-pisca { animation: gif-pisca 0.5s steps(2) infinite; }
+    @keyframes gif-pula { from { transform: translateY(0); } to { transform: translateY(-10px); } }
+    @keyframes gif-treme { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-3px) rotate(-5deg); } 75% { transform: translateX(3px) rotate(5deg); } }
+    @keyframes gif-gira { to { transform: rotate(360deg); } }
+    @keyframes gif-bate { 0%, 100% { transform: scale(1); } 30% { transform: scale(1.3); } 60% { transform: scale(0.95); } }
+    @keyframes gif-balanca { from { transform: rotate(-15deg); } to { transform: rotate(15deg); } }
+    @keyframes gif-pisca { 50% { opacity: 0.2; } }
     /* Molduras da foto de perfil */
     canvas.avatar.big { width: 56px; height: 56px; margin: 4px auto; border-radius: 6px; }
     /* Moldura = borda grossa colorida em volta da foto (o meio continua escuro) */
@@ -344,8 +377,22 @@
           <button class="mbtn orange" data-go="shop">LOJA</button>
           <button class="mbtn green big" id="m-play">JOGAR</button>
           <button class="mbtn purple" data-go="user">USUÁRIO</button>
+          <button class="mbtn pink" data-go="chat">💬 CHAT</button>
         </div>
         <button class="mbtn yellow help-btn" data-go="help">❓ COMO JOGAR</button>
+      </div>
+
+      <div class="page" id="page-chat">
+        <h2>💬 CHAT DE AMIGOS</h2>
+        <ul id="chat-list"></ul>
+        <div id="chat-gifs"></div>
+        <form id="chat-form" autocomplete="off">
+          <button type="button" id="chat-gif-btn">GIF</button>
+          <input id="chat-input" maxlength="200" placeholder="Escreva aqui...">
+          <button type="submit" id="chat-send">➤</button>
+        </form>
+        <div id="chat-msg"></div>
+        <button class="mbtn yellow back" data-go="main">◀ VOLTAR</button>
       </div>
 
       <div class="page" id="page-skins">
@@ -426,6 +473,6 @@
   </div>
 
   <div id="coop-modal"><div class="coop-box"><div id="coop-title"></div><div id="coop-sub"></div><div id="coop-btns"></div></div></div>
-  <script src="game.js?v=32"></script>
+  <script src="game.js?v=33"></script>
 </body>
 </html>
