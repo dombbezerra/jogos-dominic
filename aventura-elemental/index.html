@@ -254,11 +254,6 @@
     }
     #user-form input:focus { border-color: #5ccfff; }
     #u-msg { min-height: 18px; font-size: 13px; text-align: center; }
-    .code-form { display: flex; flex-direction: column; gap: 10px; max-width: 360px; margin: 22px auto 0; text-align: left; padding-top: 16px; border-top: 2px dashed #4a3a8a; }
-    .code-form label { display: flex; flex-direction: column; gap: 4px; font-weight: bold; font-size: 14px; }
-    .code-form input { padding: 12px; border-radius: 6px; border: 2px solid #4a3a8a; background: #120c30; color: #fff; font-size: 16px; outline: none; text-transform: uppercase; }
-    #code-msg { min-height: 18px; font-size: 13px; text-align: center; }
-    #code-msg.err { color: #ff6a6a; } #code-msg.ok { color: #2fd15a; }
     #u-msg.err { color: #ff6a6a; } #u-msg.ok { color: #2fd15a; }
 
   </style>
@@ -377,16 +372,11 @@
           <div id="u-msg"></div>
           <button class="mbtn green" type="submit">SALVAR</button>
         </form>
-        <form id="code-form" class="code-form">
-          <label>🎁 Código secreto<input id="code" type="text" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="Digite o código"></label>
-          <div id="code-msg"></div>
-          <button class="mbtn orange" type="submit">USAR CÓDIGO</button>
-        </form>
         <button class="mbtn yellow back" data-go="main">◀ VOLTAR</button>
       </div>
     </div>
   </div>
 
-  <script src="game.js?v=22"></script>
+  <script src="game.js?v=23"></script>
 </body>
 </html>
