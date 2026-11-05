@@ -49,6 +49,9 @@
     .album-team { margin: 12px 0; background: rgba(0, 0, 0, 0.25); border-radius: 12px; padding: 10px; }
     .album-title { font-weight: 900; font-size: 17px; margin-bottom: 8px; letter-spacing: 1px; }
     .album-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .card.album-missing { filter: grayscale(1) brightness(0.55); cursor: default; }
+    .card.album-missing::after { content: 'FALTA'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg);
+      background: #e04848; color: #fff; font-weight: 900; font-size: 13px; padding: 2px 8px; border-radius: 4px; filter: none; }
     .card.album-empty { background: rgba(255, 255, 255, 0.08); border: 2px dashed rgba(255, 255, 255, 0.35); color: #fff; box-shadow: none; cursor: default; }
     .album-slot { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; }
     .album-del { background: #e04848; color: #fff; border: none; border-radius: 6px; padding: 3px 8px; font-weight: bold; cursor: pointer; font-family: inherit; }
@@ -197,6 +200,6 @@
   </div>
   <div id="keys-help">Setas/WASD: andar · J: passe · K: chute (segure pra mais força) · Shift: correr</div>
 
-  <script src="game.js?v=4"></script>
+  <script src="game.js?v=5"></script>
 </body>
 </html>

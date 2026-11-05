@@ -273,14 +273,7 @@
       row.className = 'album-row';
       for (const sp of players) {
         if (have.has(sp.key)) row.appendChild(withRemove(cardEl(sp), sp));
-        else {
-          const e = document.createElement('div');
-          e.className = 'card album-empty';
-          e.innerHTML = '<div class="rt"></div><div class="face">❔</div><div class="nm"></div>';
-          e.querySelector('.rt').textContent = sp.r;
-          e.querySelector('.nm').textContent = sp.custom ? nameOf(sp) : sp.pos;
-          row.appendChild(withRemove(e, sp));
-        }
+        else row.appendChild(withRemove(cardEl(sp, 'album-missing'), sp));   // ainda não tem: aparece apagadinho
       }
       sec.append(h, row, addForm(id));
       list.appendChild(sec);
