@@ -123,10 +123,13 @@ const nomeKey = (n) => n.trim().toLowerCase();
 // Só nome, cor e online: o e-mail dos outros nunca sai daqui
 async function listarJogadores(email) {
   const now = Date.now();
-  const [, onlineEmails, todos] = await redis(['ZREMRANGEBYSCORE', 'aventura:online', 0, now - ONLINE_SECS * 1000],
-    ['ZRANGE', 'aventura:online', 0, -1], ['SMEMBERS', 'aventura:users']);
+  const [, onlineEmails, todos, ocultos] = await redis(['ZREMRANGEBYSCORE', 'aventura:online', 0, now - ONLINE_SECS * 1000],
+    ['ZRANGE', 'aventura:online', 0, -1], ['SMEMBERS', 'aventura:users'], ['SMEMBERS', 'aventura:ocultos']);
+  // Conta de teste (oculta): não aparece pra ninguém e não vê ninguém
+  const oc = new Set(ocultos || []);
+  if (oc.has(email)) return [];
   const on = new Set(onlineEmails || []);
-  const outros = (todos || []).filter((e) => e !== email).slice(0, 80);
+  const outros = (todos || []).filter((e) => e !== email && !oc.has(e)).slice(0, 80);
   if (!outros.length) return [];
   const users = await redis(...outros.map((e) => ['GET', 'aventura:user:' + e]));
   return outros.map((e, i) => {
@@ -146,7 +149,7 @@ module.exports = async (req, res) => {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
 
     // Página de avisos: ver todos os usuários e apagar pelo nome (precisa do login)
-    if (['admin-lista', 'admin-apagar', 'admin-chat', 'admin-adm', 'admin-limpar-chat'].includes(body.action)) {
+    if (['admin-lista', 'admin-apagar', 'admin-chat', 'admin-adm', 'admin-limpar-chat', 'admin-oculto'].includes(body.action)) {
       // Login da Base Secreta pode tudo. Conta de ADM (marcada pelo login) só vê a lista e convida pro chat
       let ok = isAdmin(req);
       if (!ok && ['admin-lista', 'admin-chat', 'admin-limpar-chat'].includes(body.action) && EMAIL_OK.test(String(body.email || ''))) {
@@ -181,6 +184,12 @@ module.exports = async (req, res) => {
         if (i < 0) return res.status(404).json({ error: 'Não achei esse usuário.' });
         if (body.adm) { await redis(['SADD', 'aventura:adm', todos[i]]); adms.add(todos[i]); }
         else { await redis(['SREM', 'aventura:adm', todos[i]]); adms.delete(todos[i]); }
+      }
+      // Conta de teste: some da caixa de amigos de todo mundo (só com o login da Base Secreta)
+      if (body.action === 'admin-oculto') {
+        const i = users.findIndex((raw) => raw && JSON.parse(raw).nome === String(body.nome || ''));
+        if (i < 0) return res.status(404).json({ error: 'Não achei esse usuário.' });
+        await redis([body.oculto ? 'SADD' : 'SREM', 'aventura:ocultos', todos[i]]);
       }
       // Convidar pro chat (ou tirar), pelo nome
       membros = new Set(membros || []);
