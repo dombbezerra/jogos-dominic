@@ -49,14 +49,17 @@
   ];
   const ALBUM = [['brasil', '🇧🇷 BRASIL'], ['argentina', '🇦🇷 ARGENTINA'], ['portugal', '🇵🇹 PORTUGAL'], ['franca', '🇫🇷 FRANÇA'],
     ['inglaterra', '🏴 INGLATERRA'], ['espanha', '🇪🇸 ESPANHA']];
-  const ALBUM_PRIZE = 1500;   // completou uma seleção: ganha moedas
+  const ALBUM_PRIZE = 1500;
+  // Os craques do álbum: os do jogo e os que você adicionou (➕)
+  const allSpecials = () => SPECIALS.concat((data && data.custom) || []);
+  const BADGES = { brasil: ['🇧🇷', 'Brasil'], argentina: ['🇦🇷', 'Argentina'], portugal: ['🇵🇹', 'Portugal'], franca: ['🇫🇷', 'França'], inglaterra: ['🏴', 'Inglaterra'], espanha: ['🇪🇸', 'Espanha'] };   // completou uma seleção: ganha moedas
   // Nome que aparece: o que você escreveu no ✏️, ou o da carta
   const nameOf = c => (data.renames && data.renames[c.key || c.id]) || c.nome;
   let data;
   function newCard(min, max, pos) {
     // De vez em quando sai um craque especial (os de nota alta são mais raros)
     if (!pos && Math.random() < 0.15) {
-      const ok = SPECIALS.filter(sp => sp.r >= min && sp.r <= max && Math.random() < 1.4 - sp.r / 130);
+      const ok = allSpecials().filter(sp => sp.r >= min && sp.r <= max && Math.random() < 1.4 - sp.r / 130);
       if (ok.length) return Object.assign({ id: data.next++ }, pick(ok));
     }
     return { id: data.next++, r: Math.min(MAX_R, roll(min, max)), pos: pos || pick(POS), nome: pick(FIRST) + ' ' + pick(LAST), face: pick(FACES) };
@@ -259,7 +262,7 @@
     const have = new Set(data.cards.map(c => c.key).filter(Boolean));
     data.albumDone = data.albumDone || [];
     for (const [id, title] of ALBUM) {
-      const players = SPECIALS.filter(sp => sp.album === id);
+      const players = allSpecials().filter(sp => sp.album === id);
       const got = players.filter(sp => have.has(sp.key)).length;
       const sec = document.createElement('div');
       sec.className = 'album-team';
@@ -269,17 +272,17 @@
       const row = document.createElement('div');
       row.className = 'album-row';
       for (const sp of players) {
-        if (have.has(sp.key)) row.appendChild(cardEl(sp));
+        if (have.has(sp.key)) row.appendChild(withRemove(cardEl(sp), sp));
         else {
           const e = document.createElement('div');
           e.className = 'card album-empty';
           e.innerHTML = '<div class="rt"></div><div class="face">❔</div><div class="nm"></div>';
           e.querySelector('.rt').textContent = sp.r;
-          e.querySelector('.nm').textContent = sp.pos;
-          row.appendChild(e);
+          e.querySelector('.nm').textContent = sp.custom ? nameOf(sp) : sp.pos;
+          row.appendChild(withRemove(e, sp));
         }
       }
-      sec.append(h, row);
+      sec.append(h, row, addForm(id));
       list.appendChild(sec);
       // Completou a seleção pela primeira vez: prêmio!
       if (got === players.length && !data.albumDone.includes(id)) {
@@ -291,6 +294,53 @@
       }
     }
     $('coins').textContent = data.coins;
+  }
+
+  // Jogador que você criou: tem 🗑️ pra tirar do álbum
+  function withRemove(el, sp) {
+    if (!sp.custom) return el;
+    const w = document.createElement('div');
+    w.className = 'album-slot';
+    const b = document.createElement('button');
+    b.className = 'album-del';
+    b.textContent = '🗑️';
+    b.addEventListener('click', () => {
+      if (b.dataset.armed !== '1') { b.dataset.armed = '1'; b.textContent = 'Tirar?'; setTimeout(() => { b.dataset.armed = ''; b.textContent = '🗑️'; }, 3000); return; }
+      data.custom = data.custom.filter(x => x.key !== sp.key);
+      save(); render();
+    });
+    w.append(el, b);
+    return w;
+  }
+  // ➕ Adicionar um jogador seu na seleção: ele passa a sair nos pacotes
+  function addForm(id) {
+    const wrap = document.createElement('div');
+    wrap.className = 'album-add';
+    const open = document.createElement('button');
+    open.className = 'add-open';
+    open.textContent = '➕ ADICIONAR JOGADOR';
+    const form = document.createElement('div');
+    form.className = 'add-form';
+    form.style.display = 'none';
+    form.innerHTML = '<input class="a-nome" maxlength="22" placeholder="Nome do jogador">' +
+      '<select class="a-pos"><option>ATA</option><option>MEI</option><option>ZAG</option><option>GOL</option></select>' +
+      '<input class="a-r" type="number" min="60" max="130" value="100" title="Nota (60 a 130)">' +
+      '<select class="a-face">' + FACES.concat(['⚽', '🐐', '👑', '🔥', '⚡', '🧤']).map(f => '<option>' + f + '</option>').join('') + '</select>' +
+      '<button class="a-ok">ADICIONAR</button><div class="a-msg"></div>';
+    open.addEventListener('click', () => { form.style.display = form.style.display === 'none' ? 'flex' : 'none'; });
+    form.querySelector('.a-nome').addEventListener('keydown', e => e.stopPropagation());
+    form.querySelector('.a-ok').addEventListener('click', () => {
+      const nome = form.querySelector('.a-nome').value.trim();
+      const r = Math.round(Number(form.querySelector('.a-r').value));
+      if (!nome) { form.querySelector('.a-msg').textContent = 'Escreva o nome!'; return; }
+      if (!(r >= MIN_R && r <= MAX_R)) { form.querySelector('.a-msg').textContent = 'A nota é de 60 a 130.'; return; }
+      data.custom = data.custom || [];
+      data.custom.push({ key: 'meu-' + Date.now(), custom: true, nome, pos: form.querySelector('.a-pos').value, r,
+        face: form.querySelector('.a-face').value, club: BADGES[id][1], badge: BADGES[id][0], album: id });
+      save(); render();
+    });
+    wrap.append(open, form);
+    return wrap;
   }
 
   // ── Som ───────────────────────────────────────────────────
