@@ -87,14 +87,24 @@
   }
   document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
 
+  // ADM: quem tem o nome Dominic. Pacotes de graça, coroa e criar carta
+  const isAdm = () => (data.nome || '').trim().toLowerCase() === 'dominic';
   function render() {
-    $('coins').textContent = data.coins;
+    document.body.classList.toggle('adm', isAdm());
+    $('name-tag').textContent = data.nome ? (isAdm() ? '👑 ' : '👤 ') + data.nome : '✍️ Seu nome';
+    $('coins').textContent = isAdm() ? '∞' : data.coins;
     $('ovr').textContent = $('ovr2').textContent = teamOvr();
     $('n-cards').textContent = data.cards.length + ' cartas';
     if (page === 'team') renderTeam();
     if (page === 'packs') renderPacks();
     if (page === 'cards') renderCards();
     if (page === 'album') renderAlbum();
+    if (page === 'name') { $('name-input').value = data.nome || ''; $('name-msg').textContent = ''; }
+    if (page === 'create' && !$('create-form').childElementCount) $('create-form').append(...playerForm('CRIAR', (c) => {
+      data.cards.push(Object.assign({ id: data.next++ }, c));
+      save(); render();
+      $('create-msg').textContent = '✅ ' + c.nome + ' (' + c.r + ') foi pras suas cartas!';
+    }));
   }
 
   function renderTeam() {
@@ -155,15 +165,17 @@
       b.querySelector('.nm').textContent = p.name;
       b.querySelector('small').textContent = p.n + ' jogadores de nota ' + p.min + ' a ' + p.max + (p.best ? ' (1 garantido de ' + p.best[0] + '+)' : '');
       b.querySelector('.price').textContent = '🪙 ' + p.price;
-      b.disabled = data.coins < p.price;
+      b.disabled = !isAdm() && data.coins < p.price;
       b.addEventListener('click', () => openPack(p));
       list.appendChild(b);
     }
     $('pack-msg').textContent = 'Ganhe moedas jogando partidas! Vitória: 500 · Empate: 250 · Derrota: 100 · Gol: +50';
   }
   function openPack(p) {
-    if (data.coins < p.price) return;
-    data.coins -= p.price;
+    if (!isAdm()) {   // o ADM abre de graça
+      if (data.coins < p.price) return;
+      data.coins -= p.price;
+    }
     const got = [];
     for (let i = 0; i < p.n; i++) got.push(i === 0 && p.best ? newCard(p.best[0], p.best[1]) : newCard(p.min, p.max));
     data.cards.push(...got);
@@ -212,6 +224,38 @@
       list.appendChild(wrap);
     }
   }
+
+  // Formulário de jogador (nome, posição, nota e rosto): usado no ➕ do álbum e no 👑 CRIAR CARTA
+  function playerForm(label, onOk) {
+    const f = document.createElement('div');
+    f.innerHTML = '<input class="a-nome" maxlength="22" placeholder="Nome do jogador">' +
+      '<select class="a-pos">' + POSITIONS.map(([sg, nm]) => '<option value="' + sg + '">' + nm + ' (' + sg + ')</option>').join('') + '</select>' +
+      '<input class="a-r" type="number" min="60" max="130" value="100" title="Nota (60 a 130)">' +
+      '<select class="a-face">' + FACES.concat(['⚽', '🐐', '👑', '🔥', '⚡', '🧤']).map(x => '<option>' + x + '</option>').join('') + '</select>' +
+      '<button class="a-ok"></button><div class="a-msg"></div>';
+    const q = sel => f.querySelector(sel);
+    const [nomeEl, posEl, rEl, faceEl, okEl, msgEl] = ['.a-nome', '.a-pos', '.a-r', '.a-face', '.a-ok', '.a-msg'].map(q);   // guarda antes de sair do f
+    okEl.textContent = label;
+    nomeEl.addEventListener('keydown', e => e.stopPropagation());
+    okEl.addEventListener('click', () => {
+      const nome = nomeEl.value.trim();
+      const r = Math.round(Number(rEl.value));
+      if (!nome) { msgEl.textContent = 'Escreva o nome!'; return; }
+      if (!(r >= MIN_R && r <= MAX_R)) { msgEl.textContent = 'A nota é de 60 a 130.'; return; }
+      msgEl.textContent = '';
+      onOk({ nome, pos: posEl.value, r, face: faceEl.value });
+      nomeEl.value = '';
+    });
+    return [...f.childNodes];
+  }
+  $('name-save').addEventListener('click', () => {
+    const v = $('name-input').value.trim().slice(0, 20);
+    if (!v) { $('name-msg').textContent = 'Escreva seu nome!'; return; }
+    data.nome = v;
+    save(); render();
+    $('name-msg').textContent = isAdm() ? '👑 Bem-vindo, ADM! Pacotes de graça e CRIAR CARTA liberados.' : '✅ Pronto, ' + v + '!';
+  });
+  $('name-input').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') $('name-save').click(); });
 
   // ✏️ Muda o nome da carta (fica guardado só neste aparelho). Vale pra todas as cartas iguais
   function editName(c, wrap) {
@@ -297,23 +341,12 @@
     const form = document.createElement('div');
     form.className = 'add-form';
     form.style.display = 'none';
-    form.innerHTML = '<input class="a-nome" maxlength="22" placeholder="Nome do jogador">' +
-      '<select class="a-pos">' + POSITIONS.map(([sg, nm]) => '<option value="' + sg + '">' + nm + ' (' + sg + ')</option>').join('') + '</select>' +
-      '<input class="a-r" type="number" min="60" max="130" value="100" title="Nota (60 a 130)">' +
-      '<select class="a-face">' + FACES.concat(['⚽', '🐐', '👑', '🔥', '⚡', '🧤']).map(f => '<option>' + f + '</option>').join('') + '</select>' +
-      '<button class="a-ok">ADICIONAR</button><div class="a-msg"></div>';
-    open.addEventListener('click', () => { form.style.display = form.style.display === 'none' ? 'flex' : 'none'; });
-    form.querySelector('.a-nome').addEventListener('keydown', e => e.stopPropagation());
-    form.querySelector('.a-ok').addEventListener('click', () => {
-      const nome = form.querySelector('.a-nome').value.trim();
-      const r = Math.round(Number(form.querySelector('.a-r').value));
-      if (!nome) { form.querySelector('.a-msg').textContent = 'Escreva o nome!'; return; }
-      if (!(r >= MIN_R && r <= MAX_R)) { form.querySelector('.a-msg').textContent = 'A nota é de 60 a 130.'; return; }
+    form.append(...playerForm('ADICIONAR', (c) => {
       data.custom = data.custom || [];
-      data.custom.push({ key: 'meu-' + Date.now(), custom: true, nome, pos: form.querySelector('.a-pos').value, r,
-        face: form.querySelector('.a-face').value, club: BADGES[id][1], badge: BADGES[id][0], album: id });
+      data.custom.push(Object.assign({ key: 'meu-' + Date.now(), custom: true, club: BADGES[id][1], badge: BADGES[id][0], album: id }, c));
       save(); render();
-    });
+    }));
+    open.addEventListener('click', () => { form.style.display = form.style.display === 'none' ? 'flex' : 'none'; });
     wrap.append(open, form);
     return wrap;
   }
