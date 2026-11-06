@@ -1044,7 +1044,7 @@
   function update() {
     frame++;
     // No menu, a prévia do herói vai girando
-    if (state === 'title' && menuPage === 'main' && frame % 45 === 0) { heroTurn++; heroCanvas($('hero'), meta.skin, player.elem, HERO_DIRS[heroTurn % 4]); }
+    if (state === 'title' && menuPage === 'main' && frame % 45 === 0) { heroTurn++; heroCanvas($('hero'), meta.skin, elemOf(meta.skin), HERO_DIRS[heroTurn % 4]); }
     if (modalOn && !coop && state === 'play') return;   // convite na tela: o jogo espera
     if (toastTimer > 0) toastTimer--;
     coopTick();
@@ -1392,7 +1392,7 @@
     paintMyTag();
     renderFriends();
     if (menuPage === 'main') {
-      heroCanvas($('hero'), meta.skin, player.elem, HERO_DIRS[heroTurn % 4]);
+      heroCanvas($('hero'), meta.skin, elemOf(meta.skin), HERO_DIRS[heroTurn % 4]);   // a roupa é da cor do personagem
       $('m-skin').textContent = skinOf(meta.skin).name.toUpperCase();
       loadSave();
       const run = started ? { v: 3, level: levelIdx } : save;
@@ -1440,7 +1440,8 @@
         btn.addEventListener('click', () => {
           if (!have) { meta.coins -= price; meta.skins.push(s.id); }
           meta.skin = s.id;
-          if (started) { player.maxHp = maxHpNow(); player.hp = Math.min(player.hp, player.maxHp); player.elem = elemOf(meta.skin); }
+          player.elem = elemOf(meta.skin);
+          if (started) { player.maxHp = maxHpNow(); player.hp = Math.min(player.hp, player.maxHp); }
           // A foto do perfil acompanha o personagem (se a foto for de personagem, não de bicho)
           if (!String(meta.avatar).startsWith('bicho:')) { meta.avatar = 'skin:' + s.id; syncUser(); }
           writeMeta(); renderMenu();
