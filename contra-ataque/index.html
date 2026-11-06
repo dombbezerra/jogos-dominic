@@ -7,6 +7,9 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#12100c">
   <title>Contra-Ataque</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -203,6 +206,34 @@
     #b-reload { right: calc(env(safe-area-inset-right) + 34px); bottom: calc(env(safe-area-inset-bottom) + 136px); width: 62px; height: 62px; }
 
     .hidden { display: none !important; }
+
+    /* ── Visual novo: letra de fliperama, bordas grossas e sombra dura (igual ao menu dos jogos), em cor de areia ── */
+    :root { --tinta: #0c0a07; --areia: #d8a24a; --display: 'Bungee', 'Arial Black', Impact, sans-serif; --texto: 'Baloo 2', 'Trebuchet MS', sans-serif; }
+    html, body, button { font-family: var(--texto); }
+    #menu, #armasTela { background:
+      repeating-linear-gradient(135deg, rgba(216,162,74,.035) 0 14px, transparent 14px 28px),
+      radial-gradient(ellipse at 50% 30%, rgba(216,162,74,.12), transparent 60%),
+      linear-gradient(#1b1813, #0c0a07); }
+    #menu h1, #armasTela h1 { font-family: var(--display); font-weight: 400; letter-spacing: 0; color: #e8c07a;
+      text-shadow: 3px 3px 0 #7a5320, 6px 6px 0 var(--tinta); }
+    #menu .sub, #armasTela .sub { font-weight: 700; letter-spacing: 0; text-transform: none; font-size: clamp(14px, 2.6vw, 17px); }
+    .dif { font-family: var(--texto); font-weight: 800; font-size: 16px; letter-spacing: 0; padding: 8px 18px 6px;
+      border: 3px solid var(--tinta); border-radius: 12px; box-shadow: 0 4px 0 var(--tinta); }
+    .dif:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
+    .dif.on { border-color: var(--tinta); }
+    .ctl-lbl { font-weight: 700; letter-spacing: 0; font-size: 15px; }
+    .acoes button, #voltarArmas { font-family: var(--display); font-weight: 400; letter-spacing: 0; font-size: clamp(17px, 3.4vw, 22px);
+      padding: 12px 30px 8px; border-radius: 14px; box-shadow: 0 5px 0 var(--tinta); }
+    .arma-card { border-width: 3px; border-radius: 14px; }
+    .arma-card .n { font-family: var(--display); font-weight: 400; letter-spacing: 0; }
+    .arma-card .t, .barra span { letter-spacing: 0; font-weight: 600; font-size: 12px; }
+    .keys { font-size: clamp(13px, 2.2vw, 15px); font-weight: 500; }
+    .big { font-family: var(--display); font-weight: 400; }
+    .lbl { font-weight: 700; letter-spacing: 1px; font-size: 11px; }
+    .panel-bl, .panel-br, .panel-t { border-radius: 12px; border-width: 2px; }
+    .tb { font-family: var(--texto); font-weight: 800; }
+    #back-link { font-family: var(--texto); font-weight: 800; font-size: 14px; background: var(--areia); color: var(--tinta);
+      border: 3px solid var(--tinta); border-radius: 12px; box-shadow: 0 4px 0 var(--tinta); padding: 4px 12px 2px; }
   </style>
 </head>
 <body>
