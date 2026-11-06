@@ -23,13 +23,19 @@
   const tierOf = r => TIERS.find(t => r >= t[0]);
   const pick = a => a[Math.floor(Math.random() * a.length)];
 
-  const SPECIALS = [];   // os jogadores quem cria é você (➕ no álbum)
+  const SPECIALS = [];   // preenchido depois do BADGES com o álbum de todo mundo (album.js)
   const ALBUM = [['brasil', '🇧🇷 BRASIL'], ['argentina', '🇦🇷 ARGENTINA'], ['portugal', '🇵🇹 PORTUGAL'], ['franca', '🇫🇷 FRANÇA'],
     ['inglaterra', '🏴 INGLATERRA'], ['espanha', '🇪🇸 ESPANHA'], ['lendas', '🏆 LENDAS']];   // LENDAS: jogadores aposentados
   const ALBUM_PRIZE = 1500;   // completou uma seleção: ganha moedas
   // Os craques do álbum: os do jogo e os que você adicionou (➕)
-  const allSpecials = () => SPECIALS.concat((data && data.custom) || []);
+  // O mesmo jogador (mesma chave) do seu álbum vale mais que o de todo mundo (ex.: o nome de verdade, no seu)
+  const allSpecials = () => {
+    const mine = (data && data.custom) || [], keys = new Set(mine.map(c => c.key));
+    return SPECIALS.filter(sp => !keys.has(sp.key)).concat(mine);
+  };
   const BADGES = { brasil: ['🇧🇷', 'Brasil'], argentina: ['🇦🇷', 'Argentina'], portugal: ['🇵🇹', 'Portugal'], franca: ['🇫🇷', 'França'], inglaterra: ['🏴', 'Inglaterra'], espanha: ['🇪🇸', 'Espanha'], lendas: ['🏆', 'Lendas'] };
+  for (const [key, nome, pos, r, face, album] of window.ALBUM_FC || [])
+    SPECIALS.push({ key, nome, pos, r, face, album, club: BADGES[album][1], badge: BADGES[album][0] });
   // Nome que aparece: o que você escreveu no ✏️, ou o da carta
   const nameOf = c => (data.renames && data.renames[c.key || c.id]) || c.nome;
   let data;
@@ -293,7 +299,7 @@
     return { id: data.next++, key: sp.key, nome: sp.nome, pos: sp.pos, r: sp.r, face: sp.face, club: sp.club, badge: sp.badge, time: sp.time };
   }
   function openPack(p) {
-    if (!allSpecials().length) { $('pack-msg').textContent = 'Primeiro crie seus jogadores no 📒 ÁLBUM (➕ ADICIONAR JOGADOR)!'; return; }
+    if (!allSpecials().length) { $('pack-msg').textContent = 'O álbum ainda não tem jogadores.'; return; }
     if (!isAdm()) {   // o ADM abre de graça
       if (data.coins < p.price) return;
       data.coins -= p.price;
