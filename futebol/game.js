@@ -84,7 +84,9 @@
   const nameOf = c => (data.renames && data.renames[c.key || c.id]) || c.nome;
   let data;
   // Conta de iniciante: começa só com 500 moedas e nenhuma carta
-  const jogoNovo = () => ({ coins: 500, cards: [], team: SLOTS.map(() => null), next: 1, played: 0, wins: 0, semFalsas: true });
+  // (táticas e times já vêm vazios, senão vinham os da conta pela nuvem)
+  const jogoNovo = () => ({ coins: 500, cards: [], team: SLOTS.map(() => null), next: 1, played: 0, wins: 0, semFalsas: true,
+    tactics: [0, 1, 2].map(() => ({ nome: '', team: SLOTS.map(() => null) })), tactic: 0, clubs: [], renames: {}, myClub: '' });
 
   function load() {
     loading = true;
@@ -345,8 +347,8 @@
   }
 
   const PACKS = [
-    // Bronze: um time inteiro pra começar (1 de cada posição)
-    { id: 'bronze', name: 'Pacote Bronze', ico: '🟫', price: 300, n: 7, team: true, min: 60, max: 95, bg: 'linear-gradient(135deg,#c07a3a,#7a4a1a)' },
+    // Bronze: um time inteiro de iniciantes pra começar (1 de cada posição)
+    { id: 'bronze', name: 'Pacote Bronze', ico: '🟫', price: 300, n: 7, team: true, min: 60, max: 80, bg: 'linear-gradient(135deg,#c07a3a,#7a4a1a)' },
     { id: 'prata', name: 'Pacote Prata', ico: '⬜', price: 800, n: 3, min: 70, max: 95, bg: 'linear-gradient(135deg,#a9b2c3,#5a6a80)' },
     { id: 'ouro', name: 'Pacote Ouro', ico: '🟨', price: 2000, n: 3, min: 85, max: 112, bg: 'linear-gradient(135deg,#ffd23a,#b8860b)' },
     { id: 'lenda', name: 'Pacote Lenda', ico: '🌈', price: 6000, n: 3, min: 95, max: 130, best: [110, 130], bg: 'linear-gradient(135deg,#ff4a4a,#ffb02e,#5ccfff,#b06cff)' },
@@ -361,7 +363,7 @@
       b.innerHTML = '<div class="ico"></div><div class="nm"></div><small></small><div class="price"></div>';
       b.querySelector('.ico').textContent = p.ico;
       b.querySelector('.nm').textContent = p.name;
-      b.querySelector('small').textContent = p.team ? 'Um time inteiro: 7 jogadores, 1 de cada posição' : p.n + ' jogadores de nota ' + p.min + ' a ' + p.max + (p.best ? ' (1 garantido de ' + p.best[0] + '+)' : '');
+      b.querySelector('small').textContent = p.team ? 'Um time de iniciantes: 7 jogadores de nota ' + p.min + ' a ' + p.max : p.n + ' jogadores de nota ' + p.min + ' a ' + p.max + (p.best ? ' (1 garantido de ' + p.best[0] + '+)' : '');
       b.querySelector('.price').textContent = '🪙 ' + p.price;
       b.disabled = !isAdm() && data.coins < p.price;
       b.addEventListener('click', () => openPack(p));
@@ -381,6 +383,9 @@
     let pool = allSpecials().filter(sp => !sp.evento);   // carta de evento só na loja do evento
     if (!pool.length) return inventCard(min, max, pos);
     if (pos && pool.some(sp => sp.pos === pos)) pool = pool.filter(sp => sp.pos === pos);   // pacote de time: essa posição
+    // Os craques do álbum têm nota 84 pra cima: nota mais baixa que isso vem um jogador iniciante
+    const r = min + Math.floor((max - min + 1) * Math.pow(Math.random(), 1.6));
+    if (r < Math.min(...pool.map(sp => sp.r))) return inventCard(r, r, pos);
     let ok = pool.filter(sp => sp.r >= min && sp.r <= max);
     if (!ok.length) {   // nenhum nessa faixa: vem o de nota mais perto
       const d = sp => sp.r < min ? min - sp.r : sp.r > max ? sp.r - max : 0;
