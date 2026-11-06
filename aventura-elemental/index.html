@@ -403,6 +403,23 @@
       .row .mbtn.big { order: -1; flex-basis: 100%; }
     }
     @media (prefers-reduced-motion: reduce) { .mbtn { transition: none; } }
+
+    /* Amigos: gaveta no lado da tela (toca na aba 👥 AMIGOS pra abrir e fechar) */
+    .friends { position: fixed; top: 50%; right: 0; left: auto; width: min(270px, 78vw); margin: 0; z-index: 30; overflow: visible;
+      transform: translate(100%, -50%); transition: transform 0.25s ease; border-radius: 14px 0 0 14px; border-right: none; background: #1e1650; }
+    .friends.aberta { transform: translate(0, -50%); box-shadow: -6px 0 24px rgba(0, 0, 0, 0.5); }
+    .friends .friends-title { border-radius: 11px 0 0 0; }
+    .friends .friends-title { font-size: 18px; padding: 8px 12px 6px; }
+    .friends #friends-list { max-height: 60vh; min-height: 80px; font-size: 17px; padding: 6px 0; }
+    .friends #friends-list li { padding: 8px 12px; gap: 8px; }
+    .friends .friend-btn { font-size: 13px; padding: 6px 10px; border-radius: 8px; }
+    .friends-tab {
+      position: absolute; right: 100%; top: 50%; transform: translateY(-50%); cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px;
+      background: #4a3a8a; color: #fff; border: 3px solid var(--tinta); border-right: none; border-radius: 12px 0 0 12px;
+      font-family: var(--display); font-size: 18px; box-shadow: -3px 3px 0 var(--tinta);
+    }
+    .friends-tab span { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 12px; letter-spacing: 1px; }
   </style>
 </head>
 <body class="in-menu">
@@ -433,7 +450,8 @@
       <div class="wallet"><i class="ic ic-gema" title="Gema Elemental"></i> <b id="m-coins">0</b> <i class="ic ic-moeda" title="Moeda Elemental"></i> <b id="m-gems">0</b></div>
       <div id="m-user" class="user-tag"></div>
       <!-- Amigos online (a lista vai ser preenchida quando tiver o sistema de amigos) -->
-      <div class="friends">
+      <div class="friends" id="friends">
+        <button type="button" class="friends-tab" id="friends-tab" aria-label="Abrir amigos">👥<span>AMIGOS</span></button>
         <div class="friends-title">AMIGOS</div>
         <ul id="friends-list"></ul>
       </div>
@@ -547,5 +565,9 @@
   <div id="coop-modal"><div class="coop-box"><div id="coop-title"></div><div id="coop-sub"></div><div id="coop-btns"></div></div></div>
   <script src="../monta-emoji/emoji.js?v=1"></script>
   <script src="game.js?v=48"></script>
+  <script>
+    // Gaveta de amigos no lado da tela
+    document.getElementById('friends-tab').addEventListener('click', () => document.getElementById('friends').classList.toggle('aberta'));
+  </script>
 </body>
 </html>
