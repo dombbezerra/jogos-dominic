@@ -900,13 +900,20 @@
       else if (M.charge > 0) { shoot(me, dir.y, M.charge); M.charge = 0; }
     } else {
       M.charge = 0;
-      if (pressed.shoot && me.lunge <= 0) { me.lunge = 14; beep(160, 0.06, 'square'); }   // carrinho: corre pra roubar
+      if (pressed.shoot && me.lunge <= 0) { me.lunge = 22; beep(160, 0.08, 'square'); }   // CARRINHO: desliza pra roubar a bola
       if (pressed.pass) {   // troca pro jogador mais perto da bola
         const near = M.players.filter(p => p.team === 0 && !p.gk && p !== me).sort((p, q) => dist(p, b) - dist(q, b))[0];
         if (near) { M.me = near; M.switchCd = 30; }
       }
     }
     pressed.pass = pressed.shoot = false;
+    // Botões igual FC Mobile: com a bola é PASSE/CHUTE; sem a bola é TROCAR/CARRINHO
+    const ataque = b.owner === me;
+    if (M.labels !== ataque) {
+      M.labels = ataque;
+      $('b-shoot').textContent = ataque ? 'CHUTE' : 'CARRINHO';
+      $('b-pass').textContent = ataque ? 'PASSE' : 'TROCAR';
+    }
 
     // Movimento
     for (const p of M.players) {
@@ -948,7 +955,7 @@
         let best = null, bd = 9;
         for (const p of M.players) {
           if (p.cd > 0 || p.gk) continue;
-          const d = dist(p, b);
+          const d = dist(p, b) - (p.lunge > 0 ? 6 : 0);   // no carrinho alcança mais longe
           if (d < bd && (sp < 5 || Math.random() < 0.3)) { bd = d; best = p; }
         }
         if (best) { b.owner = best; best.cd = 0; }
@@ -1046,7 +1053,7 @@
   async function play() {
     if (mode3d() && !window.FC3D) {
       $('main-msg').textContent = '⏳ Carregando o estádio 3D...';
-      try { if (!window.THREE) await loadScript('../mundo-blocos/three.min.js'); await loadScript('game3d.js?v=1'); }
+      try { if (!window.THREE) await loadScript('../mundo-blocos/three.min.js'); await loadScript('game3d.js?v=2'); }
       catch (e) { $('main-msg').textContent = 'Não deu pra carregar o 3D. Jogando no normal.'; }
       $('main-msg').textContent = '';
     }

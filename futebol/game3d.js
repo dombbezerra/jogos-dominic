@@ -183,8 +183,15 @@
       const u = m.userData;
       u.step += sp * 0.35;
       const sw = Math.sin(u.step) * Math.min(0.9, sp * 0.45);
-      u.legs[0].rotation.z = sw; u.legs[1].rotation.z = -sw;
-      u.arms[0].rotation.z = -sw * 0.8; u.arms[1].rotation.z = sw * 0.8;
+      if (p.lunge > 0) {   // carrinho: deita pra trás e desliza com as pernas pra frente
+        m.rotation.z = 1.1; m.position.y = 0.35;
+        u.legs[0].rotation.z = u.legs[1].rotation.z = 0.6;
+        u.arms[0].rotation.z = u.arms[1].rotation.z = -1.2;
+      } else {
+        m.rotation.z = 0;
+        u.legs[0].rotation.z = sw; u.legs[1].rotation.z = -sw;
+        u.arms[0].rotation.z = -sw * 0.8; u.arms[1].rotation.z = sw * 0.8;
+      }
     }
     // Bola: sobe quando é chutada forte e quica no chão
     const b = M.ball;
