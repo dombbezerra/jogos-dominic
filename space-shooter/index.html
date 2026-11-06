@@ -7,6 +7,9 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="theme-color" content="#05060d" />
 <title>Space Shooter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; }
   html, body {
@@ -267,6 +270,42 @@
   @media (hover: none) and (pointer: coarse) {
     #touch-ui { display: block; }
   }
+
+  /* ── Visual novo: letra de fliperama, bordas grossas e sombra dura (igual ao menu dos jogos) ── */
+  :root { --tinta: #0c0718; --display: 'Bungee', 'Arial Black', Impact, sans-serif; --texto: 'Baloo 2', system-ui, sans-serif; }
+  html, body, button { font-family: var(--texto); }
+  body { background:
+    radial-gradient(circle, rgba(255,255,255,0.06) 1.5px, transparent 1.6px) 0 0 / 22px 22px, #05060d; }
+  #game { border: 3px solid var(--tinta); outline: 3px solid #8fb6ff; border-radius: 14px; box-shadow: 0 6px 0 var(--tinta), 0 0 40px #1a2070; }
+  #menu, #naves { border-radius: 14px; }
+  .menu-title .l1, .menu-title .l2 { font-family: var(--display); font-weight: 400; letter-spacing: 0;
+    text-shadow: 3px 3px 0 var(--tinta), 6px 6px 0 rgba(12, 7, 24, 0.5); }
+  .menu-title { transform: rotate(-2deg); }
+  .ship-name { font-family: var(--display); font-weight: 400; letter-spacing: 0; }
+  .ship-desc { font-weight: 600; opacity: .8; }
+  .mbtn { font-family: var(--texto); font-weight: 800; letter-spacing: 0; border-color: var(--tinta); border-radius: 14px; box-shadow: 0 5px 0 var(--tinta); }
+  .mbtn.play { font-family: var(--display); font-weight: 400; }
+  .mbtn:active { box-shadow: 0 1px 0 var(--tinta); }
+  .ship-card { border-width: 3px; border-radius: 14px; }
+  .ship-card .n { font-size: clamp(13px, 2.6vw, 15px); }
+  .ship-card .s { font-size: clamp(11px, 2.2vw, 12px); opacity: .75; font-weight: 600; }
+  #overlay .panel { border: 3px solid var(--tinta); outline: 3px solid #8fb6ff; outline-offset: -8px; border-radius: 18px; box-shadow: 0 6px 0 var(--tinta); padding: 22px 26px; }
+  #overlay h1 { font-family: var(--display); font-weight: 400; text-shadow: 3px 3px 0 var(--tinta); }
+  #overlay .start-btn { font-weight: 800; letter-spacing: 0; border: 3px solid var(--tinta); border-radius: 14px; box-shadow: 0 5px 0 var(--tinta); }
+  #hud { font-weight: 700; letter-spacing: 0; font-size: clamp(13px, 2.6vw, 16px); }
+  #hud b { font-family: var(--display); font-weight: 400; color: #ffd42a; }
+  #pauseBtn { font-weight: 800; letter-spacing: 0; border: 3px solid var(--tinta); border-radius: 12px; box-shadow: 0 4px 0 var(--tinta); background: #8fb6ff; color: var(--tinta); }
+  #pauseBtn:hover { background: #a8c6ff; }
+  #shoot-btn { font-family: var(--texto); font-weight: 800; }
+  #back-link { font-weight: 800; font-size: 14px; background: #8fb6ff; color: var(--tinta); backdrop-filter: none;
+    border: 3px solid var(--tinta); border-radius: 12px; box-shadow: 0 4px 0 var(--tinta); padding: 4px 12px 2px; }
+  @media (max-width: 520px) {
+    #game-wrap { width: calc(100% - 14px); }
+    #preview { width: 96px; height: 96px; }
+    .menu-title { margin-top: 0; }
+    .mbtn { padding: 8px 4px 6px; }
+  }
+  @media (prefers-reduced-motion: reduce) { #preview { animation: none; } }
 </style>
 </head>
 <body>
