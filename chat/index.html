@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Chat de Amigos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --tinta: #0e0c33; --noite: #15134a; --noite-2: #2a2380; --creme: #fff6dc;
+      --sol: #ffd23f; --rosa: #ff5d8f; --agua: #3fe0d0; --roxo: #b06cff; --verde: #2fd15a;
+      --display: 'Bungee', 'Arial Black', Impact, sans-serif;
+      --texto: 'Baloo 2', 'Segoe UI', Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--texto); color: var(--creme); -webkit-tap-highlight-color: transparent;
+      background: radial-gradient(circle at 50% -10%, var(--noite-2) 0%, transparent 60%), var(--noite);
+      display: flex; flex-direction: column; align-items: center;
+    }
+    #back-link {
+      position: fixed; top: 10px; left: 10px; z-index: 10; text-decoration: none;
+      font-weight: 800; background: var(--sol); color: var(--tinta); border: 3px solid var(--tinta);
+      border-radius: 12px; padding: 4px 12px; box-shadow: 0 4px 0 var(--tinta);
+    }
+    #back-link:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
+    .app { width: min(720px, 100%); height: 100%; display: flex; flex-direction: column; padding: 56px 10px 10px; }
+    h1 { font-family: var(--display); font-weight: 400; text-align: center; font-size: clamp(26px, 6vw, 38px); line-height: 1; }
+    h1 span { color: var(--sol); }
+    .eu { text-align: center; font-size: 14px; opacity: 0.85; margin: 4px 0 10px; min-height: 20px; }
+
+    #list {
+      flex: 1; min-height: 0; overflow-y: auto; list-style: none; padding: 10px;
+      background: rgba(0, 0, 0, 0.25); border: 3px solid var(--tinta); border-radius: 18px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.4);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    #list li { max-width: 82%; align-self: flex-start; background: #2e2366; border: 2px solid #4a3a8a; border-radius: 16px 16px 16px 4px; padding: 6px 10px 8px; }
+    #list li.mine { align-self: flex-end; background: #1f6a4a; border-color: #2fa070; border-radius: 16px 16px 4px 16px; }
+    #list li.info { align-self: center; max-width: 100%; background: none; border: none; text-align: center; opacity: 0.85; }
+    .who { display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 14px; }
+    .bola { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; color: var(--tinta); font-weight: 800; flex: none; }
+    .hora { font-weight: 500; font-size: 11px; opacity: 0.6; }
+    .txt { font-size: 16px; line-height: 1.3; overflow-wrap: anywhere; margin-top: 2px; }
+    .arco { background: linear-gradient(90deg, #ff5d5d, #ffb02e, #ffe36b, #5fe08a, #5cb8ff, #b06cff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+    form { display: flex; gap: 6px; margin-top: 10px; }
+    #input { flex: 1; min-width: 0; padding: 10px 12px; font-size: 16px; border-radius: 14px; border: 3px solid var(--tinta); background: var(--creme); color: var(--tinta); font-family: inherit; font-weight: 700; }
+    .btn { font-family: var(--texto); font-weight: 800; font-size: 16px; cursor: pointer; border: 3px solid var(--tinta); border-radius: 14px; padding: 0 14px; color: #fff; box-shadow: 0 4px 0 var(--tinta); }
+    .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
+    #gif-btn { background: var(--roxo); } #emoji-btn { background: var(--sol); color: var(--tinta); font-size: 20px; } #send { background: var(--verde); font-size: 20px; }
+    #msg { min-height: 20px; font-size: 13px; color: #ff9a9a; margin-top: 4px; text-align: center; }
+
+    #picker { display: none; max-height: 42vh; overflow-y: auto; margin-top: 8px; padding: 8px; background: rgba(0,0,0,0.3); border: 3px solid var(--tinta); border-radius: 16px; }
+    #picker.on { display: block; }
+    .sec { font-family: var(--display); font-size: 14px; color: var(--sol); margin: 6px 2px; }
+    .grade { display: flex; flex-wrap: wrap; gap: 6px; }
+    .grade button { background: #2e2366; border: 2px solid #4a3a8a; border-radius: 12px; width: 58px; height: 58px; cursor: pointer; display: grid; place-items: center; }
+    .grade button:active { transform: scale(0.92); }
+    .dica { font-size: 13px; opacity: 0.8; margin: 4px 2px; }
+    .dica a { color: var(--sol); }
+
+    /* GIFs: emojis grandes que se mexem (os mesmos do chat da Aventura) */
+    .gif { display: inline-block; font-size: 32px; line-height: 1; }
+    .txt .gif { font-size: 56px; margin: 4px 4px 0; }
+    .gif-pula { animation: gif-pula 0.6s ease-in-out infinite alternate; }
+    .gif-treme { animation: gif-treme 0.25s linear infinite; }
+    .gif-gira { animation: gif-gira 1.2s linear infinite; }
+    .gif-bate { animation: gif-bate 0.8s ease-in-out infinite; }
+    .gif-balanca { animation: gif-balanca 0.9s ease-in-out infinite alternate; }
+    .gif-pisca { animation: gif-pisca 0.5s steps(2) infinite; }
+    .gif-arco { animation: gif-arco 1.5s linear infinite; }
+    @keyframes gif-pula { from { transform: translateY(0); } to { transform: translateY(-10px); } }
+    @keyframes gif-treme { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-3px) rotate(-5deg); } 75% { transform: translateX(3px) rotate(5deg); } }
+    @keyframes gif-gira { to { transform: rotate(360deg); } }
+    @keyframes gif-bate { 0%, 100% { transform: scale(1); } 30% { transform: scale(1.3); } 60% { transform: scale(0.95); } }
+    @keyframes gif-balanca { from { transform: rotate(-15deg); } to { transform: rotate(15deg); } }
+    @keyframes gif-pisca { 50% { opacity: 0.2; } }
+    @keyframes gif-arco {
+      0% { filter: hue-rotate(0deg) drop-shadow(0 0 4px #ff4a4a); } 33% { filter: hue-rotate(120deg) drop-shadow(0 0 4px #7ddf64); }
+      66% { filter: hue-rotate(240deg) drop-shadow(0 0 4px #5ccfff); } 100% { filter: hue-rotate(360deg) drop-shadow(0 0 4px #ff4a4a); }
+    }
+    /* Emojis do Monta Emoji */
+    .gif-emoji { width: 1.3em; height: 1.3em; vertical-align: middle; }
+    .gif-emoji svg { width: 100%; height: 100%; display: block; animation: gif-emoji 1.2s ease-in-out infinite; }
+    .txt .gif-emoji { font-size: 76px; }
+    @keyframes gif-emoji { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-8%) rotate(-7deg); } 75% { transform: translateY(-4%) rotate(7deg); } }
+    @media (prefers-reduced-motion: reduce) { .gif, .gif * , .gif-emoji svg { animation: none !important; } }
+  </style>
+</head>
+<body>
+  <a href="../index.html" id="back-link">← Menu</a>
+  <div class="app">
+    <h1>💬 CHAT DE <span>AMIGOS</span></h1>
+    <div class="eu" id="eu"></div>
+    <ul id="list"></ul>
+    <div id="picker"></div>
+    <form id="form" style="display:none">
+      <button type="button" class="btn" id="gif-btn">GIF</button>
+      <button type="button" class="btn" id="emoji-btn" title="Meus emojis">😜</button>
+      <input id="input" maxlength="200" placeholder="Escreva aqui..." autocomplete="off">
+      <button class="btn" id="send" title="Mandar">➤</button>
+    </form>
+    <div id="msg"></div>
+  </div>
+
+  <script src="../monta-emoji/emoji.js?v=1"></script>
+  <script>
+  (() => {
+    const $ = id => document.getElementById(id);
+    const el = (tag, text, cls) => { const e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
+    const PERFIL = new URLSearchParams(location.search).get('perfil');
+    const KEY = 'aventuraConta' + (PERFIL ? ':' + PERFIL : '');   // a mesma conta da Aventura Elemental
+    const conta = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
+    const eu = () => conta().user;
+
+    // Os mesmos GIFs do chat da Aventura: [id, emoji, jeito de mexer, preço (da loja), moeda, arco-íris]
+    const GIFS = [
+      ['rindo', '😂', 'pula'], ['fogo', '🔥', 'treme'], ['festa', '🎉', 'gira'], ['joinha', '👍', 'bate'],
+      ['oculos', '😎', 'balanca'], ['caveira', '💀', 'treme'], ['coracao', '❤️', 'bate'], ['trofeu', '🏆', 'pula'],
+      ['raio', '⚡', 'pisca'], ['chorando', '😭', 'treme'], ['susto', '😱', 'bate'], ['danca', '🕺', 'balanca'],
+      ['dragao', '🐉', 'balanca', 60], ['foguete', '🚀', 'pula', 60], ['alien', '👽', 'treme', 60],
+      ['robo', '🤖', 'balanca', 60], ['unicornio', '🦄', 'pula', 100], ['coroa', '👑', 'bate', 100],
+      ['diamante', '💎', 'gira', 100], ['ninja', '🥷', 'treme', 100],
+      ['rindoarco', '😂', 'pula', 30, 1, true], ['fogoarco', '🔥', 'treme', 30, 1, true],
+      ['coracaoarco', '❤️', 'bate', 30, 1, true], ['joinhaarco', '👍', 'bate', 30, 1, true],
+      ['estrelaarco', '⭐', 'gira', 40, 1, true], ['oculosarco', '😎', 'balanca', 40, 1, true],
+      ['arcoiris', '🌈', 'pula', 40, 1, true], ['dragaoarco', '🐉', 'balanca', 60, 1, true],
+      ['coroaarco', '👑', 'bate', 60, 1, true],
+    ];
+    const temGif = id => { const g = GIFS.find(x => x[0] === id); return !!g && (!g[3] || (conta().gifs || []).includes(id)); };
+    function gifEl(id) {
+      const g = GIFS.find(x => x[0] === id);
+      if (!g) return el('span', '');
+      const inner = el('span', g[1], 'gif gif-' + g[2]);
+      if (!g[5]) return inner;
+      const wrap = el('span', null, 'gif gif-arco');
+      wrap.appendChild(inner);
+      return wrap;
+    }
+    function emojiEl(e) {
+      const sp = el('span', null, 'gif gif-emoji');
+      if (window.MontaEmoji) sp.innerHTML = MontaEmoji.desenha(MontaEmoji.limpa(e));
+      else sp.textContent = '😀';
+      return sp;
+    }
+    const CORES = { branco: '#ffffff', verde: '#5df07a', azul: '#5ccfff', vermelho: '#ff5a5a', laranja: '#ff9a2e', roxo: '#b06cff', rosa: '#ff6ad5', dourado: '#ffd23a' };
+    function nomeEl(nome, cor) {
+      const s = el('span', nome);
+      if (cor === 'arcoiris') s.className = 'arco'; else s.style.color = CORES[cor] || '#fff';
+      return s;
+    }
+
+    async function api(body) {
+      const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || 'Não deu agora.');
+      return d;
+    }
+
+    // ── Mensagens ──
+    let msgs = [], ultimo = 0, membro = null, ocupado = false;
+    function info(t) { const l = $('list'); l.innerHTML = ''; l.appendChild(el('li', t, 'info')); }
+    function render() {
+      const u = eu();
+      $('form').style.display = u && membro ? '' : 'none';
+      if (!u) {
+        $('eu').textContent = '';
+        const l = $('list'); l.innerHTML = '';
+        const li = el('li', null, 'info');
+        li.innerHTML = 'Pra usar o chat, entre com seu e-mail na <a href="../aventura-elemental/' + (PERFIL ? '?perfil=' + encodeURIComponent(PERFIL) : '') + '" style="color:#ffd23f">Aventura Elemental</a> (botão USUÁRIO).';
+        l.appendChild(li);
+        return;
+      }
+      $('eu').textContent = 'Você é ';
+      $('eu').appendChild(nomeEl(u.nome, conta().nameColor));
+      if (membro === null) return info('Carregando...');
+      if (!membro) return info('🔒 O chat é só pra convidados. Peça pro ADM te convidar!');
+      const l = $('list');
+      const noFim = l.scrollHeight - l.scrollTop - l.clientHeight < 60;
+      l.innerHTML = '';
+      if (!msgs.length) l.appendChild(el('li', 'Ninguém falou nada ainda. Diga oi! 👋', 'info'));
+      for (const m of msgs) {
+        const li = el('li', null, m.nome === u.nome ? 'mine' : '');
+        const who = el('div', null, 'who');
+        const bola = el('span', (m.nome || '?').slice(0, 1).toUpperCase(), 'bola');
+        bola.style.background = CORES[m.cor] || '#ffd23f';
+        const d = new Date(m.t);
+        who.append(bola, nomeEl(m.nome, m.cor), el('span', String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'), 'hora'));
+        const txt = el('div', m.texto || null, 'txt');
+        if (m.gif) txt.appendChild(gifEl(m.gif));
+        if (m.emoji) txt.appendChild(emojiEl(m.emoji));
+        li.append(who, txt);
+        l.appendChild(li);
+      }
+      if (noFim || ocupado) l.scrollTop = l.scrollHeight;
+    }
+    function junta(d) {
+      membro = !!(d && d.membro);
+      if (d && d.limpo) msgs = msgs.filter(m => m.id > d.limpo);   // o ADM apagou as conversas
+      for (const m of (d && d.msgs) || []) if (m.id > ultimo) { msgs.push(m); ultimo = m.id; }
+      msgs = msgs.slice(-100);
+    }
+    async function ler() {
+      const u = eu();
+      if (!u) return render();
+      try { junta(await api({ action: 'chatLer', email: u.email, desde: ultimo })); } catch (e) { return; }
+      render();
+    }
+    async function mandar(texto, gif, emoji) {
+      const u = eu();
+      if (!u || ocupado) return;
+      ocupado = true;
+      $('msg').textContent = '';
+      try {
+        junta(await api({ action: 'chatEnviar', email: u.email, texto, gif, emoji, desde: ultimo }));
+        $('input').value = '';
+        $('picker').classList.remove('on');
+        render();
+      } catch (e) { $('msg').textContent = e.message; }
+      ocupado = false;
+    }
+    $('form').addEventListener('submit', e => { e.preventDefault(); const t = $('input').value.trim(); if (t) mandar(t, null, null); });
+
+    // ── Escolher GIF ou emoji montado ──
+    let aberto = '';
+    function picker(qual) {
+      const p = $('picker');
+      if (aberto === qual && p.classList.contains('on')) { p.classList.remove('on'); aberto = ''; return; }
+      aberto = qual;
+      p.innerHTML = '';
+      p.classList.add('on');
+      if (qual === 'gif') {
+        p.appendChild(el('div', '🎞️ GIFS', 'sec'));
+        const g = el('div', null, 'grade');
+        for (const [id] of GIFS.filter(x => temGif(x[0]))) {
+          const b = el('button'); b.type = 'button'; b.appendChild(gifEl(id));
+          b.onclick = () => mandar('', id, null);
+          g.appendChild(b);
+        }
+        p.appendChild(g);
+        p.appendChild(el('div', 'Mais GIFs na loja da Aventura Elemental! 🛒', 'dica'));
+        return;
+      }
+      p.appendChild(el('div', '😜 MEUS EMOJIS', 'sec'));
+      const g = el('div', 'Carregando...', 'dica');
+      p.appendChild(g);
+      api({ action: 'figurinhas', email: eu().email }).then(d => {
+        const figs = d.figurinhas || [];
+        g.textContent = '';
+        if (!figs.length) {
+          g.innerHTML = 'Você ainda não tem emojis. Monte no <a href="../monta-emoji/' + (PERFIL ? '?perfil=' + encodeURIComponent(PERFIL) : '') + '">MONTA EMOJI</a> e aperte 💬 SALVAR GIF!';
+          return;
+        }
+        g.className = 'grade';
+        for (const e of figs) {
+          const b = el('button'); b.type = 'button'; b.appendChild(emojiEl(e));
+          b.onclick = () => mandar('', null, e);
+          g.appendChild(b);
+        }
+        const mais = el('div', null, 'dica');
+        mais.innerHTML = '<a href="../monta-emoji/' + (PERFIL ? '?perfil=' + encodeURIComponent(PERFIL) : '') + '">➕ Montar mais emojis</a>';
+        p.appendChild(mais);
+      }).catch(() => { g.textContent = 'Não deu pra carregar seus emojis.'; });
+    }
+    $('gif-btn').onclick = () => picker('gif');
+    $('emoji-btn').onclick = () => picker('emoji');
+
+    render();
+    ler();
+    // Olha mensagem nova a cada 2,5 segundos (só com a página aberta na tela)
+    setInterval(() => { if (!document.hidden) ler(); }, 2500);
+  })();
+  </script>
+</body>
+</html>
