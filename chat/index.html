@@ -51,6 +51,8 @@
     .btn { font-family: var(--texto); font-weight: 800; font-size: 16px; cursor: pointer; border: 3px solid var(--tinta); border-radius: 14px; padding: 0 14px; color: #fff; box-shadow: 0 4px 0 var(--tinta); }
     .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
     #gif-btn { background: var(--roxo); } #emoji-btn { background: var(--sol); color: var(--tinta); font-size: 20px; } #send { background: var(--verde); font-size: 20px; }
+    .limpar { align-self: center; margin-bottom: 8px; background: none; border: 2px solid #e04848; color: #ff8a8a; border-radius: 10px; padding: 3px 12px; font-weight: 800; font-size: 13px; cursor: pointer; font-family: inherit; }
+    .limpar.armado { background: #e04848; color: #fff; }
     #msg { min-height: 20px; font-size: 13px; color: #ff9a9a; margin-top: 4px; text-align: center; }
 
     #picker { display: none; max-height: 42vh; overflow-y: auto; margin-top: 8px; padding: 8px; background: rgba(0,0,0,0.3); border: 3px solid var(--tinta); border-radius: 16px; }
@@ -95,6 +97,7 @@
   <div class="app">
     <h1>💬 CHAT DE <span>AMIGOS</span></h1>
     <div class="eu" id="eu"></div>
+    <button class="limpar" id="limpar" style="display:none">🗑️ APAGAR CONVERSAS</button>
     <ul id="list"></ul>
     <div id="picker"></div>
     <form id="form" style="display:none">
@@ -196,6 +199,7 @@
         l.appendChild(li);
       }
       if (noFim || ocupado) l.scrollTop = l.scrollHeight;
+      botaoLimpar();
     }
     function junta(d) {
       membro = !!(d && d.membro);
@@ -267,6 +271,23 @@
     }
     $('gif-btn').onclick = () => picker('gif');
     $('emoji-btn').onclick = () => picker('emoji');
+
+    // ADM: só ele vê o botão de apagar todas as conversas (toca duas vezes)
+    let adm = false;
+    function botaoLimpar() { $('limpar').style.display = adm && membro && msgs.length ? '' : 'none'; }
+    if (eu()) api({ action: 'online', email: eu().email }).then(d => { adm = !!d.adm; botaoLimpar(); }).catch(() => {});
+    $('limpar').onclick = async () => {
+      const b = $('limpar');
+      if (!b.classList.contains('armado')) {
+        b.classList.add('armado'); b.textContent = '🗑️ APAGAR TUDO? Toque de novo';
+        setTimeout(() => { b.classList.remove('armado'); b.textContent = '🗑️ APAGAR CONVERSAS'; }, 4000);
+        return;
+      }
+      b.disabled = true;
+      try { await api({ action: 'admin-limpar-chat', email: eu().email }); msgs = []; render(); }
+      catch (e) { $('msg').textContent = 'Não deu pra apagar agora.'; }
+      b.disabled = false; b.classList.remove('armado'); b.textContent = '🗑️ APAGAR CONVERSAS';
+    };
 
     render();
     ler();
