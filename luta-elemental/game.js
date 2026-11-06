@@ -169,7 +169,7 @@ function desenharBotao(b) {
   ctx.strokeRect(b.x - b.w/2, b.y - b.h/2, b.w, b.h);
   // texto
   ctx.fillStyle = b.corTexto || '#1a1a2e';
-  ctx.font = b.fonte || 'bold 22px Arial';
+  ctx.font = b.fonte || 'bold 22px "Baloo 2", Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(b.texto, b.x, b.y);
@@ -667,9 +667,9 @@ function desenharMenu() {
   // título
   ctx.textAlign = 'center';
   ctx.fillStyle = '#ffcc00';
-  ctx.font = 'bold 56px Arial';
+  ctx.font = 'bold 56px "Baloo 2", Arial';
   ctx.fillText('LUTA', tela.width/2, 110);
-  ctx.font = 'bold 76px Arial';
+  ctx.font = 'bold 76px "Baloo 2", Arial';
   ctx.fillStyle = '#ff66cc';
   ctx.fillText('ELEMENTAL', tela.width/2, 185);
 
@@ -680,7 +680,7 @@ function desenharMenu() {
   // melhor pontuação
   if (salvo.melhorPontuacao > 0) {
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.font = '14px Arial';
+    ctx.font = '14px "Baloo 2", Arial';
     ctx.textAlign = 'left';
     ctx.fillText('🏆 Recorde: ' + salvo.melhorPontuacao, 20, 40);
   }
@@ -697,25 +697,25 @@ function desenharMenu() {
   desenharPersonagemVisual(px, py, 80, p, true);
   // nome do personagem
   ctx.fillStyle = 'white';
-  ctx.font = 'bold 24px Arial';
+  ctx.font = 'bold 24px "Baloo 2", Arial';
   ctx.textAlign = 'center';
   ctx.fillText(p.nome, px, py + 90);
   ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  ctx.font = '14px Arial';
+  ctx.font = '14px "Baloo 2", Arial';
   ctx.fillText(p.descricao, px, py + 110);
 
   // mostrar evento atual (texto pequeno acima do botão jogar)
   const modo = getModo(salvo.modoAtual);
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.font = '13px Arial';
+  ctx.font = '13px "Baloo 2", Arial';
   ctx.textAlign = 'center';
   ctx.fillText('Modo: ' + modo.icone + ' ' + modo.nome, tela.width/2, tela.height - 130);
 
   // 4 botões: Personagens, Eventos, Jogar, Loja
-  btn(120, tela.height - 80, 175, 65, 'PERSONAGENS', () => { estado = 'personagens'; }, { fonte: 'bold 14px Arial', cor: '#66ccff', corHover: '#99ddff', corBorda: '#225577' });
-  btn(305, tela.height - 80, 175, 65, modo.icone + ' EVENTOS',     () => { estado = 'eventos'; },     { fonte: 'bold 15px Arial', cor: '#cc66ff', corHover: '#dd99ff', corBorda: '#552288' });
-  btn(495, tela.height - 80, 195, 80, 'JOGAR',       () => { iniciarPartida(); },     { fonte: 'bold 28px Arial', cor: '#22cc55', corHover: '#33dd66', corBorda: '#117733', corTexto: 'white' });
-  btn(680, tela.height - 80, 175, 65, 'LOJA',        () => { estado = 'loja'; },      { fonte: 'bold 18px Arial', cor: '#ff9933', corHover: '#ffaa55', corBorda: '#883300' });
+  btn(120, tela.height - 80, 175, 65, 'PERSONAGENS', () => { estado = 'personagens'; }, { fonte: 'bold 14px "Baloo 2", Arial', cor: '#66ccff', corHover: '#99ddff', corBorda: '#225577' });
+  btn(305, tela.height - 80, 175, 65, modo.icone + ' EVENTOS',     () => { estado = 'eventos'; },     { fonte: 'bold 15px "Baloo 2", Arial', cor: '#cc66ff', corHover: '#dd99ff', corBorda: '#552288' });
+  btn(495, tela.height - 80, 195, 80, 'JOGAR',       () => { iniciarPartida(); },     { fonte: 'bold 28px "Baloo 2", Arial', cor: '#22cc55', corHover: '#33dd66', corBorda: '#117733', corTexto: 'white' });
+  btn(680, tela.height - 80, 175, 65, 'LOJA',        () => { estado = 'loja'; },      { fonte: 'bold 18px "Baloo 2", Arial', cor: '#ff9933', corHover: '#ffaa55', corBorda: '#883300' });
 
   for (const b of botoes) desenharBotao(b);
 }
@@ -729,13 +729,13 @@ function desenharMoedas(x, y) {
   ctx.lineWidth = 2;
   ctx.stroke();
   ctx.fillStyle = '#aa8800';
-  ctx.font = 'bold 14px Arial';
+  ctx.font = 'bold 14px "Baloo 2", Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('$', x, y + 1);
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = 'white';
-  ctx.font = 'bold 22px Arial';
+  ctx.font = 'bold 22px "Baloo 2", Arial';
   ctx.textAlign = 'left';
   ctx.fillText(salvo.moedas, x + 22, y + 8);
 }
@@ -744,7 +744,7 @@ function desenharMoedas(x, y) {
 function desenharPersonagens() {
   ctx.textAlign = 'center';
   ctx.fillStyle = '#66ccff';
-  ctx.font = 'bold 36px Arial';
+  ctx.font = 'bold 36px "Baloo 2", Arial';
   ctx.fillText('PERSONAGENS', tela.width/2, 45);
 
   desenharMoedas(tela.width - 150, 30);
@@ -774,7 +774,7 @@ function desenharPersonagens() {
   }
 
   // botão voltar
-  btn(80, tela.height - 50, 120, 50, '◀ VOLTAR', () => { estado = 'menu'; }, { fonte: 'bold 16px Arial' });
+  btn(80, tela.height - 50, 120, 50, '◀ VOLTAR', () => { estado = 'menu'; }, { fonte: 'bold 16px "Baloo 2", Arial' });
   for (const b of botoes) desenharBotao(b);
 }
 
@@ -803,7 +803,7 @@ function desenharCardPersonagem(p, cx, cy, w, h) {
       ctx.lineWidth = 2;
       ctx.strokeRect(cx - 22, iconY - 22, 44, 44);
       ctx.fillStyle = 'white';
-      ctx.font = 'bold 22px Arial';
+      ctx.font = 'bold 22px "Baloo 2", Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('🔒', cx, iconY);
@@ -811,9 +811,9 @@ function desenharCardPersonagem(p, cx, cy, w, h) {
     }
     ctx.textAlign = 'center';
     ctx.fillStyle = 'white';
-    ctx.font = 'bold 14px Arial';
+    ctx.font = 'bold 14px "Baloo 2", Arial';
     ctx.fillText(p.nome, cx, cy + 12);
-    ctx.font = '10px Arial';
+    ctx.font = '10px "Baloo 2", Arial';
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
     ctx.fillText('❤'+p.vida+'  ⚡'+p.velocidade+'  🔥'+p.dano, cx, cy + 28);
   } else {
@@ -828,7 +828,7 @@ function desenharCardPersonagem(p, cx, cy, w, h) {
       ctx.lineWidth = 2;
       ctx.strokeRect(cxIcone - 30, cyIcone - 30, 60, 60);
       ctx.fillStyle = 'white';
-      ctx.font = 'bold 28px Arial';
+      ctx.font = 'bold 28px "Baloo 2", Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('🔒', cxIcone, cyIcone);
@@ -837,12 +837,12 @@ function desenharCardPersonagem(p, cx, cy, w, h) {
     const tx = cx - w/2 + 110;
     ctx.textAlign = 'left';
     ctx.fillStyle = 'white';
-    ctx.font = 'bold 20px Arial';
+    ctx.font = 'bold 20px "Baloo 2", Arial';
     ctx.fillText(p.nome, tx, cy - 35);
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.font = '12px Arial';
+    ctx.font = '12px "Baloo 2", Arial';
     ctx.fillText(p.descricao, tx, cy - 18);
-    ctx.font = '13px Arial';
+    ctx.font = '13px "Baloo 2", Arial';
     ctx.fillStyle = '#22cc55';
     ctx.fillText('❤ Vida: ' + p.vida, tx, cy + 2);
     ctx.fillStyle = '#66ccff';
@@ -855,7 +855,7 @@ function desenharCardPersonagem(p, cx, cy, w, h) {
   const txtCompra = compacto ? p.custo + '💰' : 'COMPRAR (' + p.custo + ' 💰)';
   const txtSelec  = compacto ? '✓ SELEC.' : '✓ SELECIONADO';
   const txtSel2   = compacto ? 'SELECIONAR' : 'SELECIONAR';
-  const fonte     = compacto ? 'bold 12px Arial' : 'bold 14px Arial';
+  const fonte     = compacto ? 'bold 12px "Baloo 2", Arial' : 'bold 14px "Baloo 2", Arial';
   if (selecionado) {
     btn(cx, cy + h/2 - 22, w - 20, 30, txtSelec, () => {}, { cor: '#444', corBorda: '#222', corTexto: 'white', desabilitado: true, fonte });
   } else if (desbloqueado) {
@@ -870,10 +870,10 @@ function desenharCardPersonagem(p, cx, cy, w, h) {
 function desenharEventos() {
   ctx.textAlign = 'center';
   ctx.fillStyle = '#cc66ff';
-  ctx.font = 'bold 42px Arial';
+  ctx.font = 'bold 42px "Baloo 2", Arial';
   ctx.fillText('EVENTOS', tela.width/2, 60);
   ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  ctx.font = '14px Arial';
+  ctx.font = '14px "Baloo 2", Arial';
   ctx.fillText('Escolha o modo e clique JOGAR no menu', tela.width/2, 90);
 
   desenharMoedas(tela.width - 150, 30);
@@ -890,7 +890,7 @@ function desenharEventos() {
     desenharCardModo(m, cx, cy, cardW, cardH);
   }
 
-  btn(80, tela.height - 50, 120, 50, '◀ VOLTAR', () => { estado = 'menu'; }, { fonte: 'bold 16px Arial' });
+  btn(80, tela.height - 50, 120, 50, '◀ VOLTAR', () => { estado = 'menu'; }, { fonte: 'bold 16px "Baloo 2", Arial' });
   for (const b of botoes) desenharBotao(b);
 }
 
@@ -905,42 +905,42 @@ function desenharCardModo(m, cx, cy, w, h) {
 
   // ícone gigante
   ctx.fillStyle = m.disponivel ? 'white' : '#888';
-  ctx.font = 'bold 60px Arial';
+  ctx.font = 'bold 60px "Baloo 2", Arial';
   ctx.textAlign = 'center';
   ctx.fillText(m.icone, cx, cy - 60);
 
   // nome
   ctx.fillStyle = m.disponivel ? m.cor : '#888';
-  ctx.font = 'bold 20px Arial';
+  ctx.font = 'bold 20px "Baloo 2", Arial';
   ctx.fillText(m.nome, cx, cy - 10);
 
   // descrição (com quebra simples)
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.font = '12px Arial';
+  ctx.font = '12px "Baloo 2", Arial';
   desenharTextoMultilinha(m.descricao, cx, cy + 15, w - 30, 16);
 
   // recorde do modo
   if (m.id === 'sobrevivencia' && salvo.melhorPontuacao > 0) {
     ctx.fillStyle = '#ffcc00';
-    ctx.font = 'bold 13px Arial';
+    ctx.font = 'bold 13px "Baloo 2", Arial';
     ctx.fillText('🏆 ' + salvo.melhorPontuacao, cx, cy + 70);
   } else if (m.id === 'tempo' && salvo.recordeTempo > 0) {
     ctx.fillStyle = '#ffcc00';
-    ctx.font = 'bold 13px Arial';
+    ctx.font = 'bold 13px "Baloo 2", Arial';
     ctx.fillText('🏆 ' + salvo.recordeTempo, cx, cy + 70);
   } else if (m.id === 'chefao' && salvo.recordeChefao > 0) {
     ctx.fillStyle = '#ffcc00';
-    ctx.font = 'bold 13px Arial';
+    ctx.font = 'bold 13px "Baloo 2", Arial';
     ctx.fillText('🏆 ' + salvo.recordeChefao, cx, cy + 70);
   }
 
   // botão selecionar / em breve
   if (!m.disponivel) {
-    btn(cx, cy + h/2 - 28, w - 30, 36, 'EM BREVE', () => {}, { cor: '#666', corBorda: '#333', corTexto: 'white', desabilitado: true, fonte: 'bold 14px Arial' });
+    btn(cx, cy + h/2 - 28, w - 30, 36, 'EM BREVE', () => {}, { cor: '#666', corBorda: '#333', corTexto: 'white', desabilitado: true, fonte: 'bold 14px "Baloo 2", Arial' });
   } else if (selecionado) {
-    btn(cx, cy + h/2 - 28, w - 30, 36, '✓ SELECIONADO', () => {}, { cor: '#444', corBorda: '#222', corTexto: 'white', desabilitado: true, fonte: 'bold 14px Arial' });
+    btn(cx, cy + h/2 - 28, w - 30, 36, '✓ SELECIONADO', () => {}, { cor: '#444', corBorda: '#222', corTexto: 'white', desabilitado: true, fonte: 'bold 14px "Baloo 2", Arial' });
   } else {
-    btn(cx, cy + h/2 - 28, w - 30, 36, 'SELECIONAR', () => { salvo.modoAtual = m.id; salvar(); mostrarMensagem('Modo: ' + m.nome); }, { cor: m.cor, corHover: '#ffe066', corBorda: '#aa8800', corTexto: 'white', fonte: 'bold 14px Arial' });
+    btn(cx, cy + h/2 - 28, w - 30, 36, 'SELECIONAR', () => { salvo.modoAtual = m.id; salvar(); mostrarMensagem('Modo: ' + m.nome); }, { cor: m.cor, corHover: '#ffe066', corBorda: '#aa8800', corTexto: 'white', fonte: 'bold 14px "Baloo 2", Arial' });
   }
 }
 
@@ -966,7 +966,7 @@ function desenharTextoMultilinha(texto, x, y, larguraMax, alturaLinha) {
 function desenharLoja() {
   ctx.textAlign = 'center';
   ctx.fillStyle = '#ff9933';
-  ctx.font = 'bold 32px Arial';
+  ctx.font = 'bold 32px "Baloo 2", Arial';
   ctx.fillText('LOJA', tela.width/2, 38);
 
   // contadores: moedas + gemas
@@ -987,7 +987,7 @@ function desenharLoja() {
       corHover:  ativo ? a.cor : 'rgba(255,255,255,0.2)',
       corBorda:  ativo ? '#000' : 'rgba(255,255,255,0.3)',
       corTexto:  ativo ? '#1a1a2e' : 'rgba(255,255,255,0.7)',
-      fonte: 'bold 16px Arial',
+      fonte: 'bold 16px "Baloo 2", Arial',
     });
   }
 
@@ -1011,7 +1011,7 @@ function desenharLoja() {
     }
   }
 
-  btn(80, tela.height - 35, 120, 50, '◀ VOLTAR', () => { estado = 'menu'; }, { fonte: 'bold 16px Arial' });
+  btn(80, tela.height - 35, 120, 50, '◀ VOLTAR', () => { estado = 'menu'; }, { fonte: 'bold 16px "Baloo 2", Arial' });
   for (const b of botoes) desenharBotao(b);
 }
 
@@ -1032,24 +1032,24 @@ function desenharCardMoedasPacote(pacote, cx, cy, w, h) {
   // etiqueta
   if (pacote.etiqueta) {
     ctx.fillStyle = '#22cc55';
-    ctx.font = 'bold 12px Arial';
+    ctx.font = 'bold 12px "Baloo 2", Arial';
     ctx.textAlign = 'center';
     ctx.fillText(pacote.etiqueta, cx, cy - h/2 + 18);
   }
 
   // quantidade
   ctx.fillStyle = 'white';
-  ctx.font = 'bold 26px Arial';
+  ctx.font = 'bold 26px "Baloo 2", Arial';
   ctx.textAlign = 'center';
   ctx.fillText(pacote.moedas + ' moedas', cx, cy + 10);
 
   // custo (em gemas)
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.font = '13px Arial';
+  ctx.font = '13px "Baloo 2", Arial';
   ctx.fillText('por ' + pacote.custo + ' 💎 gemas', cx, cy + 30);
 
   // botão de compra
-  btn(cx, cy + h/2 - 22, w - 30, 32, 'COMPRAR', () => comprarPacoteMoedas(pacote), { cor: podeComprar ? '#22cc55' : '#666', corHover: podeComprar ? '#33dd66' : '#666', corTexto: 'white', desabilitado: !podeComprar, fonte: 'bold 14px Arial' });
+  btn(cx, cy + h/2 - 22, w - 30, 32, 'COMPRAR', () => comprarPacoteMoedas(pacote), { cor: podeComprar ? '#22cc55' : '#666', corHover: podeComprar ? '#33dd66' : '#666', corTexto: 'white', desabilitado: !podeComprar, fonte: 'bold 14px "Baloo 2", Arial' });
 }
 
 // moeda grande decorativa
@@ -1067,7 +1067,7 @@ function desenharMoedaGrande(cx, cy, raio) {
   ctx.stroke();
   // símbolo $
   ctx.fillStyle = '#aa8800';
-  ctx.font = 'bold ' + (raio * 1.1) + 'px Arial';
+  ctx.font = 'bold ' + (raio * 1.1) + 'px "Baloo 2", Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('$', cx, cy + 1);
@@ -1107,7 +1107,7 @@ function desenharGemasContador(x, y) {
   ctx.restore();
   // número
   ctx.fillStyle = 'white';
-  ctx.font = 'bold 22px Arial';
+  ctx.font = 'bold 22px "Baloo 2", Arial';
   ctx.textAlign = 'left';
   ctx.fillText(salvo.gemas, x + 18, y + 8);
 }
@@ -1129,24 +1129,24 @@ function desenharCardGemas(pacote, cx, cy, w, h) {
   // etiqueta de oferta
   if (pacote.etiqueta) {
     ctx.fillStyle = '#ffcc00';
-    ctx.font = 'bold 12px Arial';
+    ctx.font = 'bold 12px "Baloo 2", Arial';
     ctx.textAlign = 'center';
     ctx.fillText(pacote.etiqueta, cx, cy - h/2 + 18);
   }
 
   // quantidade
   ctx.fillStyle = 'white';
-  ctx.font = 'bold 26px Arial';
+  ctx.font = 'bold 26px "Baloo 2", Arial';
   ctx.textAlign = 'center';
   ctx.fillText(pacote.gemas + ' gemas', cx, cy + 10);
 
   // custo
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.font = '13px Arial';
+  ctx.font = '13px "Baloo 2", Arial';
   ctx.fillText('por ' + pacote.custo + ' moedas', cx, cy + 30);
 
   // botão de compra
-  btn(cx, cy + h/2 - 22, w - 30, 32, 'COMPRAR', () => comprarPacoteGemas(pacote), { cor: podeComprar ? '#ffcc00' : '#666', corHover: podeComprar ? '#ffe066' : '#666', desabilitado: !podeComprar, fonte: 'bold 14px Arial' });
+  btn(cx, cy + h/2 - 22, w - 30, 32, 'COMPRAR', () => comprarPacoteGemas(pacote), { cor: podeComprar ? '#ffcc00' : '#666', corHover: podeComprar ? '#ffe066' : '#666', desabilitado: !podeComprar, fonte: 'bold 14px "Baloo 2", Arial' });
 }
 
 // gema grande (decorativa)
@@ -1206,29 +1206,29 @@ function desenharCardItem(item, cx, cy, w, h) {
 
   // icone gigante
   ctx.fillStyle = 'white';
-  ctx.font = 'bold 60px Arial';
+  ctx.font = 'bold 60px "Baloo 2", Arial';
   ctx.textAlign = 'center';
   ctx.fillText(item.icone, cx, cy - 40);
 
   // nome
-  ctx.font = 'bold 20px Arial';
+  ctx.font = 'bold 20px "Baloo 2", Arial';
   ctx.fillText(item.nome, cx, cy);
 
   // efeito
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.font = '13px Arial';
+  ctx.font = '13px "Baloo 2", Arial';
   ctx.fillText(item.efeito, cx, cy + 20);
 
   // nível atual
   ctx.fillStyle = '#22cc55';
-  ctx.font = 'bold 14px Arial';
+  ctx.font = 'bold 14px "Baloo 2", Arial';
   ctx.fillText('Nível: ' + nivel + ' / ' + item.max, cx, cy + 45);
 
   // botão de compra
   if (noMax) {
-    btn(cx, cy + h/2 - 28, w - 30, 36, 'NÍVEL MÁXIMO', () => {}, { cor: '#666', corBorda: '#333', corTexto: 'white', desabilitado: true, fonte: 'bold 14px Arial' });
+    btn(cx, cy + h/2 - 28, w - 30, 36, 'NÍVEL MÁXIMO', () => {}, { cor: '#666', corBorda: '#333', corTexto: 'white', desabilitado: true, fonte: 'bold 14px "Baloo 2", Arial' });
   } else {
-    btn(cx, cy + h/2 - 28, w - 30, 36, 'COMPRAR (' + custo + ' 💰)', () => comprarMelhoria(item), { cor: podeComprar ? '#ffcc00' : '#666', corHover: podeComprar ? '#ffe066' : '#666', desabilitado: !podeComprar, fonte: 'bold 13px Arial' });
+    btn(cx, cy + h/2 - 28, w - 30, 36, 'COMPRAR (' + custo + ' 💰)', () => comprarMelhoria(item), { cor: podeComprar ? '#ffcc00' : '#666', corHover: podeComprar ? '#ffe066' : '#666', desabilitado: !podeComprar, fonte: 'bold 13px "Baloo 2", Arial' });
   }
 }
 
@@ -2999,7 +2999,7 @@ function desenharInimigo(inimigo) {
   // label CHEFÃO em cima
   if (isBoss) {
     ctx.fillStyle = '#ffcc00';
-    ctx.font = 'bold 14px Arial';
+    ctx.font = 'bold 14px "Baloo 2", Arial';
     ctx.textAlign = 'center';
     ctx.fillText('CHEFÃO #' + ondaChefao, cx, cy - r - 20);
   }
@@ -3016,7 +3016,7 @@ function desenharBarraVida(x, y, largura, hp, hpMax, cor) {
 function desenharHUD() {
   // munição
   const baseX = 20, baseY = tela.height - 30;
-  ctx.font = 'bold 14px Arial';
+  ctx.font = 'bold 14px "Baloo 2", Arial';
   ctx.fillStyle = 'white';
   ctx.textAlign = 'left';
   ctx.fillText('Munição', baseX, baseY - 10);
@@ -3056,7 +3056,7 @@ function desenharHUD() {
 
   // moedas ganhas durante a partida
   ctx.fillStyle = '#ffcc00';
-  ctx.font = 'bold 16px Arial';
+  ctx.font = 'bold 16px "Baloo 2", Arial';
   ctx.textAlign = 'center';
   ctx.fillText('💰 +' + moedasGanhas, tela.width/2, 30);
 
@@ -3065,7 +3065,7 @@ function desenharHUD() {
     const segs = Math.max(0, Math.ceil(timerPartida / 60));
     const corTimer = segs <= 10 ? '#ff3344' : 'white';
     ctx.fillStyle = corTimer;
-    ctx.font = 'bold 28px Arial';
+    ctx.font = 'bold 28px "Baloo 2", Arial';
     ctx.textAlign = 'center';
     ctx.fillText('⏱ ' + segs + 's', tela.width/2, 60);
   }
@@ -3083,7 +3083,7 @@ function desenharCountdown() {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
-  ctx.font = 'bold 140px Arial';
+  ctx.font = 'bold 140px "Baloo 2", Arial';
   ctx.fillText(texto, 4, 6);
   ctx.fillStyle = texto === 'VAI!' ? '#22ff66' : '#ffcc00';
   ctx.fillText(texto, 0, 0);
@@ -3097,22 +3097,22 @@ function desenharGameOver() {
   ctx.fillRect(0, 0, tela.width, tela.height);
   ctx.textAlign = 'center';
   ctx.fillStyle = '#ff3344';
-  ctx.font = 'bold 60px Arial';
+  ctx.font = 'bold 60px "Baloo 2", Arial';
   ctx.fillText('GAME OVER', tela.width/2, tela.height/2 - 100);
   ctx.fillStyle = 'white';
-  ctx.font = 'bold 28px Arial';
+  ctx.font = 'bold 28px "Baloo 2", Arial';
   ctx.fillText('Pontos: ' + pontos, tela.width/2, tela.height/2 - 50);
   ctx.fillStyle = '#ffcc00';
-  ctx.font = 'bold 22px Arial';
+  ctx.font = 'bold 22px "Baloo 2", Arial';
   ctx.fillText('💰 Você ganhou ' + moedasGanhas + ' moedas!', tela.width/2, tela.height/2 - 15);
   if (pontos >= salvo.melhorPontuacao && pontos > 0) {
     ctx.fillStyle = '#ffcc00';
-    ctx.font = 'bold 18px Arial';
+    ctx.font = 'bold 18px "Baloo 2", Arial';
     ctx.fillText('🏆 NOVO RECORDE!', tela.width/2, tela.height/2 + 15);
   }
 
-  btn(tela.width/2, tela.height/2 + 70,  300, 60, 'JOGAR DE NOVO', () => iniciarPartida(),    { cor: '#22cc55', corHover: '#33dd66', corBorda: '#117733', corTexto: 'white', fonte: 'bold 22px Arial' });
-  btn(tela.width/2, tela.height/2 + 145, 220, 50, 'MENU',          () => { estado = 'menu'; }, { cor: '#66ccff', corHover: '#99ddff', corBorda: '#225577', fonte: 'bold 18px Arial' });
+  btn(tela.width/2, tela.height/2 + 70,  300, 60, 'JOGAR DE NOVO', () => iniciarPartida(),    { cor: '#22cc55', corHover: '#33dd66', corBorda: '#117733', corTexto: 'white', fonte: 'bold 22px "Baloo 2", Arial' });
+  btn(tela.width/2, tela.height/2 + 145, 220, 50, 'MENU',          () => { estado = 'menu'; }, { cor: '#66ccff', corHover: '#99ddff', corBorda: '#225577', fonte: 'bold 18px "Baloo 2", Arial' });
   for (const b of botoes) desenharBotao(b);
 }
 
@@ -3120,16 +3120,16 @@ function desenharPausado() {
   ctx.fillStyle = 'rgba(0,0,0,0.65)';
   ctx.fillRect(0, 0, tela.width, tela.height);
   ctx.fillStyle = '#ffcc00';
-  ctx.font = 'bold 60px Arial';
+  ctx.font = 'bold 60px "Baloo 2", Arial';
   ctx.textAlign = 'center';
   ctx.fillText('PAUSADO', tela.width/2, tela.height/2 - 60);
   ctx.fillStyle = 'white';
-  ctx.font = '18px Arial';
+  ctx.font = '18px "Baloo 2", Arial';
   ctx.fillText('Aperte P ou clique no botão pra continuar', tela.width/2, tela.height/2 - 15);
 
   // botões: continuar e sair
-  btn(tela.width/2, tela.height/2 + 40, 280, 55, '▶ CONTINUAR', () => alternarPausa(), { cor: '#22cc55', corHover: '#33dd66', corBorda: '#117733', corTexto: 'white', fonte: 'bold 20px Arial' });
-  btn(tela.width/2, tela.height/2 + 110, 280, 55, '🏠 SAIR PRO MENU', () => sairPartida(), { cor: '#ff6666', corHover: '#ff8888', corBorda: '#aa2222', corTexto: 'white', fonte: 'bold 18px Arial' });
+  btn(tela.width/2, tela.height/2 + 40, 280, 55, '▶ CONTINUAR', () => alternarPausa(), { cor: '#22cc55', corHover: '#33dd66', corBorda: '#117733', corTexto: 'white', fonte: 'bold 20px "Baloo 2", Arial' });
+  btn(tela.width/2, tela.height/2 + 110, 280, 55, '🏠 SAIR PRO MENU', () => sairPartida(), { cor: '#ff6666', corHover: '#ff8888', corBorda: '#aa2222', corTexto: 'white', fonte: 'bold 18px "Baloo 2", Arial' });
   for (const b of botoes) desenharBotao(b);
 }
 
@@ -3139,7 +3139,7 @@ function desenharMensagem() {
   const w = 400, h = 50;
   ctx.fillRect(tela.width/2 - w/2, tela.height/2 - 200 - h/2, w, h);
   ctx.fillStyle = `rgba(255,255,255,${op})`;
-  ctx.font = 'bold 20px Arial';
+  ctx.font = 'bold 20px "Baloo 2", Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(mensagemTemp, tela.width/2, tela.height/2 - 200);

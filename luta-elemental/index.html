@@ -7,6 +7,9 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#1a1a2e">
   <title>Luta Elemental</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; }
     html, body {
@@ -146,6 +149,21 @@
       text-align: center;
       line-height: 1.2;
     }
+
+    /* ── Visual novo: letra de fliperama, bordas grossas e sombra dura (igual ao menu dos jogos) ── */
+    :root { --tinta: #0c0b22; --sol: #ffcc00; --display: 'Bungee', 'Arial Black', Impact, sans-serif; --texto: 'Baloo 2', Arial, sans-serif; }
+    body { font-family: var(--texto); background:
+      radial-gradient(circle, rgba(255,255,255,0.05) 1.5px, transparent 1.6px) 0 0 / 22px 22px, #1a1a2e; }
+    h1 { font-family: var(--display); font-weight: 400; text-shadow: 3px 3px 0 #ff5d5d, 5px 5px 0 var(--tinta); padding-bottom: 4px; }
+    #instrucoes { font-weight: 600; }
+    #instrucoes b { color: var(--sol); }
+    #placar { font-weight: 700; }
+    canvas { border: 3px solid var(--tinta); outline: 3px solid var(--sol); border-radius: 12px; box-shadow: 0 6px 0 var(--tinta); }
+    #back-link { font-family: var(--texto); font-weight: 800; font-size: 14px; background: var(--sol); color: var(--tinta);
+      border: 3px solid var(--tinta); border-radius: 12px; box-shadow: 0 4px 0 var(--tinta); padding: 4px 12px 2px; }
+    #botao-pausa { background: var(--sol); border: 3px solid var(--tinta); box-shadow: 0 3px 0 var(--tinta); }
+    #b-super, .stick span { font-family: var(--texto); font-weight: 800; }
+    #b-super { border-color: var(--tinta); font-size: 15px; }
   </style>
 </head>
 <body>
@@ -164,6 +182,6 @@
     <button id="b-super">SUPER</button>
   </div>
   <div id="placar">Clique em JOGAR pra começar</div>
-  <script src="game.js?v=7"></script>
+  <script src="game.js?v=8"></script>
 </body>
 </html>
