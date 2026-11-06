@@ -820,7 +820,7 @@
 
   // Mais fácil: o time do computador é um pouco mais lento, rouba menos e o goleiro dele pega menos
   // Dificuldade (interruptor no menu): no celular o computador joga um pouco melhor
-  const DIFFS = { computador: { speed: 0.92, tackle: 0.6, reach: 0.92 }, celular: { speed: 1.0, tackle: 0.85, reach: 1.0 } };
+  const DIFFS = { computador: { speed: 0.88, tackle: 0.5, reach: 0.88 }, celular: { speed: 0.92, tackle: 0.6, reach: 0.9 } };
   const EASY = () => DIFFS[data.diff] || DIFFS[isTouch ? 'celular' : 'computador'];
   const PACE = 0.68;   // ritmo do FC Mobile: todo mundo corre mais devagar
   function makePlayer(team, slot, rating, card) {
@@ -971,7 +971,9 @@
       if (s > bs) { bs = s; best = q; }
     }
     const d = dist(p, best);
-    kick(p, best.x + best.vx * 10, best.y + best.vy * 10, clamp(2.2 + d / 45, 2.6, 5.5), p.err * 0.5);
+    // Seu time passa igual FC Mobile: a bola vai certinha no colega
+    kick(p, best.x + best.vx * 10, best.y + best.vy * 10, clamp(2.2 + d / 45, 2.6, 5.5), p.team === 0 ? 0 : p.err * 0.5);
+    if (p.team === 0) { M.passTo = best; M.passT = 90; }
     beep(500, 0.05, 'triangle');
     return best;
   }
@@ -999,6 +1001,8 @@
     for (const p of M.players) {
       if (p.cd > 0) p.cd--;
       if (p.lunge > 0) p.lunge--;
+      // Quem vai receber o passe corre sozinho pra bola
+      if (p === M.passTo && !b.owner) { moveTo(p, b.x, b.y, true); continue; }
       if (p === me) {
         const sp = me.speed * (btn.sprint ? 1.45 : 1) * (me.lunge > 0 ? 1.8 : 1);
         me.vx = lerp(me.vx, dir.x * sp, 0.3); me.vy = lerp(me.vy, dir.y * sp, 0.3);
@@ -1067,6 +1071,7 @@
     }
     // A bola vai colada no pé de quem tem
     if (b.owner) {
+      M.passTo = null;
       const o = b.owner;
       b.x = o.x + Math.cos(o.face) * 7; b.y = o.y + Math.sin(o.face) * 7; b.vx = o.vx; b.vy = o.vy;
       // Roubada de bola
@@ -1078,6 +1083,13 @@
     } else {
       b.x += b.vx; b.y += b.vy;
       b.vx *= 0.975; b.vy *= 0.975;
+      // Passe do seu time: a bola vai entortando pro colega e não para no meio do caminho
+      const rec = M.passTo;
+      if (rec && M.passT-- > 0) {
+        const a = Math.atan2(rec.y - b.y, rec.x - b.x), v = Math.max(Math.hypot(b.vx, b.vy), 2.2);
+        b.vx = lerp(b.vx, Math.cos(a) * v, 0.15); b.vy = lerp(b.vy, Math.sin(a) * v, 0.15);
+        if (dist(rec, b) < 16) { b.owner = rec; rec.cd = 0; M.passTo = null; }
+      } else M.passTo = null;
       // Gol!
       if (b.x < FX0 && b.y > GY0 && b.y < GY1) return goal(1);
       if (b.x > FX1 && b.y > GY0 && b.y < GY1) return goal(0);
