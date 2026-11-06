@@ -7,6 +7,9 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#2b1d12">
   <title>Mundo de Blocos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -282,6 +285,43 @@
     body.flying #b-down { display: flex; }
     #b-cam   { right: calc(env(safe-area-inset-right) + 132px); top: calc(env(safe-area-inset-top) + 50px); width: 52px; height: 52px; font-size: 20px; }
     #b-pause { right: calc(env(safe-area-inset-right) + 72px);  top: calc(env(safe-area-inset-top) + 50px); width: 52px; height: 52px; font-size: 20px; }
+
+    /* ── Visual novo: letra de fliperama, bordas grossas e sombra dura (igual ao menu dos jogos), cor de grama ── */
+    :root { --tinta: #1a120b; --grama: #7ccf4a; --grama-esc: #3f8a22; --display: 'Bungee', 'Arial Black', Impact, sans-serif; --texto: 'Baloo 2', Arial, sans-serif; }
+    html, body { font-family: var(--texto); }
+    .screen.dirt { background-color: #3b2a1e; box-shadow: inset 0 0 0 100vmax rgba(26, 18, 11, 0.35); }
+    .screen h1 { font-family: var(--display); font-weight: 400; letter-spacing: 0; line-height: 1; color: var(--grama);
+      text-shadow: 4px 4px 0 var(--grama-esc), 8px 8px 0 var(--tinta); }
+    .screen h2 { font-family: var(--display); font-weight: 400; font-size: 24px; text-shadow: 3px 3px 0 var(--tinta); }
+    .splash { font-family: var(--texto); font-weight: 800; font-size: 18px; text-shadow: 2px 2px 0 var(--tinta);
+      transform: rotate(-6deg); animation: pulse .6s ease-in-out infinite alternate; margin-top: -6px; }
+    @keyframes pulse { to { transform: rotate(-6deg) scale(1.08); } }
+    .btn { font-family: var(--texto); font-weight: 800; font-size: 19px; letter-spacing: 0; padding: 10px 0 8px;
+      background: #f2ead8; color: var(--tinta); text-shadow: none;
+      border: 3px solid var(--tinta); border-radius: 14px; box-shadow: 0 5px 0 var(--tinta);
+      transition: transform .1s, box-shadow .1s; }
+    .btn:hover:not(:disabled) { background: #fffaf0; }
+    .btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--tinta); }
+    #t-play, #w-play, #c-create, #p-resume { background: var(--grama); }
+    #t-play:hover, #w-play:hover:not(:disabled), #c-create:hover, #p-resume:hover { background: #95e066; }
+    #w-delete { background: #ff8a73; }
+    .btn.small { font-size: 15px; padding: 8px 0 6px; }
+    .controls { font-size: 15px; font-weight: 500; line-height: 1.6; }
+    #world-list { border: 3px solid var(--tinta); border-radius: 16px; background: rgba(26, 18, 11, 0.7); padding: 8px; }
+    .world { border-width: 3px; border-radius: 10px; }
+    .world b { font-size: 17px; font-weight: 800; }
+    .world span { font-size: 13px; }
+    .field { font-size: 15px; font-weight: 700; }
+    .field input { font-family: var(--texto); font-size: 17px; border: 3px solid var(--tinta); border-radius: 12px; background: #f2ead8; color: var(--tinta); }
+    #c-desc { font-size: 15px; }
+    .bar { height: 16px; border: 3px solid var(--tinta); border-radius: 10px; overflow: hidden; }
+    .inv-box { border-radius: 18px; box-shadow: inset 3px 3px 0 #fff, inset -3px -3px 0 #555, 0 6px 0 var(--tinta); }
+    #inv-tabs button, #inv-close, #inv-clear, .item.special { font-family: var(--texto); font-weight: 800; font-size: 14px; border-radius: 10px; }
+    .item, .aslot { border-radius: 6px; }
+    #toast, #info { font-family: var(--texto); font-weight: 800; }
+    #back-link { font-family: var(--texto); font-weight: 800; font-size: 14px; background: var(--grama); color: var(--tinta);
+      border: 3px solid var(--tinta); border-radius: 12px; box-shadow: 0 4px 0 var(--tinta); padding: 4px 12px 2px; }
+    @media (prefers-reduced-motion: reduce) { .splash { animation: none; } .btn { transition: none; } }
   </style>
 </head>
 <body>
