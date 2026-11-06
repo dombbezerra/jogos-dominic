@@ -257,10 +257,6 @@
       { id: 'aureola', nome: 'Auréola', de: '😇', svg: () => `<ellipse cx="100" cy="14" rx="44" ry="11" fill="none" stroke="#ffd23f" stroke-width="7"/>` },
       { id: 'chifres', nome: 'Chifres', de: '😈', svg: () => `<path d="M44 46 Q34 18 46 6 Q50 28 70 38Z M156 46 Q166 18 154 6 Q150 28 130 38Z" fill="#7a45c7" stroke="#4a2486" stroke-width="3" stroke-linejoin="round"/>` },
       { id: 'bone', nome: 'Boné', de: '🧢', svg: () => `<path d="M42 54 Q42 6 100 6 Q158 6 158 54Z" fill="#2f6fe0"/><path d="M138 50 Q176 46 186 58 L140 60Z" fill="#1f4fb0"/><circle cx="100" cy="8" r="5" fill="#1f4fb0"/>` },
-      { id: 'espetado', nome: 'Cabelo espetado', de: '⚡', svg: () => `<path d="M30 70 L36 34 L52 46 L56 8 L76 32 L92 -4 L104 28 L124 -2 L132 30 L152 10 L150 44 L170 36 L168 72 Q100 30 30 70Z" fill="#2a1a10"/>` },
-      { id: 'cacheado', nome: 'Cabelo cacheado', de: '🧑‍🦱', svg: () => [[40, 54, 18], [54, 32, 20], [78, 18, 22], [104, 14, 22], [128, 20, 21], [150, 34, 19], [162, 56, 16], [100, 36, 18], [70, 40, 16], [132, 42, 16]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#3b2414"/>`).join('') },
-      { id: 'moicano', nome: 'Moicano', de: '🤘', svg: () => `<path d="M84 34 L80 -14 L92 4 L96 -20 L106 2 L114 -14 L116 34Z" fill="#ff2d75" stroke="#b5124f" stroke-width="2" stroke-linejoin="round"/>` },
-      { id: 'franja', nome: 'Franjinha', de: '💇', svg: () => `<path d="M24 92 Q20 10 100 14 Q180 10 176 92 Q168 56 150 50 Q140 64 120 56 Q104 68 84 56 Q66 66 52 52 Q32 60 24 92Z" fill="#f0c040" stroke="#b58a10" stroke-width="2"/>` },
       { id: 'unicornio', nome: 'Chifre de unicórnio', de: '🦄', svg: () => `<path d="M88 30 L100 -26 L112 30Z" fill="#fff2a8" stroke="#e0b030" stroke-width="3" stroke-linejoin="round"/><path d="M92 18 L108 12 M95 4 L106 0 M97 -10 L103 -12" stroke="#e0b030" stroke-width="3"/>` },
       { id: 'orelhagato', nome: 'Orelhas de gato', de: '😺', svg: () => `<path d="M34 52 L40 -2 L78 26Z M166 52 L160 -2 L122 26Z" fill="#2a2a3a"/><path d="M44 40 L46 12 L66 28Z M156 40 L154 12 L134 28Z" fill="#ff8fb0"/>` },
       { id: 'orelhacoelho', nome: 'Orelhas de coelho', de: '🐇', svg: () => `<ellipse cx="74" cy="-6" rx="13" ry="38" fill="#fff" stroke="#c7c2d6" stroke-width="3"/><ellipse cx="74" cy="-4" rx="6" ry="28" fill="#ffb3c9"/><ellipse cx="126" cy="-6" rx="13" ry="38" fill="#fff" stroke="#c7c2d6" stroke-width="3"/><ellipse cx="126" cy="-4" rx="6" ry="28" fill="#ffb3c9"/>` },
@@ -275,6 +271,23 @@
       { id: 'e-ovo', nome: 'Ovo frito', de: '🍳', svg: () => g('🍳', 100, 10, 80) },
       { id: 'e-gelo', nome: 'Sorvete', de: '🍦', svg: () => g('🍦', 100, 0, 72, 180) },
       { id: 'e-mago', nome: 'Varinha', de: '🪄', svg: () => g('🪄', 150, 6, 60, -10) },
+    ];
+
+    // Cabelo: separado da cabeça, pra dar pra usar junto com chapéu, fone...
+    const CABELOS = [
+      { id: 'nenhum', nome: 'Nenhum', de: '🚫', svg: () => '' },
+      { id: 'espetado', nome: 'Espetado', de: '⚡', svg: () => `<path d="M30 70 L36 34 L52 46 L56 8 L76 32 L92 -4 L104 28 L124 -2 L132 30 L152 10 L150 44 L170 36 L168 72 Q100 30 30 70Z" fill="#2a1a10"/>` },
+      { id: 'cacheado', nome: 'Cacheado', de: '🧑‍🦱', svg: () => [[40, 54, 18], [54, 32, 20], [78, 18, 22], [104, 14, 22], [128, 20, 21], [150, 34, 19], [162, 56, 16], [100, 36, 18], [70, 40, 16], [132, 42, 16]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#3b2414"/>`).join('') },
+      { id: 'moicano', nome: 'Moicano', de: '🤘', svg: () => `<path d="M84 34 L80 -14 L92 4 L96 -20 L106 2 L114 -14 L116 34Z" fill="#ff2d75" stroke="#b5124f" stroke-width="2" stroke-linejoin="round"/>` },
+      { id: 'franja', nome: 'Franjinha', de: '💇', svg: () => `<path d="M24 92 Q20 10 100 14 Q180 10 176 92 Q168 56 150 50 Q140 64 120 56 Q104 68 84 56 Q66 66 52 52 Q32 60 24 92Z" fill="#f0c040" stroke="#b58a10" stroke-width="2"/>` },
+      { id: 'liso', nome: 'Liso comprido', de: '👩', svg: () => `<path d="M16 150 Q6 4 100 6 Q194 4 184 150 L166 150 Q170 70 144 46 Q100 64 56 46 Q30 70 34 150Z" fill="#6b3f1f"/>` },
+      { id: 'coque', nome: 'Coque', de: '👱‍♀️', svg: () => `<circle cx="100" cy="-2" r="24" fill="#8a4a1f"/><path d="M24 84 Q26 12 100 12 Q174 12 176 84 Q152 38 100 38 Q48 38 24 84Z" fill="#8a4a1f"/>` },
+      { id: 'chiquinha', nome: 'Maria-chiquinha', de: '👧', svg: () => `<ellipse cx="10" cy="86" rx="20" ry="34" fill="#3b2414"/><ellipse cx="190" cy="86" rx="20" ry="34" fill="#3b2414"/><path d="M24 84 Q26 12 100 12 Q174 12 176 84 Q152 38 100 38 Q48 38 24 84Z" fill="#3b2414"/>` + g('🎀', 22, 46, 26, -20) + g('🎀', 178, 46, 26, 20) },
+      { id: 'blackpower', nome: 'Black power', de: '🧑🏿‍🦱', svg: () => [[26, 74, 24], [32, 40, 28], [58, 14, 30], [100, 4, 32], [142, 14, 30], [168, 40, 28], [174, 74, 24]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#24160c"/>`).join('') },
+      { id: 'topete', nome: 'Topete', de: '🕺', svg: () => `<path d="M40 70 Q36 18 90 10 Q160 -4 172 34 Q150 22 128 30 Q140 44 130 52 Q100 30 70 40 Q50 48 40 70Z" fill="#2a1a10"/>` },
+      { id: 'loiro', nome: 'Loiro arrepiado', de: '👱', svg: () => `<path d="M26 72 L22 30 L44 40 L46 2 L70 26 L84 -12 L100 20 L118 -12 L130 24 L156 2 L156 40 L178 30 L174 72 Q100 30 26 72Z" fill="#ffd23f" stroke="#c99a00" stroke-width="2" stroke-linejoin="round"/>` },
+      { id: 'azul', nome: 'Colorido', de: '💙', svg: () => `<path d="M24 90 Q18 8 100 10 Q182 8 176 90 Q166 50 142 46 Q132 60 112 50 Q100 62 84 50 Q66 62 56 46 Q32 54 24 90Z" fill="#3fa0ff" stroke="#1f6fd0" stroke-width="2"/><path d="M60 28 Q100 14 140 28" stroke="#ff5d8f" stroke-width="8" fill="none" stroke-linecap="round"/>` },
+      { id: 'careca', nome: 'Careca brilhando', de: '👨‍🦲', svg: () => `<ellipse cx="80" cy="34" rx="22" ry="9" fill="#fff" opacity="0.8"/>` + star(116, 26, 7) },
     ];
 
     // Mãos: aparecem embaixo, dos dois lados (a da esquerda é espelhada)
@@ -356,14 +369,15 @@
       { id: 'nariz', nome: 'NARIZ', lista: NARIZES, dica: 'Quer um nariz?' },
       { id: 'boca', nome: 'BOCA', lista: BOCAS, dica: 'De qual emoji você quer a boca?' },
       { id: 'sobrancelha', nome: 'SOBRANCELHA', lista: SOBRANCELHAS, dica: 'Sobrancelha muda a cara toda!' },
-      { id: 'chapeu', nome: 'CABEÇA', lista: CHAPEUS, dica: 'Chapéu, cabelo ou orelhas.' },
+      { id: 'cabelo', nome: 'CABELO', lista: CABELOS, dica: 'Escolha o cabelo. Dá pra usar junto com chapéu e fone!' },
+      { id: 'chapeu', nome: 'CABEÇA', lista: CHAPEUS, dica: 'Chapéu, fone ou orelhas.' },
       { id: 'maos', nome: 'MÃOS', lista: MAOS, dica: 'O que as mãos estão fazendo?' },
       { id: 'extras', nome: 'EXTRAS', lista: EXTRAS, dica: 'Pode escolher vários! Toque de novo pra tirar.', varios: true },
     ];
     const byId = (lista, id) => lista.find(p => p.id === id) || lista[0];
 
     // ── O emoji montado ──
-    let emoji = { rosto: 'amarelo', olhos: 'normal', nariz: 'nenhum', boca: 'dentes', sobrancelha: 'nenhuma', chapeu: 'nenhum', maos: 'nenhuma', extras: [] };
+    let emoji = { rosto: 'amarelo', olhos: 'normal', nariz: 'nenhum', boca: 'dentes', sobrancelha: 'nenhuma', cabelo: 'nenhum', chapeu: 'nenhum', maos: 'nenhuma', extras: [] };
     let uid = 0;
     // O formato da cabeça (com as orelhas de bicho atrás)
     function cabeca(r, fill) {
@@ -400,6 +414,7 @@
         ${byId(NARIZES, e.nariz).svg()}
         ${byId(BOCAS, e.boca).svg()}
         ${cima.map(x => x.svg()).join('')}
+        ${byId(CABELOS, e.cabelo || (CABELOS.some(h => h.id === e.chapeu) ? e.chapeu : 'nenhum')).svg()}
         ${byId(CHAPEUS, e.chapeu).svg()}
         ${byId(MAOS, e.maos).svg()}
       </svg>`;
@@ -481,7 +496,7 @@
     $('b-sortear').onclick = () => {
       const talvez = (l, nada, chance) => Math.random() < chance ? sorteia(l) : nada;
       emoji = { rosto: sorteia(ROSTOS), olhos: sorteia(OLHOS), nariz: talvez(NARIZES, 'nenhum', 0.4), boca: sorteia(BOCAS),
-        sobrancelha: sorteia(SOBRANCELHAS), chapeu: talvez(CHAPEUS, 'nenhum', 0.5), maos: talvez(MAOS, 'nenhuma', 0.4),
+        sobrancelha: sorteia(SOBRANCELHAS), cabelo: talvez(CABELOS, 'nenhum', 0.5), chapeu: talvez(CHAPEUS, 'nenhum', 0.35), maos: talvez(MAOS, 'nenhuma', 0.4),
         extras: EXTRAS.filter(() => Math.random() < 0.06).map(x => x.id) };
       som(660); render();
     };
