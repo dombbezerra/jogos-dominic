@@ -61,7 +61,7 @@
   .salvas { margin-top: 16px; }
   .salvas h2 { font-family: var(--display); font-weight: 400; font-size: 18px; text-align: center; margin-bottom: 8px; }
   .lista { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-  .lista:empty::after { content: 'Aperte 💾 GUARDAR pra salvar sua música aqui.'; opacity: .7; }
+  .lista:empty::after { content: 'Aperte 💾 SALVAR pra salvar sua música aqui.'; opacity: .7; }
   .musica { display: flex; align-items: center; gap: 6px; background: var(--creme); color: var(--tinta); border: 3px solid var(--tinta); border-radius: 14px; padding: 4px 6px 2px 12px; font-weight: 800; box-shadow: 0 4px 0 var(--tinta); cursor: pointer; }
   .musica button { border: 2px solid var(--tinta); border-radius: 50%; width: 26px; height: 26px; background: var(--rosa); color: #fff; font-weight: 800; cursor: pointer; }
   .dica { text-align: center; font-size: 13px; opacity: .75; margin-top: 10px; }
@@ -89,7 +89,7 @@
   <div class="controles">
     <button class="btn sol" id="b-sorteia">🎲 SURPRESA</button>
     <button class="btn agua" id="b-ritmo">🥁 RITMOS</button>
-    <button class="btn roxo" id="b-guarda">💾 GUARDAR</button>
+    <button class="btn roxo" id="b-guarda">💾 SALVAR</button>
     <button class="btn" id="b-limpa">🧽 LIMPAR</button>
   </div>
   <div class="instrumentos" id="insts"></div>
@@ -335,12 +335,12 @@ $('b-limpa').onclick = () => {
   pintaTudo(); guardaAtual();
 };
 $('b-guarda').onclick = () => {
-  if (!grade.some(l => l.some(Boolean))) { mensagem('Coloque alguns sons antes de guardar!'); return; }
+  if (!grade.some(l => l.some(Boolean))) { mensagem('Coloque alguns sons antes de salvar!'); return; }
   const nome = 'Música ' + (dados.salvas.length + 1);
   dados.salvas.unshift({ nome, grade: JSON.parse(JSON.stringify(grade)), inst, bpm: +$('tempo').value });
   if (dados.salvas.length > 30) dados.salvas.length = 30;
   grava(dados); lista();
-  mensagem('💾 Guardada como "' + nome + '"!');
+  mensagem('💾 Salva como "' + nome + '"!');
 };
 function lista() {
   const box = $('lista'); box.innerHTML = '';
