@@ -45,7 +45,7 @@
       data = { coins: 500, cards: [], team: SLOTS.map(() => null), next: 1, played: 0, wins: 0, semFalsas: true };
       save();
     }
-    // Sem cartas inventadas: só ficam os jogadores que você criou (álbum ➕ ou 👑 CRIAR CARTA)
+    // Sem cartas inventadas: só ficam as cartas dos jogadores do álbum
     if (!data.semFalsas) {
       data.cards = data.cards.filter(c => c.key || c.criada);
       data.semFalsas = true;
@@ -182,7 +182,7 @@
   }
   document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
 
-  // ADM: quem tem o nome Dominic. Pacotes de graça, coroa e criar carta
+  // ADM: quem tem o nome Dominic. Pacotes de graça e coroa
   const isAdm = () => (data.nome || '').trim().toLowerCase() === 'dominic';
   // ADM tem todas as cartas do álbum: o que faltar entra nas suas cartas
   function admGetsAll() {
