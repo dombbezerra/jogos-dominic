@@ -197,8 +197,14 @@
     }
     if (got) save();
   }
+  function renderDiff() {
+    const cur = data.diff || (isTouch ? 'celular' : 'computador');
+    document.querySelectorAll('.diff-btn').forEach(b => b.classList.toggle('on', b.dataset.diff === cur));
+  }
+  document.querySelectorAll('.diff-btn').forEach(b => b.addEventListener('click', () => { data.diff = b.dataset.diff; save(); renderDiff(); beep(b.dataset.diff === 'celular' ? 660 : 520, 0.08, 'triangle'); }));
   function render() {
     admGetsAll();
+    renderDiff();
     document.body.classList.toggle('adm', isAdm());
     $('name-tag').textContent = data.nome ? (isAdm() ? '👑 ' : '👤 ') + data.nome : '✍️ Seu nome';
     $('coins').textContent = isAdm() ? '∞' : data.coins;
@@ -687,14 +693,16 @@
   const norm01 = r => clamp((r - MIN_R) / (MAX_R - MIN_R), 0, 1.15);
 
   // Mais fácil: o time do computador é um pouco mais lento, rouba menos e o goleiro dele pega menos
-  const EASY = { speed: 0.92, tackle: 0.6, reach: 0.92 };
+  // Dificuldade (interruptor no menu): no celular o computador joga um pouco melhor
+  const DIFFS = { computador: { speed: 0.92, tackle: 0.6, reach: 0.92 }, celular: { speed: 1.0, tackle: 0.85, reach: 1.0 } };
+  const EASY = () => DIFFS[data.diff] || DIFFS[isTouch ? 'celular' : 'computador'];
   const PACE = 0.68;   // ritmo do FC Mobile: todo mundo corre mais devagar
   function makePlayer(team, slot, rating, card) {
     const k = norm01(rating), cpu = team === 1;
     return {
       team, slot, gk: slot === 0, r: rating, card, x: 0, y: 0, vx: 0, vy: 0, face: team === 0 ? 0 : Math.PI,
-      speed: (1.0 + k * 0.9) * PACE * (cpu ? EASY.speed : 1), power: (5 + k * 3.2) * 0.85, err: Math.max(0.03, 0.24 - k * 0.19),
-      tackle: (0.01 + k * 0.022) * (cpu ? EASY.tackle : 1.3), reach: (11 + k * 11) * (cpu ? EASY.reach : 1),
+      speed: (1.0 + k * 0.9) * PACE * (cpu ? EASY().speed : 1), power: (5 + k * 3.2) * 0.85, err: Math.max(0.03, 0.24 - k * 0.19),
+      tackle: (0.01 + k * 0.022) * (cpu ? EASY().tackle : 1.3), reach: (11 + k * 11) * (cpu ? EASY().reach : 1),
       cd: 0, lunge: 0, hold: 0,
     };
   }
