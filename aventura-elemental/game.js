@@ -437,8 +437,10 @@
     meta.frames = Array.isArray(m.frames) ? m.frames.filter(id => FRAMES.some(f => f.id === id)) : [];
     meta.frame = meta.frames.includes(m.frame) ? m.frame : 'nenhuma';
     meta.gifs = Array.isArray(m.gifs) ? m.gifs.filter(id => typeof id === 'string') : [];
-    meta.pets = Array.isArray(m.pets) ? m.pets.filter(id => petOf(id)) : [];
-    meta.pet = meta.pets.includes(m.pet) ? m.pet : null;
+    // Guarda até os pets que não existem mais (gato, cachorro...): se jogar fora, o servidor acha que o aparelho
+    // está atrasado e desfaz a troca de personagem
+    meta.pets = Array.isArray(m.pets) ? m.pets.filter(id => typeof id === 'string') : [];
+    meta.pet = meta.pets.includes(m.pet) && petOf(m.pet) ? m.pet : null;
     meta.updatedAt = m.updatedAt || 0;
     if (refund) writeMeta();   // devolve uma vez só
   }
