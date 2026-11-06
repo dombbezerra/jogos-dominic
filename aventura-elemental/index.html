@@ -7,6 +7,9 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#10141f">
   <title>Aventura Elemental</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; overscroll-behavior: none; }
@@ -346,6 +349,54 @@
     #u-msg { min-height: 18px; font-size: 13px; text-align: center; }
     #u-msg.err { color: #ff6a6a; } #u-msg.ok { color: #2fd15a; }
 
+
+    /* ── Visual novo: letra de fliperama, bordas grossas e sombra dura (igual ao menu dos jogos) ── */
+    :root { --tinta: #0d0826; --ouro: #f5c518; --display: 'Bungee', 'Arial Black', Impact, sans-serif; --texto: 'Baloo 2', Arial, sans-serif; }
+    #menu, #coop-modal { font-family: var(--texto); }
+    #menu { background:
+      radial-gradient(circle, rgba(255,255,255,0.05) 1.5px, transparent 1.6px) 0 0 / 22px 22px,
+      rgba(10, 8, 30, 0.94); }
+    .panel { display: flex; flex-direction: column; border: 3px solid var(--tinta); outline: 3px solid var(--ouro); outline-offset: -8px;
+      border-radius: 24px; padding: 22px 18px 18px; box-shadow: 0 8px 0 var(--tinta), 0 0 50px rgba(245, 197, 24, 0.12); }
+    /* Amigos: embaixo do menu, pra não ficar em cima do título */
+    .friends { order: 1; position: static; width: min(320px, 100%); margin: 18px auto 0; border: 3px solid var(--tinta); border-radius: 14px; }
+    .friends-title { font-family: var(--display); font-weight: 400; letter-spacing: 0; padding: 5px 10px 3px; }
+    #friends-list { min-height: 28px; max-height: 120px; font-size: 14px; }
+    .wallet { top: 14px; right: 18px; font-size: 17px; font-weight: 800; }
+    .user-tag { top: 14px; left: 18px; font-size: 14px; font-weight: 700; }
+    h1 { margin: 26px 0 8px; transform: rotate(-2deg); }
+    h1 .t1, h1 .t2 { font-family: var(--display); font-weight: 400; text-shadow: 3px 3px 0 var(--tinta), 6px 6px 0 rgba(13, 8, 38, 0.5); }
+    h1 .t1 { font-size: clamp(28px, 7.5vw, 46px); }
+    h1 .t2 { font-size: clamp(30px, 8.5vw, 56px); }
+    h2 { font-family: var(--display); font-weight: 400; font-size: 24px; text-shadow: 3px 3px 0 var(--tinta); }
+    .hero-name { font-family: var(--display); font-weight: 400; font-size: 18px; }
+    .hero-sub { font-size: 14px; font-weight: 600; }
+    .mbtn { font-family: var(--texto); font-weight: 800; font-size: 16px; letter-spacing: 0; padding: 10px 14px 8px;
+      border: 3px solid var(--tinta); border-radius: 14px; box-shadow: 0 5px 0 var(--tinta); transition: transform 0.1s, box-shadow 0.1s; }
+    .mbtn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--tinta); }
+    .mbtn.big { font-family: var(--display); font-weight: 400; font-size: 24px; padding: 10px 22px 6px; }
+    .back { box-shadow: 0 5px 0 var(--tinta), 0 6px 18px rgba(0, 0, 0, 0.6); }
+    .row { gap: 10px; margin-top: 20px; }
+    .tabs .tab { font-weight: 800; font-size: 14px; border-radius: 12px; border-width: 3px; padding: 6px 14px 4px; }
+    .card { border-width: 3px; border-radius: 14px; }
+    .card b { font-size: 15px; }
+    .card small { font-size: 12px; }
+    .card button { font-weight: 800; border: 3px solid var(--tinta); border-radius: 10px; box-shadow: 0 3px 0 var(--tinta); }
+    .card button:not(:disabled):active { transform: translateY(2px); box-shadow: 0 1px 0 var(--tinta); }
+    .help-box { border-width: 3px; border-radius: 14px; font-size: 15px; }
+    .help-box h3 { font-family: var(--display); font-weight: 400; font-size: 16px; }
+    .coop-box { border: 3px solid var(--tinta); outline: 3px solid var(--ouro); outline-offset: -8px; border-radius: 20px; box-shadow: 0 6px 0 var(--tinta); }
+    #coop-title { font-family: var(--display); font-weight: 400; }
+    #chat-input, #user-form input { border-width: 3px; border-radius: 12px; font-family: var(--texto); }
+    #back-link, #sound-btn, #menu-btn { font-family: var(--texto); font-weight: 800; background: var(--ouro); color: var(--tinta);
+      border: 3px solid var(--tinta); border-radius: 12px; box-shadow: 0 4px 0 var(--tinta); }
+    #back-link { padding: 4px 12px 2px; font-size: 14px; }
+    @media (max-width: 620px) {
+      .panel { padding: 50px 12px 14px; }
+      .row .mbtn { flex: 1 1 40%; min-width: 0; }
+      .row .mbtn.big { order: -1; flex-basis: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) { .mbtn { transition: none; } }
   </style>
 </head>
 <body class="in-menu">
