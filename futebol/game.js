@@ -1038,20 +1038,20 @@
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   }
 
-  // 🧪 3D: por enquanto só no modo teste. Carrega o three.js (o mesmo do Mundo de Blocos) na primeira vez
-  const MODE_3D = PERFIL === 'teste';
+  // 🧪 3D: por enquanto só no modo teste e pro ADM (nome Dominic). Carrega o three.js (o mesmo do Mundo de Blocos) na primeira vez
+  const mode3d = () => PERFIL === 'teste' || isAdm();
   function loadScript(src) {
     return new Promise((ok, fail) => { const sc = document.createElement('script'); sc.src = src; sc.onload = ok; sc.onerror = fail; document.head.appendChild(sc); });
   }
   async function play() {
-    if (MODE_3D && !window.FC3D) {
+    if (mode3d() && !window.FC3D) {
       $('main-msg').textContent = '⏳ Carregando o estádio 3D...';
       try { if (!window.THREE) await loadScript('../mundo-blocos/three.min.js'); await loadScript('game3d.js?v=1'); }
       catch (e) { $('main-msg').textContent = 'Não deu pra carregar o 3D. Jogando no normal.'; }
       $('main-msg').textContent = '';
     }
     startMatch();
-    if (MODE_3D && window.FC3D) {
+    if (mode3d() && window.FC3D) {
       document.body.classList.add('mode3d');
       FC3D.start({ W, H, FX0, FX1, FY0, FY1, MIDY, GY0, GY1 });
     }
