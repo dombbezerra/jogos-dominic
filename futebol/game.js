@@ -207,11 +207,6 @@
     if (page === 'cards') renderCards();
     if (page === 'album') renderAlbum();
     if (page === 'name') { $('name-input').value = data.nome || ''; $('name-msg').textContent = ''; }
-    if (page === 'create' && !$('create-form').childElementCount) $('create-form').append(...playerForm('CRIAR', (c) => {
-      data.cards.push(Object.assign({ id: data.next++, criada: true }, c));
-      save(); render();
-      $('create-msg').textContent = '✅ ' + c.nome + ' (' + c.r + ') foi pras suas cartas!';
-    }));
   }
 
   function renderTeam() {
@@ -370,32 +365,6 @@
     }
   }
 
-  // Formulário de jogador (nome, posição, nota e rosto): usado no ➕ do álbum e no 👑 CRIAR CARTA
-  function playerForm(label, onOk) {
-    const f = document.createElement('div');
-    f.innerHTML = '<input class="a-nome" maxlength="22" placeholder="Nome do jogador">' +
-      '<select class="a-pos">' + POSITIONS.map(([sg, nm]) => '<option value="' + sg + '">' + nm + ' (' + sg + ')</option>').join('') + '</select>' +
-      '<input class="a-r" type="number" min="60" max="130" value="100" title="Nota (60 a 130)">' +
-      '<select class="a-face">' + FACES.concat(['⚽', '🐐', '👑', '🔥', '⚡', '🧤']).map(x => '<option>' + x + '</option>').join('') + '</select>' +
-      '<input class="a-time" list="clubs-dl" maxlength="24" placeholder="🔍 Time (opcional)">' +
-      '<button class="a-ok"></button><div class="a-msg"></div>';
-    const q = sel => f.querySelector(sel);
-    const [nomeEl, posEl, rEl, faceEl, timeEl, okEl, msgEl] = ['.a-nome', '.a-pos', '.a-r', '.a-face', '.a-time', '.a-ok', '.a-msg'].map(q);   // guarda antes de sair do f
-    timeEl.addEventListener('keydown', e => e.stopPropagation());
-    okEl.textContent = label;
-    nomeEl.addEventListener('keydown', e => e.stopPropagation());
-    okEl.addEventListener('click', () => {
-      const nome = nomeEl.value.trim();
-      const r = Math.round(Number(rEl.value));
-      if (!nome) { msgEl.textContent = 'Escreva o nome!'; return; }
-      if (!(r >= MIN_R && r <= MAX_R)) { msgEl.textContent = 'A nota é de 60 a 130.'; return; }
-      msgEl.textContent = '';
-      const time = timeEl.value.trim() ? addClub(timeEl.value) : null;   // time que não existe vira time novo
-      onOk(Object.assign({ nome, pos: posEl.value, r, face: faceEl.value }, time ? { time } : {}));
-      nomeEl.value = '';
-    });
-    return [...f.childNodes];
-  }
   // ── 3 táticas: cada uma guarda um time (data.team é o da tática escolhida) ──
   let editingTac = -1;
   function ensureTactics() {
@@ -587,7 +556,7 @@
     if (!v) { $('name-msg').textContent = 'Escreva seu nome!'; return; }
     data.nome = v;
     save(); render();
-    $('name-msg').textContent = isAdm() ? '👑 Bem-vindo, ADM! Pacotes de graça e CRIAR CARTA liberados.' : '✅ Pronto, ' + v + '!';
+    $('name-msg').textContent = isAdm() ? '👑 Bem-vindo, ADM! Pacotes de graça liberados.' : '✅ Pronto, ' + v + '!';
   });
   $('name-input').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') $('name-save').click(); });
 
