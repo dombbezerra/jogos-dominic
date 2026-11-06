@@ -18,6 +18,9 @@
     /* A partida ocupa exatamente a tela visível (fixa: não dá pra arrastar nem dar zoom) */
     #game { background: #1f7a32; display: block; position: fixed; inset: 0; width: 100%; height: 100%; }
     body.in-match { position: fixed; inset: 0; overflow: hidden; }
+    /* 3D: o estádio fica embaixo e o canvas do jogo (só o placar) fica por cima, transparente */
+    #game3d { position: fixed; inset: 0; width: 100%; height: 100%; display: none; z-index: 0; }
+    body.mode3d #game { background: transparent; z-index: 1; }
     /* Celular em pé: pede pra deitar (o jogo é na horizontal) */
     #turn { position: fixed; inset: 0; z-index: 90; display: none; background: #0b1a2e; color: #fff; flex-direction: column; align-items: center; justify-content: center; gap: 12px; font-size: 20px; font-weight: 900; text-align: center; padding: 20px; }
     #turn .ico { font-size: 64px; animation: turn 1.5s ease-in-out infinite; }
@@ -288,6 +291,6 @@
   </div>
   <div id="keys-help">Setas/WASD: andar · J: passe · K: chute (segure pra mais força) · Shift: correr</div>
 
-  <script src="game.js?v=32"></script>
+  <script src="game.js?v=33"></script>
 </body>
 </html>

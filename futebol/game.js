@@ -787,6 +787,7 @@
     b.dataset.armed = ''; b.textContent = 'SAIR';
     M = null;
     document.body.classList.remove('in-match');
+    if (window.FC3D) FC3D.stop();
     show('main');
   });
 
@@ -974,6 +975,7 @@
     $('main-msg').textContent = (res === 'win' ? '🏆 Vitória' : res === 'draw' ? '🤝 Empate' : '😢 Derrota') + ` ${a} x ${c} contra ${M.opp}! Você ganhou 🪙 ${prize}`;
     M = null;
     document.body.classList.remove('in-match');
+    if (window.FC3D) FC3D.stop();
     show('main');
   }
 
@@ -1006,14 +1008,18 @@
   }
   const scoreLogo = new Image();   // escudo do seu time no placar
   function draw() {
-    ctx.fillStyle = '#0b1a2e'; ctx.fillRect(0, 0, W, H);
+    const in3d = M && window.FC3D && document.body.classList.contains('mode3d');
+    if (in3d) { ctx.clearRect(0, 0, W, H); FC3D.render(M); }   // 3D: aqui só o placar
+    else { ctx.fillStyle = '#0b1a2e'; ctx.fillRect(0, 0, W, H); }
     if (!M) return;
-    drawField();
-    const b = M.ball;
-    for (const p of M.players) drawPlayer(p);
-    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(b.x + 1, b.y + 3, 3, 1.5, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    if (!in3d) {
+      drawField();
+      const b = M.ball;
+      for (const p of M.players) drawPlayer(p);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(b.x + 1, b.y + 3, 3, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
     // Placar
     const min = Math.min(90, Math.floor(M.t / MATCH_FRAMES * 90));
     ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(W / 2 - 120, 4, 240, 24);
@@ -1032,7 +1038,25 @@
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   }
 
-  $('go-play').addEventListener('click', startMatch);
+  // 🧪 3D: por enquanto só no modo teste. Carrega o three.js (o mesmo do Mundo de Blocos) na primeira vez
+  const MODE_3D = PERFIL === 'teste';
+  function loadScript(src) {
+    return new Promise((ok, fail) => { const sc = document.createElement('script'); sc.src = src; sc.onload = ok; sc.onerror = fail; document.head.appendChild(sc); });
+  }
+  async function play() {
+    if (MODE_3D && !window.FC3D) {
+      $('main-msg').textContent = '⏳ Carregando o estádio 3D...';
+      try { if (!window.THREE) await loadScript('../mundo-blocos/three.min.js'); await loadScript('game3d.js?v=1'); }
+      catch (e) { $('main-msg').textContent = 'Não deu pra carregar o 3D. Jogando no normal.'; }
+      $('main-msg').textContent = '';
+    }
+    startMatch();
+    if (MODE_3D && window.FC3D) {
+      document.body.classList.add('mode3d');
+      FC3D.start({ W, H, FX0, FX1, FY0, FY1, MIDY, GY0, GY1 });
+    }
+  }
+  $('go-play').addEventListener('click', play);
 
   // Passo fixo de 60 por segundo
   let last = performance.now(), acc = 0;
