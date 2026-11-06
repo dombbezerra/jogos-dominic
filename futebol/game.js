@@ -83,12 +83,14 @@
   // Nome que aparece: o que você escreveu no ✏️, ou o da carta
   const nameOf = c => (data.renames && data.renames[c.key || c.id]) || c.nome;
   let data;
+  // Conta de iniciante: começa só com 500 moedas e nenhuma carta
+  const jogoNovo = () => ({ coins: 500, cards: [], team: SLOTS.map(() => null), next: 1, played: 0, wins: 0, semFalsas: true });
 
   function load() {
     loading = true;
     try { data = JSON.parse(localStorage.getItem(KEY)); } catch (e) { data = null; }
     if (!data || !Array.isArray(data.cards)) {
-      data = { coins: 500, cards: [], team: SLOTS.map(() => null), next: 1, played: 0, wins: 0, semFalsas: true };
+      data = jogoNovo();
       save();
     }
     // Sem cartas inventadas: só ficam as cartas dos jogadores do álbum
@@ -176,8 +178,20 @@
     if (!r) { setCloud('☁️ sem internet agora'); return; }
     const remote = r.dados;
     synced = true;
+    // O que está guardado no aparelho é de outra conta (trocou de conta): não mistura nada.
+    // Usa o da conta, ou começa do zero se a conta ainda não tem jogo
+    if (data.dono !== u.email && (data.dono || !remote)) {
+      const meu = remote || jogoNovo();
+      meu.dono = u.email;
+      try { localStorage.setItem(KEY, JSON.stringify(meu)); } catch (e) { /* ok */ }
+      load(); fillClubList(); render();
+      if (remote) setCloud('☁️ carregado da conta ' + u.nome); else save();
+      return;
+    }
+    data.dono = u.email;
     if (remote && (remote.updatedAt || 0) > (data.updatedAt || 0)) {
       const merged = mergeFC(remote, data);
+      merged.dono = u.email;
       try { localStorage.setItem(KEY, JSON.stringify(merged)); } catch (e) { /* ok */ }
       load(); fillClubList(); render();
       setCloud('☁️ carregado da conta ' + u.nome);
