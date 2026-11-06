@@ -629,7 +629,7 @@
 
   // Jogador que você criou: tem 🗑️ pra tirar do álbum
   function withRemove(el, sp) {
-    if (!sp.custom) return el;
+    if (!sp.custom || !isAdm()) return el;   // só o ADM tira jogador do álbum
     const w = document.createElement('div');
     w.className = 'album-slot';
     const b = document.createElement('button');
