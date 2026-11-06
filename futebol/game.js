@@ -122,7 +122,7 @@
     for (const c of base.custom || []) byKey.set(c.key, c);
     base.custom = [...byKey.values()].filter(c => !removed.has(c.key));
     base.removedKeys = [...removed];
-    for (const k of ['clubs', 'tactics', 'renames', 'myClub', 'nome']) if (base[k] == null && other[k] != null) base[k] = other[k];
+    for (const k of ['clubs', 'tactics', 'tactic', 'renames', 'myClub', 'nome']) if (base[k] == null && other[k] != null) base[k] = other[k];
     return base;
   }
   async function syncFC() {
@@ -381,6 +381,7 @@
       data.tactics = [0, 1, 2].map(i => ({ nome: '', team: i === 0 ? data.team.slice() : SLOTS.map(() => null) }));
       data.tactic = 0;
     }
+    if (!(data.tactic >= 0 && data.tactic < 3)) data.tactic = 0;   // tática escolhida perdida: volta pra primeira
     data.tactics[data.tactic].team = data.team;   // a tática escolhida usa o time de agora
   }
   function renderTactics() {

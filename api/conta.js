@@ -317,7 +317,7 @@ module.exports = async (req, res) => {
         for (const c of dados.custom || []) byKey.set(c.key, c);
         dados.custom = [...byKey.values()].filter((c) => !removed.has(c.key));
         dados.removedKeys = [...removed];
-        for (const k of ['clubs', 'tactics', 'renames', 'myClub']) if (dados[k] == null && old[k] != null) dados[k] = old[k];
+        for (const k of ['clubs', 'tactics', 'tactic', 'renames', 'myClub']) if (dados[k] == null && old[k] != null) dados[k] = old[k];
       }
       await redis(['SET', 'aventura:fc:' + email, JSON.stringify(dados)]);
       return res.status(200).json({ ok: true });
