@@ -39,6 +39,7 @@
   // ── Evento BOLA DE OURO (novembro e dezembro): ganha 🥇 jogando e troca pelas cartas douradas ──
   const EVENTO = { fim: new Date(2026, 11, 31, 23, 59, 59).getTime() };   // 31 de dezembro de 2026
   const EVENT_CARDS = [
+    { key: 'evento-bola-kane', nome: 'Harry Kane', pos: 'ATA', r: 131, face: '😀', time: 'Bola de Ouro 2026', ouro: true, preco: 50 },
     { key: 'evento-bola-kaka', nome: 'Kaká', pos: 'ATA', r: 130, face: '😄', time: 'Bola de Ouro 2007', ouro: true, preco: 30 },
     { key: 'evento-bola-ronaldo', nome: 'Ronaldo Fenômeno', pos: 'ATA', r: 131, face: '😁', time: 'Bola de Ouro 2002', ouro: true, preco: 45 },
     { key: 'evento-bola-messi', nome: 'Messi', pos: 'PD', r: 131, face: '😎', time: 'Bola de Ouro 2023', ouro: true, preco: 45 },
