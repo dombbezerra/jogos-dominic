@@ -40,6 +40,16 @@
   const EVENTO = { fim: new Date(2026, 11, 31, 23, 59, 59).getTime() };   // 31 de dezembro de 2026
   const EVENT_CARDS = [
     { key: 'evento-bola-kaka', nome: 'Kaká', pos: 'ATA', r: 130, face: '😄', time: 'Bola de Ouro 2007', ouro: true, preco: 30 },
+    { key: 'evento-bola-ronaldo', nome: 'Ronaldo Fenômeno', pos: 'ATA', r: 131, face: '😁', time: 'Bola de Ouro 2002', ouro: true, preco: 45 },
+    { key: 'evento-bola-messi', nome: 'Messi', pos: 'PD', r: 131, face: '😎', time: 'Bola de Ouro 2023', ouro: true, preco: 45 },
+    { key: 'evento-bola-cr7', nome: 'Cristiano Ronaldo', pos: 'ATA', r: 131, face: '😤', time: 'Bola de Ouro 2017', ouro: true, preco: 45 },
+    { key: 'evento-bola-ronaldinho', nome: 'Ronaldinho Gaúcho', pos: 'PE', r: 130, face: '😆', time: 'Bola de Ouro 2005', ouro: true, preco: 40 },
+    { key: 'evento-bola-zidane', nome: 'Zidane', pos: 'ATA', r: 130, face: '🙂', time: 'Bola de Ouro 1998', ouro: true, preco: 40 },
+    { key: 'evento-bola-dembele', nome: 'Dembélé', pos: 'PD', r: 130, face: '😃', time: 'Bola de Ouro 2025', ouro: true, preco: 40 },
+    { key: 'evento-bola-rivaldo', nome: 'Rivaldo', pos: 'PE', r: 129, face: '😊', time: 'Bola de Ouro 1999', ouro: true, preco: 35 },
+    { key: 'evento-bola-benzema', nome: 'Benzema', pos: 'ATA', r: 129, face: '😌', time: 'Bola de Ouro 2022', ouro: true, preco: 35 },
+    { key: 'evento-bola-rodri', nome: 'Rodri', pos: 'ZAG', r: 129, face: '🤓', time: 'Bola de Ouro 2024', ouro: true, preco: 35 },
+    { key: 'evento-bola-cannavaro', nome: 'Cannavaro', pos: 'ZAG', r: 129, face: '😏', time: 'Bola de Ouro 2006', ouro: true, preco: 35 },
   ];
   for (const ec of EVENT_CARDS) SPECIALS.push(Object.assign({ album: 'bolaouro', club: 'Bola de Ouro', badge: '🥇', evento: true }, ec));
   const eventoAtivo = () => Date.now() < EVENTO.fim;
