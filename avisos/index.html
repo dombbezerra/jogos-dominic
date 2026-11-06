@@ -6,6 +6,9 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#0a0a1a">
   <title>Avisos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { min-height: 100%; }
@@ -44,6 +47,21 @@
     .users li button.chat-off { background: #2fd15a; }
     .users li button.chat-on { background: #6a5aa8; }
     a { color: rgba(255, 255, 255, 0.5); font-size: 13px; text-align: center; text-decoration: none; }
+
+    /* ── Visual novo (igual ao menu dos jogos) ── */
+    :root { --tinta: #0e0c33; --sol: #ffd23f; --creme: #fff6dc; }
+    body { font-family: 'Baloo 2', 'Segoe UI', Arial, sans-serif; color: var(--creme);
+      background: radial-gradient(circle, rgba(255,255,255,0.06) 1.5px, transparent 1.6px) 0 0 / 22px 22px, #15134a; }
+    .card { background: #241f6b; border: 3px solid var(--tinta); border-radius: 22px; box-shadow: 0 7px 0 var(--tinta); }
+    h1 { font-family: 'Bungee', 'Arial Black', sans-serif; font-weight: 400; color: var(--sol); text-shadow: 3px 3px 0 var(--tinta); line-height: 1.15; }
+    p { font-size: 15px; opacity: 0.9; }
+    input, textarea { border: 3px solid var(--tinta); background: var(--creme); color: var(--tinta); font-weight: 600; }
+    button, a.exit { font-family: inherit; font-weight: 800; font-size: 16px; letter-spacing: 0; border: 3px solid var(--tinta); border-radius: 14px; box-shadow: 0 4px 0 var(--tinta); }
+    button:active, a.exit:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
+    a.exit { color: var(--tinta); background: #3fe0a8; }
+    .users li { background: rgba(14, 12, 51, 0.5); border-radius: 12px; }
+    .users li button { font-size: 14px; border-width: 2px; box-shadow: 0 3px 0 var(--tinta); }
+    a { color: rgba(255, 246, 220, 0.7); font-size: 15px; font-weight: 700; }
   </style>
 </head>
 <body>
