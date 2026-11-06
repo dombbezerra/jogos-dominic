@@ -635,11 +635,30 @@
   });
   $('club-search').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') $('club-go').click(); });
 
+  // Cada nome é um jogo separado: nome novo começa como iniciante (500 moedas);
+  // voltar pra um nome que já jogou traz o jogo dele de volta. O álbum é o mesmo pra todos
+  const chaveNome = n => (n || '').trim().toLowerCase();
+  function trocarNome(v) {
+    const de = chaveNome(data.nome), para = chaveNome(v);
+    if (!de || de === para) { data.nome = v; return; }
+    const outros = data.outros || {};
+    const atual = Object.assign({}, data);
+    delete atual.outros;
+    if (!data.outros) atual.principal = true;   // o jogo de antes de ter nomes separados é o principal
+    outros[de] = atual;
+    // O ADM sem jogo guardado volta pro jogo principal
+    const k = para in outros ? para : para === 'dominic' ? Object.keys(outros).find(x => outros[x].principal) : null;
+    const meu = k ? outros[k] : jogoNovo();
+    if (k) delete outros[k];
+    const novo = Object.assign(meu, { nome: v, outros, custom: data.custom, removedKeys: data.removedKeys, dono: data.dono, updatedAt: data.updatedAt });
+    try { localStorage.setItem(KEY, JSON.stringify(novo)); } catch (e) { /* ok */ }
+    load();
+  }
   $('name-save').addEventListener('click', () => {
     const v = $('name-input').value.trim().slice(0, 20);
     if (!v) { $('name-msg').textContent = 'Escreva seu nome!'; return; }
-    data.nome = v;
-    save(); render();
+    trocarNome(v);
+    save(); fillClubList(); render();
     $('name-msg').textContent = isAdm() ? '👑 Bem-vindo, ADM! Pacotes de graça liberados.' : '✅ Pronto, ' + v + '!';
   });
   $('name-input').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') $('name-save').click(); });
