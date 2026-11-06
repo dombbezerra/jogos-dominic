@@ -676,11 +676,14 @@
   const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   const norm01 = r => clamp((r - MIN_R) / (MAX_R - MIN_R), 0, 1.15);
 
+  // Mais fácil: o time do computador é um pouco mais lento, rouba menos e o goleiro dele pega menos
+  const EASY = { speed: 0.9, tackle: 0.65, reach: 0.85 };
   function makePlayer(team, slot, rating, card) {
-    const k = norm01(rating);
+    const k = norm01(rating), cpu = team === 1;
     return {
       team, slot, gk: slot === 0, r: rating, card, x: 0, y: 0, vx: 0, vy: 0, face: team === 0 ? 0 : Math.PI,
-      speed: 1.0 + k * 0.9, power: 5 + k * 3.2, err: Math.max(0.03, 0.24 - k * 0.19), tackle: 0.01 + k * 0.022, reach: 11 + k * 11,
+      speed: (1.0 + k * 0.9) * (cpu ? EASY.speed : 1), power: 5 + k * 3.2, err: Math.max(0.03, 0.24 - k * 0.19),
+      tackle: (0.01 + k * 0.022) * (cpu ? EASY.tackle : 1.3), reach: (11 + k * 11) * (cpu ? EASY.reach : 1),
       cd: 0, lunge: 0, hold: 0,
     };
   }
@@ -705,7 +708,7 @@
     // No celular, entra em tela cheia (esconde a barra do navegador)
     if (isTouch && document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
     const myOvr = teamOvr();
-    const opp = clamp(myOvr + Math.floor(Math.random() * 11) - 4, MIN_R, MAX_R);
+    const opp = clamp(myOvr + Math.floor(Math.random() * 9) - 8, MIN_R, MAX_R);   // adversário um pouco mais fraco que você
     const players = [];
     data.team.forEach((id, i) => { const c = cardById(id); players.push(makePlayer(0, i, effR(c, i), c)); });
     for (let i = 0; i < SLOTS.length; i++) players.push(makePlayer(1, i, clamp(opp + Math.floor(Math.random() * 9) - 4, MIN_R, MAX_R), null));
@@ -874,7 +877,7 @@
         if (foe && dist(foe, p) < 28) tgt.y += (p.y < foe.y ? -1 : 1) * 40;   // drible pro lado
         moveTo(p, tgt.x, clamp(tgt.y, FY0 + 10, FY1 - 10), dist(foe, p) < 40);
         const toGoal = Math.abs(gx - p.x);
-        if (p.cd === 0 && (toGoal < 110 && Math.random() < 0.02 || toGoal < 55)) shoot(p, (Math.random() - 0.5) * 1.6, 0.3 + Math.random() * 0.5);
+        if (p.cd === 0 && (toGoal < 100 && Math.random() < 0.012 || toGoal < 45)) shoot(p, (Math.random() - 0.5) * 1.6, 0.3 + Math.random() * 0.5);
         else if (p.cd === 0 && foe && dist(foe, p) < 18 && Math.random() < 0.04) pass(p, null);
         continue;
       }
