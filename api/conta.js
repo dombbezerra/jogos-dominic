@@ -319,6 +319,18 @@ module.exports = async (req, res) => {
         dados.removedKeys = [...removed];
         for (const k of ['clubs', 'tactics', 'tactic', 'renames', 'myClub']) if (dados[k] == null && old[k] != null) dados[k] = old[k];
       }
+      // Cada nome é um jogo (outros): um aparelho atrasado não apaga o jogo dos outros nomes
+      if (old) {
+        const ch = (n) => String(n || '').trim().toLowerCase();
+        const outros = Object.assign({}, old.outros || {}, dados.outros || {});
+        if (old.nome && ch(old.nome) !== ch(dados.nome) && !(dados.outros && dados.outros[ch(old.nome)])) {
+          const antigo = Object.assign({}, old);
+          delete antigo.outros;
+          outros[ch(old.nome)] = antigo;
+        }
+        delete outros[ch(dados.nome)];
+        if (Object.keys(outros).length) dados.outros = outros;
+      }
       await redis(['SET', 'aventura:fc:' + email, JSON.stringify(dados)]);
       return res.status(200).json({ ok: true });
     }

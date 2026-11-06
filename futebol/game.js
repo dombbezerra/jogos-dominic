@@ -161,7 +161,7 @@
   }
   // Ao abrir: se a conta tem uma versão mais nova (de outro aparelho), usa ela
   // Junta dois saves sem perder jogador do álbum: fica a versão mais nova de cada um,
-  // menos os que foram tirados (removedKeys). Times, táticas e nomes vêm do outro se faltarem
+  // menos os que foram tirados (removedKeys). Times e táticas vêm do outro se faltarem
   function mergeFC(base, other) {
     if (!other) return base;
     const removed = new Set([...(base.removedKeys || []), ...(other.removedKeys || [])]);
@@ -170,7 +170,7 @@
     for (const c of base.custom || []) byKey.set(c.key, c);
     base.custom = [...byKey.values()].filter(c => !removed.has(c.key));
     base.removedKeys = [...removed];
-    for (const k of ['clubs', 'tactics', 'tactic', 'renames', 'myClub', 'nome']) if (base[k] == null && other[k] != null) base[k] = other[k];
+    for (const k of ['clubs', 'tactics', 'tactic', 'renames', 'myClub']) if (base[k] == null && other[k] != null) base[k] = other[k];
     return base;
   }
   async function syncFC() {
@@ -180,9 +180,9 @@
     if (!r) { setCloud('☁️ sem internet agora'); return; }
     const remote = r.dados;
     synced = true;
-    // O que está guardado no aparelho é de outra conta (trocou de conta): não mistura nada.
-    // Usa o da conta, ou começa do zero se a conta ainda não tem jogo
-    if (data.dono !== u.email && (data.dono || !remote)) {
+    // O que está guardado no aparelho é de outra conta (trocou de conta), ou de quem jogou sem conta
+    // e a conta já tem jogo: não mistura nada. Usa o da conta, ou começa do zero se a conta não tem jogo
+    if (data.dono !== u.email && (data.dono || remote)) {
       const meu = remote || jogoNovo();
       meu.dono = u.email;
       try { localStorage.setItem(KEY, JSON.stringify(meu)); } catch (e) { /* ok */ }
@@ -369,7 +369,7 @@
       b.addEventListener('click', () => openPack(p));
       list.appendChild(b);
     }
-    $('pack-msg').textContent = 'Ganhe moedas jogando partidas! Vitória: 500 · Empate: 250 · Derrota: 100 · Gol: +50';
+    $('pack-msg').textContent = 'Ganhe moedas jogando partidas! Vitória: 200 · Empate: 100 · Derrota: 50 · Gol: +20';
   }
   // Os pacotes dão os jogadores que você criou no álbum (os de nota baixa saem mais)
   // Conta sem álbum (jogador novo): o pacote cria jogadores com nomes inventados, pra dar pra começar a jogar
@@ -435,7 +435,7 @@
       wrap.appendChild(act);
       if (!inTeam) {
         const b = document.createElement('button');
-        const val = Math.round(c.r * 1.2);
+        const val = Math.round(c.r * 0.3);   // vender vale pouco: senão comprar pacote e vender dava lucro
         b.textContent = 'VENDER 🪙' + val;
         // Primeiro toque pergunta, segundo vende
         b.addEventListener('click', () => {
@@ -652,7 +652,7 @@
     const k = para in outros ? para : para === 'dominic' ? Object.keys(outros).find(x => outros[x].principal) : null;
     const meu = k ? outros[k] : jogoNovo();
     if (k) delete outros[k];
-    const novo = Object.assign(meu, { nome: v, outros, custom: data.custom, removedKeys: data.removedKeys, dono: data.dono, updatedAt: data.updatedAt });
+    const novo = Object.assign(meu, { nome: v, outros, custom: data.custom, removedKeys: data.removedKeys, dono: data.dono, updatedAt: Date.now() });
     try { localStorage.setItem(KEY, JSON.stringify(novo)); } catch (e) { /* ok */ }
     load();
   }
@@ -759,7 +759,7 @@
         beep(1046, 0.4, 'triangle');
       }
     }
-    $('coins').textContent = data.coins;
+    $('coins').textContent = isAdm() ? '∞' : data.coins;
   }
 
   // Jogador que você criou: tem 🗑️ pra tirar do álbum
@@ -773,6 +773,7 @@
     b.addEventListener('click', () => {
       if (b.dataset.armed !== '1') { b.dataset.armed = '1'; b.textContent = 'Tirar?'; setTimeout(() => { b.dataset.armed = ''; b.textContent = '🗑️'; }, 3000); return; }
       data.custom = data.custom.filter(x => x.key !== sp.key);
+      (data.removedKeys = data.removedKeys || []).push(sp.key);   // senão a conta devolvia ele
       save(); render();
     });
     w.append(el, b);
@@ -1135,7 +1136,7 @@
   function endMatch() {
     const [a, c] = M.score;
     const res = a > c ? 'win' : a === c ? 'draw' : 'loss';
-    const prize = { win: 500, draw: 250, loss: 100 }[res] + a * 50;
+    const prize = { win: 200, draw: 100, loss: 50 }[res] + a * 20;   // menos moedas: igual FC Mobile, demora pra ficar rico
     data.coins += prize; data.played++; if (res === 'win') data.wins++;
     // Evento: vitória dá 3 🥇, empate 1, e cada gol mais 1
     const bolas = eventoAtivo() ? ({ win: 3, draw: 1, loss: 0 }[res] + a) : 0;
