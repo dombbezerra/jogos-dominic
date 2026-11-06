@@ -7,6 +7,9 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#2a1d14">
   <title>Nocaute!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -65,6 +68,12 @@
     #t-chute { right: calc(env(safe-area-inset-right) + 18px); bottom: calc(env(safe-area-inset-bottom) + 96px); width: 64px; height: 64px; background:#2f5fa8; color:#f4ead2; }
     #t-block { right: calc(env(safe-area-inset-right) + 22px); bottom: calc(env(safe-area-inset-bottom) + 18px); width: 60px; height: 60px; background:#e8b53a; }
     #t-pause { right: calc(env(safe-area-inset-right) + 20px); top: calc(env(safe-area-inset-top) + 10px); width: 44px; height: 44px; font-size: 18px; }
+
+    /* ── Botão de voltar igual ao dos outros jogos (o jogo continua com cara de desenho antigo) ── */
+    #back-link { font-family: 'Baloo 2', Arial, sans-serif; font-weight: 800; font-size: 14px; letter-spacing: 0;
+      border: 3px solid #1a1410; border-radius: 12px; box-shadow: 0 4px 0 #1a1410; padding: 4px 12px 2px; }
+    #back-link:active { transform: translateY(3px); box-shadow: 0 1px 0 #1a1410; }
+    body { background: radial-gradient(ellipse at 50% 0%, #4a3322 0%, #2a1d14 65%); }
   </style>
 </head>
 <body>
