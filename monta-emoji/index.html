@@ -232,13 +232,9 @@
       { id: 'ziper', nome: 'Zíper', de: '🤐', svg: () => line('M62 146 H138', 6) + `<path d="M70 140 V152 M80 140 V152 M90 140 V152 M100 140 V152 M110 140 V152 M120 140 V152 M130 140 V152" stroke="${INK}" stroke-width="3"/><rect x="132" y="138" width="10" height="16" rx="2" fill="#c9c9d6" stroke="${INK}" stroke-width="2"/>` },
       { id: 'vampiro', nome: 'Vampiro', de: '🧛', svg: () => line('M64 134 Q100 158 136 134', 7) + `<path d="M78 141 L84 158 L89 145Z M122 141 L116 158 L111 145Z" fill="#fff" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>` },
       { id: 'dentuco', nome: 'Dentuço', de: '🐰', svg: () => line('M66 134 Q100 152 134 134', 7) + `<rect x="88" y="141" width="11" height="16" rx="2" fill="#fff" stroke="${INK}" stroke-width="2.5"/><rect x="101" y="141" width="11" height="16" rx="2" fill="#fff" stroke="${INK}" stroke-width="2.5"/>` },
-      { id: 'robo', nome: 'Robô', de: '🤖', svg: () => `<rect x="64" y="132" width="72" height="24" rx="6" fill="#1c2a3a"/><path d="M74 144 H86 M92 144 H104 M110 144 H122" stroke="#3fe0d0" stroke-width="5" stroke-linecap="round"/>` },
       { id: 'monstro', nome: 'Monstro', de: '👹', svg: () => `<path d="M56 130 Q100 176 144 130 Z" fill="${INK}"/><path d="M60 131 L68 146 L76 132 L86 150 L96 133 L106 150 L116 133 L126 148 L134 132 L140 131Z" fill="#fff"/>` },
       { id: 'e-labios', nome: 'Lábios', de: '👄', svg: () => g('👄', 100, 146, 46) },
       { id: 'e-pirulito', nome: 'Pirulito', de: '🍭', svg: () => line('M64 134 Q100 156 136 134', 7) + g('🍭', 140, 140, 40, 30) },
-      { id: 'e-pizza', nome: 'Comendo pizza', de: '🍕', svg: () => `<ellipse cx="100" cy="146" rx="20" ry="16" fill="${INK}"/>` + g('🍕', 104, 150, 40, -20) },
-      { id: 'e-cachorroquente', nome: 'Cachorro-quente', de: '🌭', svg: () => `<ellipse cx="100" cy="146" rx="20" ry="14" fill="${INK}"/>` + g('🌭', 100, 148, 46) },
-      { id: 'e-chiclete', nome: 'Chiclete', de: '🫧', svg: () => `<circle cx="100" cy="148" r="24" fill="#ff8fc6" stroke="#e05a9a" stroke-width="3"/><ellipse cx="92" cy="140" rx="7" ry="5" fill="#fff" opacity="0.6"/>` },
     ];
 
     const SOBRANCELHAS = [
@@ -273,7 +269,7 @@
       { id: 'e-sol', nome: 'Chapéu de sol', de: '👒', svg: () => g('👒', 100, 12, 108) },
       { id: 'e-capacete', nome: 'Capacete', de: '⛑️', svg: () => g('⛑️', 100, 20, 104) },
       { id: 'e-militar', nome: 'Militar', de: '🪖', svg: () => g('🪖', 100, 18, 108) },
-      { id: 'e-fone', nome: 'Fone', de: '🎧', svg: () => g('🎧', 100, 54, 186) },
+      { id: 'e-fone', nome: 'Fone', de: '🎧', svg: () => `<path d="M14 112 Q10 -2 100 -2 Q190 -2 186 112" fill="none" stroke="#2a2a3a" stroke-width="13" stroke-linecap="round"/><path d="M20 96 Q18 8 100 8" fill="none" stroke="#fff" stroke-width="3" opacity="0.25"/><rect x="-2" y="86" width="30" height="58" rx="13" fill="#ff4a5a" stroke="#2a2a3a" stroke-width="5"/><rect x="172" y="86" width="30" height="58" rx="13" fill="#ff4a5a" stroke="#2a2a3a" stroke-width="5"/><rect x="4" y="94" width="8" height="26" rx="4" fill="#fff" opacity="0.4"/>` },
       { id: 'e-cogumelo', nome: 'Cogumelo', de: '🍄', svg: () => g('🍄', 100, 2, 90) },
       { id: 'e-flor', nome: 'Flor', de: '🌻', svg: () => g('🌻', 146, 20, 56, 15) },
       { id: 'e-ovo', nome: 'Ovo frito', de: '🍳', svg: () => g('🍳', 100, 10, 80) },
