@@ -1898,6 +1898,7 @@
       who.appendChild(el('span', String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'), 'chat-time'));
       const body = el('div', m.texto || null, 'chat-text');
       if (m.gif) body.appendChild(gifEl(m.gif));
+      if (m.emoji) body.appendChild(emojiEl(m.emoji));
       li.append(who, body);
       list.appendChild(li);
     }
@@ -1920,13 +1921,20 @@
   // Com o chat aberto, olha mensagem nova a cada 2,5 segundos
   setInterval(() => { if (state === 'title' && menuPage === 'chat' && !document.hidden) pollChat(); }, 2500);
 
-  async function sendChat(texto, gif) {
+  // Emoji montado no Monta Emoji (figurinha que se mexe)
+  const emojiEl = e => {
+    const sp = el('span', null, 'gif gif-emoji');
+    if (window.MontaEmoji) sp.innerHTML = MontaEmoji.desenha(MontaEmoji.limpa(e));
+    else sp.textContent = '😀';
+    return sp;
+  };
+  async function sendChat(texto, gif, emoji) {
     if (!meta.user || chatBusy) return;
     chatBusy = true;
     $('chat-msg').textContent = '';
     try {
       const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'chatEnviar', email: meta.user.email, texto, gif, desde: chatLast }) });
+        body: JSON.stringify({ action: 'chatEnviar', email: meta.user.email, texto, gif, emoji, desde: chatLast }) });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || 'Não deu pra mandar.');
       addChat(data);
@@ -1952,6 +1960,22 @@
       box.appendChild(b);
     }
     if (SHOP_GIFS.some(g => !meta.gifs.includes(g[0]))) box.appendChild(el('div', 'Mais GIFs na LOJA! 🛒', 'gif-more'));
+    // Os emojis que você montou no Monta Emoji e salvou como GIF
+    box.appendChild(el('div', '😜 MEUS EMOJIS', 'gif-sec'));
+    const meus = el('div', 'Carregando...', 'gif-more');
+    box.appendChild(meus);
+    contaApi({ action: 'figurinhas', email: meta.user.email }).then(d => {
+      const figs = (d && d.figurinhas) || [];
+      meus.remove();
+      if (!figs.length) { box.appendChild(el('div', 'Monte um emoji no jogo MONTA EMOJI e aperte 💬 SALVAR GIF!', 'gif-more')); return; }
+      for (const e of figs) {
+        const b = el('button');
+        b.type = 'button';
+        b.appendChild(emojiEl(e));
+        b.addEventListener('click', () => { box.classList.remove('on'); sendChat('', null, e); });
+        box.appendChild(b);
+      }
+    }).catch(() => { meus.textContent = 'Não deu pra carregar seus emojis.'; });
   }
   $('chat-clear').addEventListener('click', async () => {
     const b = $('chat-clear');

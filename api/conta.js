@@ -36,6 +36,16 @@ async function redis(...commands) {
 }
 
 // ── Chat de amigos: só entra quem o ADM convidou (na página de avisos). Escreve livre, mas com filtro ──
+// Emoji do Monta Emoji (figurinha): só os nomes das partes, cada um curtinho
+const PARTES_EMOJI = ['rosto', 'olhos', 'nariz', 'boca', 'sobrancelha', 'cabelo', 'chapeu', 'maos'];
+function limparEmoji(e) {
+  if (!e || typeof e !== 'object') return null;
+  const ok = (v) => typeof v === 'string' && /^[a-z0-9-]{1,24}$/.test(v);
+  const out = {};
+  for (const k of PARTES_EMOJI) if (ok(e[k])) out[k] = e[k];
+  out.extras = Array.isArray(e.extras) ? e.extras.filter(ok).slice(0, 50) : [];
+  return out.rosto ? out : null;
+}
 const CHAT_GIFS = ['rindo', 'fogo', 'festa', 'joinha', 'oculos', 'caveira', 'coracao', 'trofeu', 'raio', 'chorando', 'susto', 'danca'];
 // GIFs comprados na loja: só manda quem tem (está no progresso salvo da conta)
 const GIFS_LOJA = ['dragao', 'foguete', 'alien', 'robo', 'unicornio', 'coroa', 'diamante', 'ninja',
@@ -237,17 +247,32 @@ module.exports = async (req, res) => {
           const tem = save && ((JSON.parse(save).meta || {}).gifs || []).includes(gif);
           if (!tem) return res.status(403).json({ error: 'Esse GIF é da loja. Compre lá primeiro!' });
         }
-        if (!texto && !gif) return res.status(400).json({ error: 'Mensagem vazia.' });
+        const emoji = limparEmoji(body.emoji);   // figurinha do Monta Emoji
+        if (!texto && !gif && !emoji) return res.status(400).json({ error: 'Mensagem vazia.' });
         const [ok] = await redis(['SET', 'aventura:chat:rl:' + email, '1', 'PX', 1200, 'NX']);
         if (!ok) return res.status(429).json({ error: 'Calma! Espera um pouquinho.' });
         const u = JSON.parse(raw);
         const [id] = await redis(['INCR', 'aventura:chat:id']);
-        const msg = { id, nome: u.nome, cor: u.cor || 'branco', foto: u.foto || 'skin:gotinha', moldura: u.moldura || 'nenhuma', texto, gif, t: Date.now() };
+        const msg = { id, nome: u.nome, cor: u.cor || 'branco', foto: u.foto || 'skin:gotinha', moldura: u.moldura || 'nenhuma', texto, gif, emoji, t: Date.now() };
         await redis(['RPUSH', sala, JSON.stringify(msg)], ['LTRIM', sala, -100, -1]);
       }
       const [lista, limpo] = await redis(['LRANGE', sala, 0, -1], ['GET', oculto ? 'aventura:chat:limpo:teste' : 'aventura:chat:limpo']);
       const desde = Number(body.desde) || 0;
       return res.status(200).json({ membro: true, limpo: Number(limpo) || 0, msgs: (lista || []).map((m) => JSON.parse(m)).filter((m) => m.id > desde) });
+    }
+
+    // Figurinhas: os emojis do Monta Emoji que a pessoa guardou pra mandar no chat (até 40, a mais nova primeiro)
+    if (action === 'figurinhas') {
+      const [raw, lista] = await redis(['GET', 'aventura:user:' + email], ['GET', 'aventura:figurinhas:' + email]);
+      if (!raw) return res.status(404).json({ error: 'Usuário não encontrado.' });
+      let figs = lista ? JSON.parse(lista) : [];
+      let mudou = false;
+      const nova = limparEmoji(body.salvar);
+      if (nova) { figs.unshift(nova); figs = figs.slice(0, 40); mudou = true; }
+      const tira = Number(body.apagar);
+      if (body.apagar != null && tira >= 0 && tira < figs.length) { figs.splice(tira, 1); mudou = true; }
+      if (mudou) await redis(['SET', 'aventura:figurinhas:' + email, JSON.stringify(figs)]);
+      return res.status(200).json({ figurinhas: figs });
     }
 
     // ── Jogar junto: convite e "aperto de mão" entre os dois aparelhos (depois eles conversam direto) ──

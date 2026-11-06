@@ -217,6 +217,12 @@
     /* "GIFs": emojis grandes que se mexem */
     .gif { display: inline-block; font-size: 30px; line-height: 1; }
     .chat-text .gif { font-size: 54px; margin: 4px 6px; }
+    /* Emojis do Monta Emoji (figurinhas): se mexem igual GIF */
+    .gif-emoji { width: 1.25em; height: 1.25em; vertical-align: middle; }
+    .gif-emoji svg { width: 100%; height: 100%; display: block; animation: gif-emoji 1.2s ease-in-out infinite; }
+    .chat-text .gif-emoji { font-size: 72px; }
+    @keyframes gif-emoji { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-8%) rotate(-7deg); } 75% { transform: translateY(-4%) rotate(7deg); } }
+    #chat-gifs .gif-sec { width: 100%; text-align: center; font-weight: 900; font-size: 13px; margin-top: 6px; color: #ffd23f; }
     .gif-pula { animation: gif-pula 0.6s ease-in-out infinite alternate; }
     .gif-treme { animation: gif-treme 0.25s linear infinite; }
     .gif-gira { animation: gif-gira 1.2s linear infinite; }
@@ -540,6 +546,7 @@
   </div>
 
   <div id="coop-modal"><div class="coop-box"><div id="coop-title"></div><div id="coop-sub"></div><div id="coop-btns"></div></div></div>
-  <script src="game.js?v=46"></script>
+  <script src="../monta-emoji/emoji.js?v=1"></script>
+  <script src="game.js?v=47"></script>
 </body>
 </html>
