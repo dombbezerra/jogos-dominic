@@ -189,7 +189,8 @@
   const teamOvr = () => Math.round(data.team.reduce((s, id, i) => s + effR(cardById(id), i), 0) / SLOTS.length);
 
   function cardEl(c, extra) {
-    const al = c.key && data && (data.custom || []).find(x => x.key === c.key);   // o jogador do álbum manda (nome, rosto, time)
+    // o jogador do álbum manda (nome, rosto, time, nota): o seu álbum primeiro, depois o de todo mundo
+    const al = c.key && data && ((data.custom || []).find(x => x.key === c.key) || SPECIALS.find(x => x.key === c.key));
     if (al) c = Object.assign({}, c, { nome: al.nome, face: al.face, time: al.time, pos: al.pos, r: al.r });
     const t = tierOf(c.r);
     const d = document.createElement('div');
