@@ -55,15 +55,15 @@
     { key: 'evento-prata-mbappe', nome: 'Mbappé', pos: 'ATA', r: 128, face: '😁', time: '2º Bola de Ouro 2026', prata: true, preco: 30 },
     { key: 'evento-prata-yamal', nome: 'Lamine Yamal', pos: 'PD', r: 128, face: '😎', time: '2º Bola de Ouro 2025', prata: true, preco: 30 },
     { key: 'evento-prata-vini', nome: 'Vini Júnior', pos: 'PE', r: 128, face: '😃', time: '2º Bola de Ouro 2024', prata: true, preco: 30 },
-    { key: 'evento-prata-haaland', nome: 'Haaland', pos: 'ATA', r: 128, face: '🤖', time: '2º Bola de Ouro 2023', prata: true, preco: 30 },
-    { key: 'evento-prata-mane', nome: 'Sadio Mané', pos: 'PE', r: 128, face: '😊', time: '2º Bola de Ouro 2022', prata: true, preco: 30 },
+    { key: 'evento-prata-haaland', nome: 'Haaland', pos: 'ATA', r: 127, face: '🤖', time: '2º Bola de Ouro 2023', prata: true, preco: 30 },
+    { key: 'evento-prata-mane', nome: 'Sadio Mané', pos: 'PE', r: 127, face: '😊', time: '2º Bola de Ouro 2022', prata: true, preco: 30 },
     { key: 'evento-prata-messi', nome: 'Messi', pos: 'PD', r: 128, face: '🙂', time: '2º Bola de Ouro 2017', prata: true, preco: 30 },
     { key: 'evento-prata-cr7', nome: 'Cristiano Ronaldo', pos: 'ATA', r: 128, face: '😏', time: '2º Bola de Ouro 2007', prata: true, preco: 30 },
-    { key: 'evento-prata-buffon', nome: 'Buffon', pos: 'GOL', r: 128, face: '🧤', time: '2º Bola de Ouro 2006', prata: true, preco: 30 },
-    { key: 'evento-prata-lampard', nome: 'Lampard', pos: 'ATA', r: 128, face: '😄', time: '2º Bola de Ouro 2005', prata: true, preco: 30 },
+    { key: 'evento-prata-buffon', nome: 'Buffon', pos: 'GOL', r: 127, face: '🧤', time: '2º Bola de Ouro 2006', prata: true, preco: 30 },
+    { key: 'evento-prata-lampard', nome: 'Lampard', pos: 'ATA', r: 127, face: '😄', time: '2º Bola de Ouro 2005', prata: true, preco: 30 },
     { key: 'evento-prata-robertocarlos', nome: 'Roberto Carlos', pos: 'LE', r: 128, face: '💪', time: '2º Bola de Ouro 2002', prata: true, preco: 30 },
-    { key: 'evento-prata-beckham', nome: 'Beckham', pos: 'PD', r: 128, face: '😉', time: '2º Bola de Ouro 1999', prata: true, preco: 30 },
-    { key: 'evento-prata-suker', nome: 'Šuker', pos: 'ATA', r: 128, face: '😌', time: '2º Bola de Ouro 1998', prata: true, preco: 30 },
+    { key: 'evento-prata-beckham', nome: 'Beckham', pos: 'PD', r: 127, face: '😉', time: '2º Bola de Ouro 1999', prata: true, preco: 30 },
+    { key: 'evento-prata-suker', nome: 'Šuker', pos: 'ATA', r: 127, face: '😌', time: '2º Bola de Ouro 1998', prata: true, preco: 30 },
   ];
   for (const ec of EVENT_CARDS) SPECIALS.push(Object.assign({ album: 'bolaouro', club: 'Bola de Ouro', badge: ec.prata ? '🥈' : '🥇', evento: true }, ec));
   const eventoAtivo = () => Date.now() < EVENTO.fim;
