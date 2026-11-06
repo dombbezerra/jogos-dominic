@@ -128,7 +128,7 @@ function protegerSave(novo, velho) {
 
 // ADM: a conta precisa estar marcada (na página de avisos) E estar com o nome de ADM.
 // Trocou o nome pra outro, deixa de ser ADM até voltar pro nome
-const NOMES_ADM = ['endrick'];
+const NOMES_ADM = ['endrick', 'dominic'];   // o Dominic (a conta também precisa estar marcada como ADM)
 const admPeloNome = (raw) => !!raw && NOMES_ADM.includes(nomeKey(JSON.parse(raw).nome));
 async function ehAdm(email) {
   const [marcado, raw] = await redis(['SISMEMBER', 'aventura:adm', email], ['GET', 'aventura:user:' + email]);

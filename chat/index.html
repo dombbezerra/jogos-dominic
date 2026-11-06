@@ -330,7 +330,7 @@
     const FOTOS = ['😀', '😎', '🤩', '😜', '🥳', '😇', '🤠', '👻', '🤖', '👽', '😈', '🤡', '🐶', '🐱', '🦊', '🐼', '🐸', '🦁', '🐯', '🐵',
       '🦄', '🐲', '🦖', '🐙', '🦈', '⚽', '🏆', '🎮', '🚀', '⭐', '🔥', '💎', '👑', '🌈', '⚡', '🍕', '🍩', '🎃', '❄️', '💀'];
     const NOMES_COR = { branco: 'Branco', verde: 'Verde', azul: 'Azul', vermelho: 'Vermelho', laranja: 'Laranja', roxo: 'Roxo', rosa: 'Rosa', dourado: 'Dourado', arcoiris: 'Arco-íris' };
-    let minhaFoto = null, meuNomeChat = null, pFoto = null, pCor = 'branco';
+    let minhaFoto = null, meuNomeChat = null, nomeConta = null, pFoto = null, pCor = 'branco';
     const minhasCores = () => adm ? Object.keys(NOMES_COR) : ['branco', ...(conta().colors || [])];
     function previa() {
       const p = $('p-previa');
@@ -343,7 +343,7 @@
       pFoto = minhaFoto; pCor = conta().nameColor || 'branco';
       $('p-nome').value = meuNomeChat || u.nome;
       $('p-msg').textContent = '';
-      $('p-aviso').textContent = 'Esse nome aparece só no chat. Na Aventura você continua ' + u.nome + (adm ? ' e continua ADM 👑' : '') + '.';
+      $('p-aviso').textContent = 'Esse nome aparece só no chat. Na Aventura você continua ' + (nomeConta || u.nome) + (adm ? ' e continua ADM 👑' : '') + '.';
       const fotos = $('p-fotos');
       fotos.innerHTML = '';
       const botaoFoto = (f, conteudo) => {
@@ -390,7 +390,8 @@
       $('p-msg').textContent = 'Salvando...';
       try {
         // Cor: a mesma do usuário da Aventura (o nome, a foto e a moldura de lá continuam iguais)
-        if (pCor !== (c.nameColor || 'branco')) await api({ email: u.email, nome: u.nome, cor: pCor, foto: c.avatar || 'skin:gotinha', moldura: c.frame || 'nenhuma' });
+        // (usa o nome da conta que está no servidor, pra nunca trocar o nome da conta sem querer)
+        if (pCor !== (c.nameColor || 'branco')) await api({ email: u.email, nome: nomeConta || u.nome, cor: pCor, foto: c.avatar || 'skin:gotinha', moldura: c.frame || 'nenhuma' });
         // Foto e nome: só do chat
         const d = await api({ action: 'fotoChat', email: u.email, fotoChat: pFoto, nomeChat: nome });
         minhaFoto = d.fotoChat; meuNomeChat = d.nomeChat;
@@ -411,7 +412,7 @@
       $('perso-btn').style.display = '';
       api({ action: 'online', email: eu().email }).then(d => { adm = !!d.adm; botaoLimpar(); }).catch(() => {});
       // A foto do chat que eu já escolhi
-      api({ action: 'fotoChat', email: eu().email, ler: true }).then(d => { minhaFoto = d.fotoChat || null; meuNomeChat = d.nomeChat || null; render(); }).catch(() => {});
+      api({ action: 'fotoChat', email: eu().email, ler: true }).then(d => { minhaFoto = d.fotoChat || null; meuNomeChat = d.nomeChat || null; nomeConta = d.nome || null; render(); }).catch(() => {});
     }
     $('limpar').onclick = async () => {
       const b = $('limpar');
