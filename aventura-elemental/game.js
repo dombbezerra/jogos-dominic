@@ -1439,6 +1439,8 @@
           if (!have) { meta.coins -= price; meta.skins.push(s.id); }
           meta.skin = s.id;
           if (started) { player.maxHp = maxHpNow(); player.hp = Math.min(player.hp, player.maxHp); player.elem = elemOf(meta.skin); }
+          // A foto do perfil acompanha o personagem (se a foto for de personagem, não de bicho)
+          if (!String(meta.avatar).startsWith('bicho:')) { meta.avatar = 'skin:' + s.id; syncUser(); }
           writeMeta(); renderMenu();
         });
         const d = card(on);
