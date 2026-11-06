@@ -69,7 +69,7 @@
     .fotos button.on, .cores button.on { border-color: var(--sol); box-shadow: 0 0 0 3px var(--sol); }
     .fotos button svg { width: 100%; height: 100%; }
     #p-nome { width: 100%; padding: 10px 12px; font-size: 18px; border-radius: 14px; border: 3px solid var(--tinta); background: var(--creme); color: var(--tinta); font-family: inherit; font-weight: 800; }
-    .aviso-adm { font-size: 13px; color: #ffb3b3; margin-top: 4px; }
+    .aviso-adm { font-size: 13px; color: #b9f5d0; margin-top: 4px; }
     .cores { display: flex; flex-wrap: wrap; gap: 8px; }
     .cores button { font-family: inherit; font-weight: 800; font-size: 15px; padding: 6px 12px; border-radius: 12px; background: #2e2366; border: 3px solid #4a3a8a; cursor: pointer; }
     .cores button:disabled { opacity: 0.45; cursor: default; }
@@ -233,7 +233,7 @@
         return;
       }
       $('eu').textContent = 'Você é ';
-      $('eu').appendChild(nomeEl(u.nome, conta().nameColor));
+      $('eu').appendChild(nomeEl(meuNomeChat || u.nome, conta().nameColor));
       if (membro === null) return info('Carregando...');
       if (!membro) return info('🔒 O chat é só pra convidados. Peça pro ADM te convidar!');
       const l = $('list');
@@ -241,7 +241,7 @@
       l.innerHTML = '';
       if (!msgs.length) l.appendChild(el('li', 'Ninguém falou nada ainda. Diga oi! 👋', 'info'));
       for (const m of msgs) {
-        const li = el('li', null, m.nome === u.nome ? 'mine' : '');
+        const li = el('li', null, m.nome === u.nome || m.nome === meuNomeChat ? 'mine' : '');
         const who = el('div', null, 'who');
         const bola = fotoEl(m.fotoChat, m.nome, m.cor);
         const d = new Date(m.t);
@@ -330,19 +330,20 @@
     const FOTOS = ['😀', '😎', '🤩', '😜', '🥳', '😇', '🤠', '👻', '🤖', '👽', '😈', '🤡', '🐶', '🐱', '🦊', '🐼', '🐸', '🦁', '🐯', '🐵',
       '🦄', '🐲', '🦖', '🐙', '🦈', '⚽', '🏆', '🎮', '🚀', '⭐', '🔥', '💎', '👑', '🌈', '⚡', '🍕', '🍩', '🎃', '❄️', '💀'];
     const NOMES_COR = { branco: 'Branco', verde: 'Verde', azul: 'Azul', vermelho: 'Vermelho', laranja: 'Laranja', roxo: 'Roxo', rosa: 'Rosa', dourado: 'Dourado', arcoiris: 'Arco-íris' };
-    let minhaFoto = null, pFoto = null, pCor = 'branco';
+    let minhaFoto = null, meuNomeChat = null, pFoto = null, pCor = 'branco';
     const minhasCores = () => adm ? Object.keys(NOMES_COR) : ['branco', ...(conta().colors || [])];
     function previa() {
       const p = $('p-previa');
       p.innerHTML = '';
-      p.append(fotoEl(pFoto, $('p-nome').value || eu().nome, pCor), nomeEl($('p-nome').value.trim() || eu().nome, pCor));
+      const n = $('p-nome').value.trim() || eu().nome;
+      p.append(fotoEl(pFoto, n, pCor), nomeEl(n, pCor));
     }
     function abrirPerso() {
       const u = eu();
       pFoto = minhaFoto; pCor = conta().nameColor || 'branco';
-      $('p-nome').value = u.nome;
+      $('p-nome').value = meuNomeChat || u.nome;
       $('p-msg').textContent = '';
-      $('p-aviso').textContent = adm ? '👑 Cuidado: você é ADM pelo nome. Se trocar o nome, deixa de ser ADM!' : '';
+      $('p-aviso').textContent = 'Esse nome aparece só no chat. Na Aventura você continua ' + u.nome + (adm ? ' e continua ADM 👑' : '') + '.';
       const fotos = $('p-fotos');
       fotos.innerHTML = '';
       const botaoFoto = (f, conteudo) => {
@@ -388,12 +389,12 @@
       $('p-salvar').disabled = true;
       $('p-msg').textContent = 'Salvando...';
       try {
-        // Nome e cor: o mesmo usuário da Aventura (a foto e a moldura de lá continuam iguais)
-        await api({ email: u.email, nome, cor: pCor, foto: c.avatar || 'skin:gotinha', moldura: c.frame || 'nenhuma' });
-        const d = await api({ action: 'fotoChat', email: u.email, fotoChat: pFoto });
-        minhaFoto = d.fotoChat;
+        // Cor: a mesma do usuário da Aventura (o nome, a foto e a moldura de lá continuam iguais)
+        if (pCor !== (c.nameColor || 'branco')) await api({ email: u.email, nome: u.nome, cor: pCor, foto: c.avatar || 'skin:gotinha', moldura: c.frame || 'nenhuma' });
+        // Foto e nome: só do chat
+        const d = await api({ action: 'fotoChat', email: u.email, fotoChat: pFoto, nomeChat: nome });
+        minhaFoto = d.fotoChat; meuNomeChat = d.nomeChat;
         const novo = conta();
-        novo.user = Object.assign({}, novo.user, { nome });
         novo.nameColor = pCor;
         try { localStorage.setItem(KEY, JSON.stringify(novo)); } catch (e) { /* ok */ }
         $('p-msg').textContent = '✅ Pronto! As próximas mensagens vão com o seu visual novo.';
@@ -410,7 +411,7 @@
       $('perso-btn').style.display = '';
       api({ action: 'online', email: eu().email }).then(d => { adm = !!d.adm; botaoLimpar(); }).catch(() => {});
       // A foto do chat que eu já escolhi
-      api({ action: 'fotoChat', email: eu().email, ler: true }).then(d => { minhaFoto = d.fotoChat || null; }).catch(() => {});
+      api({ action: 'fotoChat', email: eu().email, ler: true }).then(d => { minhaFoto = d.fotoChat || null; meuNomeChat = d.nomeChat || null; render(); }).catch(() => {});
     }
     $('limpar').onclick = async () => {
       const b = $('limpar');

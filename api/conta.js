@@ -262,7 +262,7 @@ module.exports = async (req, res) => {
         if (!ok) return res.status(429).json({ error: 'Calma! Espera um pouquinho.' });
         const u = JSON.parse(raw);
         const [id] = await redis(['INCR', 'aventura:chat:id']);
-        const msg = { id, nome: u.nome, cor: u.cor || 'branco', foto: u.foto || 'skin:gotinha', moldura: u.moldura || 'nenhuma', fotoChat: u.fotoChat || null, texto, gif, emoji, t: Date.now() };
+        const msg = { id, nome: u.nomeChat || u.nome, cor: u.cor || 'branco', foto: u.foto || 'skin:gotinha', moldura: u.moldura || 'nenhuma', fotoChat: u.fotoChat || null, texto, gif, emoji, t: Date.now() };
         await redis(['RPUSH', sala, JSON.stringify(msg)], ['LTRIM', sala, -100, -1]);
       }
       const [lista, limpo] = await redis(['LRANGE', sala, 0, -1], ['GET', oculto ? 'aventura:chat:limpo:teste' : 'aventura:chat:limpo']);
@@ -275,11 +275,25 @@ module.exports = async (req, res) => {
       const [raw] = await redis(['GET', 'aventura:user:' + email]);
       if (!raw) return res.status(404).json({ error: 'Usuário não encontrado.' });
       const u = JSON.parse(raw);
-      if (!body.ler) {   // ler: só devolve a foto de agora
+      if (!body.ler) {   // ler: só devolve a foto e o nome de agora
         u.fotoChat = limparFotoChat(body.fotoChat);
-        await redis(['SET', 'aventura:user:' + email, JSON.stringify(u)]);
+        const cmds = [];
+        // Nome só do chat (a conta continua com o nome dela; o ADM continua ADM)
+        if (typeof body.nomeChat === 'string') {
+          const novo = filtrar(body.nomeChat).trim().slice(0, 20);
+          const k = novo ? nomeKey(novo) : '';
+          if (k && k !== nomeKey(u.nome)) {
+            const [dono1, dono2] = await redis(['HGET', 'aventura:nomes', k], ['HGET', 'aventura:nomesChat', k]);
+            if ((dono1 && dono1 !== email) || (dono2 && dono2 !== email)) return res.status(409).json({ error: 'Esse nome já é de outra pessoa. Escolha outro!' });
+          }
+          if (u.nomeChat && nomeKey(u.nomeChat) !== k) cmds.push(['HDEL', 'aventura:nomesChat', nomeKey(u.nomeChat)]);
+          if (k && k !== nomeKey(u.nome)) { u.nomeChat = novo; cmds.push(['HSET', 'aventura:nomesChat', k, email]); }
+          else delete u.nomeChat;
+        }
+        cmds.push(['SET', 'aventura:user:' + email, JSON.stringify(u)]);
+        await redis(...cmds);
       }
-      return res.status(200).json({ ok: true, fotoChat: u.fotoChat, cor: u.cor || 'branco', nome: u.nome });
+      return res.status(200).json({ ok: true, fotoChat: u.fotoChat, cor: u.cor || 'branco', nome: u.nome, nomeChat: u.nomeChat || null });
     }
 
     // Figurinhas: os emojis do Monta Emoji que a pessoa guardou pra mandar no chat (até 40, a mais nova primeiro)
@@ -413,7 +427,8 @@ module.exports = async (req, res) => {
     if (dono && dono !== email) return res.status(409).json({ error: 'Esse nome já é de outra pessoa. Escolha outro!' });
     const prev = old ? JSON.parse(old) : null;
     const user = { email, nome, cor, foto, moldura, criado: prev ? prev.criado : Date.now(), atualizado: Date.now() };
-    if (prev && prev.fotoChat) user.fotoChat = prev.fotoChat;   // a foto do chat continua
+    if (prev && prev.fotoChat) user.fotoChat = prev.fotoChat;   // a foto e o nome do chat continuam
+    if (prev && prev.nomeChat) user.nomeChat = prev.nomeChat;
     const cmds = [['SET', key, JSON.stringify(user)], ['SADD', 'aventura:users', email], ['HSET', 'aventura:nomes', nomeKey(nome), email]];
     if (prev && nomeKey(prev.nome) !== nomeKey(nome)) cmds.push(['HDEL', 'aventura:nomes', nomeKey(prev.nome)]);   // trocou de nome
     await redis(...cmds);
