@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Monta Emoji</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --tinta: #0e0c33; --noite: #15134a; --noite-2: #2a2380; --creme: #fff6dc;
+      --sol: #ffd23f; --rosa: #ff5d8f; --agua: #3fe0d0;
+      --display: 'Bungee', 'Arial Black', Impact, sans-serif;
+      --texto: 'Baloo 2', 'Segoe UI', Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh; font-family: var(--texto); color: var(--creme);
+      background: radial-gradient(circle at 50% -10%, var(--noite-2) 0%, transparent 60%), var(--noite);
+      -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
+    }
+    #back-link {
+      position: fixed; top: 10px; left: 10px; z-index: 10; text-decoration: none;
+      font-weight: 800; background: var(--sol); color: var(--tinta); border: 3px solid var(--tinta);
+      border-radius: 12px; padding: 4px 12px; box-shadow: 0 4px 0 var(--tinta);
+    }
+    #back-link:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 58px 12px 40px; }
+    h1 { font-family: var(--display); font-weight: 400; text-align: center; font-size: clamp(28px, 6vw, 46px); line-height: 1; letter-spacing: 1px; }
+    h1 span { color: var(--sol); }
+    .sub { text-align: center; font-size: 16px; opacity: 0.85; margin-top: 4px; }
+
+    .main { display: grid; grid-template-columns: minmax(260px, 360px) 1fr; gap: 18px; margin-top: 18px; align-items: start; }
+    @media (max-width: 720px) { .main { grid-template-columns: 1fr; } }
+
+    .stage { position: sticky; top: 12px; text-align: center; }
+    @media (max-width: 720px) { .stage { position: static; } }
+    .preview {
+      background: var(--creme); border: 4px solid var(--tinta); border-radius: 28px; box-shadow: 0 7px 0 var(--tinta);
+      aspect-ratio: 1; width: min(100%, 340px); margin: 0 auto; display: grid; place-items: center;
+      background-image: radial-gradient(circle, rgba(14,12,51,0.07) 2px, transparent 2px); background-size: 18px 18px;
+    }
+    .preview svg { width: 88%; height: 88%; }
+    .preview.pop svg { animation: pop 0.25s ease; }
+    @keyframes pop { 50% { transform: scale(1.08); } }
+    .actions { display: flex; gap: 8px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+    .btn {
+      font-family: var(--texto); font-weight: 800; font-size: 16px; cursor: pointer;
+      border: 3px solid var(--tinta); border-radius: 14px; padding: 7px 14px 5px; color: var(--tinta);
+      background: var(--agua); box-shadow: 0 4px 0 var(--tinta);
+    }
+    .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
+    .btn.sol { background: var(--sol); } .btn.rosa { background: var(--rosa); color: #fff; }
+    .msg { min-height: 24px; margin-top: 8px; font-weight: 700; color: var(--sol); }
+
+    .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tab {
+      font-family: var(--display); font-size: 14px; cursor: pointer; color: var(--creme);
+      background: rgba(255,255,255,0.08); border: 3px solid rgba(255,255,255,0.18); border-radius: 12px; padding: 6px 10px 4px;
+    }
+    .tab.on { background: var(--sol); color: var(--tinta); border-color: var(--tinta); box-shadow: 0 4px 0 var(--tinta); }
+    .hint { font-size: 14px; opacity: 0.8; margin: 10px 2px 8px; }
+    .parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+    .part {
+      position: relative; cursor: pointer; background: rgba(255,255,255,0.07); border: 3px solid rgba(255,255,255,0.15);
+      border-radius: 16px; padding: 6px 4px 4px; color: var(--creme); font-family: var(--texto); font-weight: 700; font-size: 13px;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .part svg { width: 72px; height: 72px; }
+    .part .de { position: absolute; top: 3px; right: 5px; font-size: 18px; }
+    .part.on { background: var(--creme); color: var(--tinta); border-color: var(--sol); box-shadow: 0 0 0 3px var(--sol), 0 5px 0 var(--tinta); }
+
+    .gallery-title { font-family: var(--display); font-weight: 400; font-size: 20px; margin: 30px 0 10px; text-align: center; }
+    .gallery { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .gallery:empty::after { content: 'Monte um emoji e aperte GUARDAR! Ele aparece aqui.'; opacity: 0.7; }
+    .saved { position: relative; background: var(--creme); border: 3px solid var(--tinta); border-radius: 18px; width: 92px; height: 92px; cursor: pointer; box-shadow: 0 4px 0 var(--tinta); }
+    .saved svg { width: 100%; height: 100%; }
+    .saved .del {
+      position: absolute; top: -9px; right: -9px; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+      border: 2px solid var(--tinta); background: var(--rosa); color: #fff; font-weight: 800; font-size: 14px; line-height: 1;
+    }
+  </style>
+</head>
+<body>
+  <a href="../index.html" id="back-link">← Menu</a>
+  <div class="wrap">
+    <h1>MONTA <span>EMOJI</span></h1>
+    <p class="sub">Pegue as partes dos emojis que você quiser e monte o seu!</p>
+
+    <div class="main">
+      <div class="stage">
+        <div class="preview" id="preview"></div>
+        <div class="actions">
+          <button class="btn sol" id="b-sortear">🎲 SORTEAR</button>
+          <button class="btn" id="b-guardar">💾 GUARDAR</button>
+          <button class="btn rosa" id="b-baixar">⬇️ BAIXAR</button>
+        </div>
+        <div class="msg" id="msg"></div>
+      </div>
+
+      <div>
+        <div class="tabs" id="tabs"></div>
+        <p class="hint" id="hint"></p>
+        <div class="parts" id="parts"></div>
+      </div>
+    </div>
+
+    <h2 class="gallery-title">⭐ MEUS EMOJIS</h2>
+    <div class="gallery" id="gallery"></div>
+  </div>
+
+  <script>
+  (() => {
+    const $ = id => document.getElementById(id);
+    const INK = '#3b2414';
+
+    // ── As partes. Cada uma vem de um emoji (o "de" aparece no cantinho do botão) ──
+    // Rosto: cor clara (meio) e escura (borda)
+    const ROSTOS = [
+      { id: 'amarelo', nome: 'Amarelo', de: '😀', c1: '#ffe36b', c2: '#f5a623' },
+      { id: 'vermelho', nome: 'Bravo', de: '😡', c1: '#ff8a6b', c2: '#d9302a' },
+      { id: 'verde', nome: 'Enjoado', de: '🤢', c1: '#bfe88a', c2: '#5da130' },
+      { id: 'azul', nome: 'Congelado', de: '🥶', c1: '#a8e2ff', c2: '#3c8fe0' },
+      { id: 'roxo', nome: 'Diabinho', de: '😈', c1: '#c9a2ff', c2: '#7a45c7' },
+      { id: 'rosa', nome: 'Apaixonado', de: '🥰', c1: '#ffc2dc', c2: '#e8679a' },
+      { id: 'laranja', nome: 'Abóbora', de: '🎃', c1: '#ffc27a', c2: '#e8781f' },
+      { id: 'branco', nome: 'Fantasma', de: '👻', c1: '#ffffff', c2: '#b9c2d6' },
+    ];
+    const heart = (x, y, s) => `<path transform="translate(${x} ${y}) scale(${s})" d="M0 6 C-10 -6 -22 4 0 20 C22 4 10 -6 0 6Z" fill="#ff2d55"/>`;
+    const star = (x, y, r) => { let p = ''; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; p += (i ? 'L' : 'M') + (x + Math.cos(a) * rr).toFixed(1) + ' ' + (y + Math.sin(a) * rr).toFixed(1); } return `<path d="${p}Z" fill="#ffb800" stroke="#e08a00" stroke-width="2" stroke-linejoin="round"/>`; };
+    const line = (d, w = 6, c = INK) => `<path d="${d}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    const OLHOS = [
+      { id: 'normal', nome: 'Normal', de: '😀', svg: () => `<ellipse cx="72" cy="88" rx="9" ry="14" fill="${INK}"/><ellipse cx="128" cy="88" rx="9" ry="14" fill="${INK}"/>` },
+      { id: 'coracao', nome: 'Coração', de: '😍', svg: () => heart(72, 80, 1.2) + heart(128, 80, 1.2) },
+      { id: 'estrela', nome: 'Estrela', de: '🤩', svg: () => star(72, 88, 17) + star(128, 88, 17) },
+      { id: 'oculos', nome: 'Óculos escuro', de: '😎', svg: () => `<path d="M40 76 H160 V84 H152 C150 104 132 108 120 104 C110 100 106 92 104 84 H96 C94 92 90 100 80 104 C68 108 50 104 48 84 H40Z" fill="#14141f"/><path d="M58 84 l10 0" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity="0.7"/><path d="M114 84 l10 0" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity="0.7"/>` },
+      { id: 'piscando', nome: 'Piscando', de: '😉', svg: () => `<ellipse cx="72" cy="88" rx="9" ry="14" fill="${INK}"/>` + line('M114 92 Q128 80 142 92') },
+      { id: 'rindo', nome: 'Rindo', de: '😆', svg: () => line('M60 78 L80 88 L60 98') + line('M140 78 L120 88 L140 98') },
+      { id: 'dormindo', nome: 'Dormindo', de: '😴', svg: () => line('M58 88 Q72 98 86 88') + line('M114 88 Q128 98 142 88') },
+      { id: 'arregalado', nome: 'Assustado', de: '😳', svg: () => `<circle cx="72" cy="88" r="17" fill="#fff" stroke="${INK}" stroke-width="3"/><circle cx="72" cy="90" r="7" fill="${INK}"/><circle cx="128" cy="88" r="17" fill="#fff" stroke="${INK}" stroke-width="3"/><circle cx="128" cy="90" r="7" fill="${INK}"/>` },
+      { id: 'fofo', nome: 'Fofinho', de: '🥺', svg: () => `<circle cx="72" cy="90" r="16" fill="${INK}"/><circle cx="66" cy="84" r="6" fill="#fff"/><circle cx="77" cy="96" r="3" fill="#fff"/><circle cx="128" cy="90" r="16" fill="${INK}"/><circle cx="122" cy="84" r="6" fill="#fff"/><circle cx="133" cy="96" r="3" fill="#fff"/>` },
+      { id: 'tonto', nome: 'Tonto', de: '😵', svg: () => line('M62 78 L82 98 M82 78 L62 98') + line('M118 78 L138 98 M138 78 L118 98') },
+      { id: 'dinheiro', nome: 'Dinheiro', de: '🤑', svg: () => `<text x="72" y="104" font-size="40" font-weight="900" text-anchor="middle" fill="#1fa84a" font-family="Arial Black, Arial">$</text><text x="128" y="104" font-size="40" font-weight="900" text-anchor="middle" fill="#1fa84a" font-family="Arial Black, Arial">$</text>` },
+      { id: 'revirando', nome: 'Revirando', de: '🙄', svg: () => `<circle cx="72" cy="88" r="15" fill="#fff" stroke="${INK}" stroke-width="3"/><circle cx="72" cy="79" r="7" fill="${INK}"/><circle cx="128" cy="88" r="15" fill="#fff" stroke="${INK}" stroke-width="3"/><circle cx="128" cy="79" r="7" fill="${INK}"/>` },
+    ];
+    const BOCAS = [
+      { id: 'sorriso', nome: 'Sorriso', de: '🙂', svg: () => line('M66 134 Q100 160 134 134', 7) },
+      { id: 'dentes', nome: 'Dentes', de: '😀', svg: () => `<path d="M58 128 H142 Q138 168 100 168 Q62 168 58 128Z" fill="${INK}"/><path d="M62 129 H138 Q137 140 135 143 H65 Q63 140 62 129Z" fill="#fff"/>` },
+      { id: 'gargalhada', nome: 'Gargalhada', de: '😂', svg: () => `<path d="M52 124 H148 Q144 176 100 176 Q56 176 52 124Z" fill="${INK}"/><path d="M56 125 H144 Q143 133 141 136 H59 Q57 133 56 125Z" fill="#fff"/><path d="M74 166 Q100 146 126 166 Q114 176 100 176 Q86 176 74 166Z" fill="#ff6b8a"/>` },
+      { id: 'lingua', nome: 'Língua', de: '😛', svg: () => line('M64 132 Q100 156 136 132', 7) + `<path d="M84 144 Q84 172 100 172 Q116 172 116 144Z" fill="#ff6b8a" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/><path d="M100 148 V164" stroke="#d94a6a" stroke-width="3" stroke-linecap="round"/>` },
+      { id: 'o', nome: 'Surpreso', de: '😮', svg: () => `<ellipse cx="100" cy="146" rx="15" ry="19" fill="${INK}"/>` },
+      { id: 'triste', nome: 'Triste', de: '😢', svg: () => line('M70 154 Q100 132 130 154', 7) },
+      { id: 'nervoso', nome: 'Nervoso', de: '😬', svg: () => `<rect x="58" y="130" width="84" height="30" rx="12" fill="#fff" stroke="${INK}" stroke-width="5"/><path d="M58 145 H142 M79 130 V160 M100 130 V160 M121 130 V160" stroke="${INK}" stroke-width="3"/>` },
+      { id: 'reto', nome: 'Sem graça', de: '😐', svg: () => line('M72 146 H128', 7) },
+      { id: 'beijo', nome: 'Beijinho', de: '😗', svg: () => `<path d="M94 132 Q110 136 100 144 Q112 150 96 158" fill="none" stroke="${INK}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>` },
+      { id: 'ziper', nome: 'Zíper', de: '🤐', svg: () => line('M62 146 H138', 6) + `<path d="M70 140 V152 M80 140 V152 M90 140 V152 M100 140 V152 M110 140 V152 M120 140 V152 M130 140 V152" stroke="${INK}" stroke-width="3"/><rect x="132" y="138" width="10" height="16" rx="2" fill="#c9c9d6" stroke="${INK}" stroke-width="2"/>` },
+      { id: 'vampiro', nome: 'Vampiro', de: '🧛', svg: () => line('M64 134 Q100 158 136 134', 7) + `<path d="M78 141 L84 158 L89 145Z M122 141 L116 158 L111 145Z" fill="#fff" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>` },
+      { id: 'gostoso', nome: 'Delícia', de: '😋', svg: () => line('M64 134 Q100 158 136 134', 7) + `<path d="M108 144 Q126 142 124 160 Q110 162 108 144Z" fill="#ff6b8a" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>` },
+    ];
+    const SOBRANCELHAS = [
+      { id: 'nenhuma', nome: 'Nenhuma', de: '🚫', svg: () => '' },
+      { id: 'bravo', nome: 'Bravo', de: '😠', svg: () => line('M54 58 L88 72', 7) + line('M146 58 L112 72', 7) },
+      { id: 'desconfiado', nome: 'Desconfiado', de: '🤨', svg: () => line('M56 66 L88 66', 7) + line('M112 60 Q128 48 146 56', 7) },
+      { id: 'preocupado', nome: 'Preocupado', de: '😟', svg: () => line('M56 70 L86 58', 7) + line('M144 70 L114 58', 7) },
+      { id: 'feliz', nome: 'Feliz', de: '😊', svg: () => line('M56 64 Q72 52 88 62', 7) + line('M112 62 Q128 52 144 64', 7) },
+    ];
+    const CHAPEUS = [
+      { id: 'nenhum', nome: 'Nenhum', de: '🚫', svg: () => '' },
+      { id: 'coroa', nome: 'Coroa', de: '👑', svg: () => `<path d="M58 34 L66 4 L84 22 L100 0 L116 22 L134 4 L142 34Z" fill="#ffc81e" stroke="#c98a00" stroke-width="4" stroke-linejoin="round"/><circle cx="100" cy="24" r="5" fill="#ff2d55"/><circle cx="78" cy="28" r="4" fill="#3fa0ff"/><circle cx="122" cy="28" r="4" fill="#3fa0ff"/>` },
+      { id: 'festa', nome: 'Festa', de: '🥳', svg: () => `<path d="M76 34 L104 -10 L128 34Z" fill="#7a5cf0" stroke="#3b2a8f" stroke-width="3" stroke-linejoin="round"/><path d="M90 16 L112 18 M84 26 L120 28" stroke="#ffd23f" stroke-width="5" stroke-linecap="round"/><circle cx="104" cy="-10" r="7" fill="#ff5d8f"/>` },
+      { id: 'cartola', nome: 'Cartola', de: '🎩', svg: () => `<rect x="70" y="-14" width="60" height="44" rx="4" fill="#1c1c2a"/><rect x="70" y="16" width="60" height="9" fill="#e0304a"/><rect x="52" y="28" width="96" height="10" rx="5" fill="#1c1c2a"/>` },
+      { id: 'aureola', nome: 'Auréola', de: '😇', svg: () => `<ellipse cx="100" cy="14" rx="44" ry="11" fill="none" stroke="#ffd23f" stroke-width="7"/>` },
+      { id: 'chifres', nome: 'Chifres', de: '😈', svg: () => `<path d="M44 46 Q34 18 46 6 Q50 28 70 38Z M156 46 Q166 18 154 6 Q150 28 130 38Z" fill="#7a45c7" stroke="#4a2486" stroke-width="3" stroke-linejoin="round"/>` },
+      { id: 'bone', nome: 'Boné', de: '🧢', svg: () => `<path d="M42 54 Q42 6 100 6 Q158 6 158 54Z" fill="#2f6fe0"/><path d="M138 50 Q176 46 186 58 L140 60Z" fill="#1f4fb0"/><circle cx="100" cy="8" r="5" fill="#1f4fb0"/>` },
+    ];
+    const EXTRAS = [
+      { id: 'bochecha', nome: 'Bochecha', de: '😊', svg: () => `<ellipse cx="54" cy="122" rx="14" ry="9" fill="#ff7aa2" opacity="0.6"/><ellipse cx="146" cy="122" rx="14" ry="9" fill="#ff7aa2" opacity="0.6"/>` },
+      { id: 'lagrimas', nome: 'Lágrimas', de: '😭', svg: () => `<path d="M50 100 Q42 116 50 124 Q58 116 50 100Z M150 100 Q142 116 150 124 Q158 116 150 100Z" fill="#4fb8ff" stroke="#1f7fd0" stroke-width="2"/>` },
+      { id: 'suor', nome: 'Suor', de: '😅', svg: () => `<path d="M160 40 Q148 62 160 70 Q172 62 160 40Z" fill="#7fd0ff" stroke="#1f7fd0" stroke-width="2"/>` },
+      { id: 'nerd', nome: 'Óculos nerd', de: '🤓', svg: () => `<circle cx="72" cy="88" r="22" fill="rgba(255,255,255,0.25)" stroke="#2a2a3a" stroke-width="6"/><circle cx="128" cy="88" r="22" fill="rgba(255,255,255,0.25)" stroke="#2a2a3a" stroke-width="6"/><path d="M94 86 H106" stroke="#2a2a3a" stroke-width="6"/>` },
+      { id: 'bigode', nome: 'Bigode', de: '🥸', svg: () => `<path d="M100 122 Q84 112 66 120 Q56 126 58 134 Q72 124 100 130 Q128 124 142 134 Q144 126 134 120 Q116 112 100 122Z" fill="#5a3416"/>` },
+      { id: 'brilho', nome: 'Brilhinhos', de: '✨', svg: () => star(24, 40, 10) + star(178, 150, 12) + star(170, 30, 7) },
+      { id: 'band', nome: 'Curativo', de: '🤕', svg: () => `<g transform="rotate(-25 140 58)"><rect x="118" y="50" width="44" height="16" rx="6" fill="#f5c79a" stroke="#c98a5a" stroke-width="2"/><rect x="133" y="50" width="14" height="16" fill="#e8b080"/></g>` },
+      { id: 'mascara', nome: 'Máscara', de: '😷', svg: () => `<path d="M54 120 Q100 110 146 120 L140 158 Q100 172 60 158Z" fill="#f2f6ff" stroke="#9aa6c0" stroke-width="3"/><path d="M66 132 Q100 126 134 132 M68 144 Q100 140 132 144" stroke="#c6cfe2" stroke-width="3" fill="none"/><path d="M54 122 L28 110 M146 122 L172 110" stroke="#9aa6c0" stroke-width="3"/>` },
+    ];
+
+    const CATS = [
+      { id: 'rosto', nome: 'ROSTO', lista: ROSTOS, dica: 'Escolha a cor do rosto.' },
+      { id: 'olhos', nome: 'OLHOS', lista: OLHOS, dica: 'De qual emoji você quer os olhos?' },
+      { id: 'boca', nome: 'BOCA', lista: BOCAS, dica: 'De qual emoji você quer a boca?' },
+      { id: 'sobrancelha', nome: 'SOBRANCELHA', lista: SOBRANCELHAS, dica: 'Sobrancelha muda a cara toda!' },
+      { id: 'chapeu', nome: 'CHAPÉU', lista: CHAPEUS, dica: 'Coloque alguma coisa na cabeça.' },
+      { id: 'extras', nome: 'EXTRAS', lista: EXTRAS, dica: 'Pode escolher vários! Toque de novo pra tirar.', varios: true },
+    ];
+    const byId = (lista, id) => lista.find(p => p.id === id) || lista[0];
+
+    // ── O emoji montado ──
+    let emoji = { rosto: 'amarelo', olhos: 'normal', boca: 'dentes', sobrancelha: 'nenhuma', chapeu: 'nenhum', extras: [] };
+    let uid = 0;
+    function desenha(e) {
+      const r = byId(ROSTOS, e.rosto), g = 'g' + (uid++);
+      const extras = EXTRAS.filter(x => (e.extras || []).includes(x.id));
+      const baixo = extras.filter(x => x.id === 'bochecha'), cima = extras.filter(x => x.id !== 'bochecha');
+      return `<svg viewBox="0 -20 200 220" xmlns="http://www.w3.org/2000/svg">
+        <defs><radialGradient id="${g}" cx="40%" cy="35%" r="70%"><stop offset="0%" stop-color="${r.c1}"/><stop offset="100%" stop-color="${r.c2}"/></radialGradient></defs>
+        <circle cx="100" cy="108" r="84" fill="${r.c2}" opacity="0.35" transform="translate(4 6)"/>
+        <circle cx="100" cy="104" r="84" fill="url(#${g})" stroke="${r.c2}" stroke-width="3"/>
+        <ellipse cx="74" cy="52" rx="26" ry="14" fill="#fff" opacity="0.35"/>
+        ${baixo.map(x => x.svg()).join('')}
+        ${byId(SOBRANCELHAS, e.sobrancelha).svg()}
+        ${byId(OLHOS, e.olhos).svg()}
+        ${byId(BOCAS, e.boca).svg()}
+        ${cima.map(x => x.svg()).join('')}
+        ${byId(CHAPEUS, e.chapeu).svg()}
+      </svg>`;
+    }
+
+    let aba = 'olhos';
+    function render() {
+      const pv = $('preview');
+      pv.innerHTML = desenha(emoji);
+      pv.classList.remove('pop'); void pv.offsetWidth; pv.classList.add('pop');
+      $('tabs').innerHTML = '';
+      for (const c of CATS) {
+        const t = document.createElement('button');
+        t.className = 'tab' + (c.id === aba ? ' on' : '');
+        t.textContent = c.nome;
+        t.onclick = () => { aba = c.id; render(); };
+        $('tabs').appendChild(t);
+      }
+      const cat = CATS.find(c => c.id === aba);
+      $('hint').textContent = cat.dica;
+      $('parts').innerHTML = '';
+      for (const p of cat.lista) {
+        const on = cat.varios ? emoji.extras.includes(p.id) : emoji[cat.id] === p.id;
+        // Cada botão mostra o seu emoji com essa parte trocada
+        const teste = Object.assign({}, emoji, cat.varios ? { extras: on ? emoji.extras : [...emoji.extras, p.id] } : { [cat.id]: p.id });
+        const b = document.createElement('button');
+        b.className = 'part' + (on ? ' on' : '');
+        b.innerHTML = desenha(teste) + '<span class="de"></span><span class="nm"></span>';
+        b.querySelector('.de').textContent = p.de;
+        b.querySelector('.nm').textContent = p.nome;
+        b.onclick = () => {
+          if (cat.varios) emoji.extras = on ? emoji.extras.filter(x => x !== p.id) : [...emoji.extras, p.id];
+          else emoji[cat.id] = p.id;
+          som(520 + Math.random() * 200);
+          render();
+        };
+        $('parts').appendChild(b);
+      }
+    }
+
+    // ── Guardar (cada perfil tem os seus) ──
+    const PERFIL = new URLSearchParams(location.search).get('perfil');
+    const KEY = 'montaEmoji' + (PERFIL ? ':' + PERFIL : '');
+    let salvos = [];
+    try { salvos = JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { salvos = []; }
+    const grava = () => { try { localStorage.setItem(KEY, JSON.stringify(salvos)); } catch (e) { /* sem espaço */ } };
+    function renderGaleria() {
+      const g = $('gallery');
+      g.innerHTML = '';
+      salvos.forEach((e, i) => {
+        const d = document.createElement('div');
+        d.className = 'saved';
+        d.title = 'Toque pra mexer de novo';
+        d.innerHTML = desenha(e);
+        d.onclick = () => { emoji = JSON.parse(JSON.stringify(e)); render(); scrollTo({ top: 0, behavior: 'smooth' }); aviso('✏️ Pode mexer nele de novo!'); };
+        const x = document.createElement('button');
+        x.className = 'del';
+        x.textContent = '✕';
+        x.onclick = ev => {
+          ev.stopPropagation();
+          if (x.dataset.armed !== '1') { x.dataset.armed = '1'; x.textContent = '?'; setTimeout(() => { x.dataset.armed = ''; x.textContent = '✕'; }, 2500); return; }
+          salvos.splice(i, 1); grava(); renderGaleria();
+        };
+        d.appendChild(x);
+        g.appendChild(d);
+      });
+    }
+    function aviso(t) { $('msg').textContent = t; clearTimeout(aviso.t); aviso.t = setTimeout(() => { $('msg').textContent = ''; }, 2500); }
+
+    $('b-guardar').onclick = () => {
+      salvos.unshift(JSON.parse(JSON.stringify(emoji)));
+      if (salvos.length > 60) salvos.length = 60;
+      grava(); renderGaleria();
+      som(880); som(1175, 0.12);
+      aviso('💾 Guardado em MEUS EMOJIS!');
+    };
+    const sorteia = l => l[Math.floor(Math.random() * l.length)].id;
+    $('b-sortear').onclick = () => {
+      emoji = { rosto: sorteia(ROSTOS), olhos: sorteia(OLHOS), boca: sorteia(BOCAS), sobrancelha: sorteia(SOBRANCELHAS),
+        chapeu: Math.random() < 0.5 ? 'nenhum' : sorteia(CHAPEUS), extras: EXTRAS.filter(() => Math.random() < 0.18).map(x => x.id) };
+      som(660); render();
+    };
+    // Baixar como imagem (PNG)
+    $('b-baixar').onclick = () => {
+      const svg = desenha(emoji).replace('<svg ', '<svg width="512" height="563" ');
+      const img = new Image();
+      img.onload = () => {
+        const cv = document.createElement('canvas');
+        cv.width = 512; cv.height = 563;
+        cv.getContext('2d').drawImage(img, 0, 0, 512, 563);
+        const a = document.createElement('a');
+        a.download = 'meu-emoji.png';
+        a.href = cv.toDataURL('image/png');
+        a.click();
+        aviso('⬇️ Baixou! Procure "meu-emoji" nos downloads.');
+      };
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    };
+
+    // Som de "plim"
+    let ac = null;
+    function som(f, d = 0) {
+      try {
+        ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+        const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + d;
+        o.type = 'triangle'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+        o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.16);
+      } catch (e) { /* sem som */ }
+    }
+
+    render();
+    renderGaleria();
+  })();
+  </script>
+</body>
+</html>
