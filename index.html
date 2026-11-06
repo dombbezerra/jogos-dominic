@@ -5,247 +5,192 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#0a0a1a">
+  <meta name="theme-color" content="#15134a">
   <meta name="apple-mobile-web-app-title" content="Jogos Dom">
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="/icon-192.png">
   <title>Jogos do Dominic 🎮</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --noite: #15134a;
+      --noite-2: #241f6b;
+      --tinta: #0e0c33;
+      --creme: #fff6dc;
+      --sol: #ffd23f;
+      --rosa: #ff5d8f;
+      --agua: #3fe0d0;
+      --display: 'Bungee', 'Arial Black', Impact, sans-serif;
+      --texto: 'Baloo 2', 'Segoe UI', Arial, sans-serif;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
-      height: 100%;
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: #0a0a1a;
-      color: white;
+      min-height: 100%;
+      font-family: var(--texto);
+      background: var(--noite);
+      color: var(--creme);
       overflow-x: hidden;
     }
     body {
       min-height: 100vh;
       background:
-        radial-gradient(ellipse at top, #1a1a3e 0%, #0a0a1a 60%),
-        radial-gradient(ellipse at bottom, #2a0a3e 0%, transparent 60%);
+        radial-gradient(circle at 50% -10%, var(--noite-2) 0%, transparent 55%),
+        radial-gradient(circle, rgba(255,255,255,0.06) 1.5px, transparent 1.6px) 0 0 / 22px 22px,
+        var(--noite);
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: clamp(20px, 5vw, 40px) clamp(12px, 4vw, 20px);
-      padding-top: max(clamp(20px, 5vw, 40px), env(safe-area-inset-top));
+      padding: clamp(20px, 5vw, 44px) 16px;
+      padding-top: max(clamp(64px, 8vw, 72px), calc(env(safe-area-inset-top) + 56px));
       padding-bottom: max(clamp(20px, 5vw, 40px), env(safe-area-inset-bottom));
       -webkit-tap-highlight-color: transparent;
     }
     /* Estrelas de fundo */
-    .stars {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 0;
-    }
+    .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
     .star {
-      position: absolute;
-      width: 2px;
-      height: 2px;
-      background: white;
-      border-radius: 50%;
+      position: absolute; width: 3px; height: 3px;
+      background: var(--sol); border-radius: 50%;
       animation: twinkle 3s infinite;
     }
-    @keyframes twinkle {
-      0%, 100% { opacity: 0.2; }
-      50% { opacity: 1; }
-    }
-    header {
-      text-align: center;
-      margin-bottom: clamp(28px, 6vw, 50px);
-      z-index: 1;
-    }
+    @keyframes twinkle { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.9; } }
+
+    header { text-align: center; margin-bottom: clamp(28px, 6vw, 48px); z-index: 1; }
     h1 {
-      font-size: clamp(36px, 6vw, 64px);
-      font-weight: 900;
-      letter-spacing: 3px;
-      background: linear-gradient(90deg, #ffcc00, #ff6b6b, #4ecdc4, #ffcc00);
-      background-size: 300% 100%;
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      animation: shimmer 4s linear infinite;
-      text-shadow: 0 0 40px rgba(255, 204, 0, 0.3);
+      font-family: var(--display);
+      font-weight: 400;
+      font-size: clamp(34px, 8.5vw, 76px);
+      line-height: 0.95;
+      color: var(--sol);
+      text-shadow:
+        3px 3px 0 var(--rosa),
+        6px 6px 0 var(--agua),
+        9px 9px 0 var(--tinta);
+      transform: rotate(-2deg);
     }
-    @keyframes shimmer {
-      0% { background-position: 0% 50%; }
-      100% { background-position: 300% 50%; }
-    }
+    h1 span { display: block; font-size: 0.62em; color: var(--creme); }
     .subtitle {
-      margin-top: 12px;
-      font-size: clamp(14px, 1.8vw, 18px);
-      opacity: 0.7;
-      letter-spacing: 2px;
+      margin-top: 22px;
+      font-size: clamp(16px, 2vw, 20px);
+      font-weight: 700;
+      display: inline-flex; align-items: center; gap: 10px;
     }
     .games {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
-      gap: clamp(16px, 3vw, 30px);
+      grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+      gap: clamp(16px, 2.6vw, 28px);
       max-width: 1100px;
       width: 100%;
       z-index: 1;
     }
+    /* Cada jogo é um "cartucho": cor forte, borda de tinta e sombra dura */
     .game-card {
       position: relative;
-      background: rgba(20, 20, 40, 0.8);
-      border: 2px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: clamp(20px, 4vw, 30px);
-      cursor: pointer;
-      text-decoration: none;
-      color: white;
-      transition: all 0.3s ease;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      grid-template-areas: "icon title" "icon desc" "btn btn";
+      column-gap: 16px;
       align-items: center;
-      text-align: center;
-      backdrop-filter: blur(10px);
+      background: var(--card-color);
+      color: var(--tinta);
+      border: 3px solid var(--tinta);
+      border-radius: 22px;
+      padding: 18px 18px 16px;
+      box-shadow: 0 7px 0 var(--tinta);
+      text-decoration: none;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
       -webkit-tap-highlight-color: transparent;
     }
-    @media (hover: none) {
-      .game-card:hover { transform: none; }
-    }
-    .game-card:active {
-      transform: scale(0.97);
-    }
-    .game-card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: var(--card-bg);
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      z-index: 0;
-    }
-    .game-card:hover {
-      transform: translateY(-8px) scale(1.02);
-      border-color: var(--card-color);
-      box-shadow: 0 20px 60px var(--card-shadow);
-    }
-    .game-card:hover::before {
-      opacity: 0.15;
-    }
-    .game-card > * {
-      position: relative;
-      z-index: 1;
-    }
+    .game-card:hover { transform: translateY(-3px) rotate(-0.6deg); box-shadow: 0 10px 0 var(--tinta); }
+    .game-card:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--tinta); }
+    .game-card:focus-visible { outline: 4px solid var(--creme); outline-offset: 4px; }
+    @media (hover: none) { .game-card:hover { transform: none; box-shadow: 0 7px 0 var(--tinta); } }
     .game-icon {
-      font-size: clamp(56px, 10vw, 80px);
-      margin-bottom: 12px;
-      filter: drop-shadow(0 4px 12px var(--card-shadow));
-      transition: transform 0.3s ease;
-    }
-    .game-card:hover .game-icon {
-      transform: scale(1.15) rotate(-5deg);
+      grid-area: icon;
+      width: 88px; height: 88px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 50px;
+      background: var(--card-deep);
+      border: 3px solid var(--tinta);
+      border-radius: 50%;
     }
     .game-title {
-      font-size: 26px;
-      font-weight: bold;
-      margin-bottom: 10px;
-      color: var(--card-color);
-      letter-spacing: 1px;
+      grid-area: title; align-self: end;
+      font-family: var(--display);
+      font-size: clamp(19px, 2.2vw, 23px);
+      line-height: 1.05;
     }
     .game-desc {
-      font-size: 14px;
-      opacity: 0.8;
-      line-height: 1.5;
-      margin-bottom: 20px;
+      grid-area: desc; align-self: start;
+      margin-top: 4px;
+      font-size: 15px;
+      font-weight: 500;
+      line-height: 1.3;
     }
     .play-btn {
-      background: var(--card-color);
-      color: #0a0a1a;
-      padding: 12px 32px;
-      border-radius: 30px;
-      font-weight: bold;
-      font-size: 15px;
-      letter-spacing: 2px;
-      transition: all 0.2s ease;
+      grid-area: btn;
+      margin-top: 14px;
+      text-align: center;
+      background: var(--tinta);
+      color: var(--card-color);
+      padding: 9px 0 7px;
+      border-radius: 14px;
+      font-family: var(--display);
+      font-size: 17px;
     }
-    .game-card:hover .play-btn {
-      transform: scale(1.05);
-      box-shadow: 0 4px 20px var(--card-shadow);
-    }
-    /* Cores específicas para cada jogo */
-    .luta {
-      --card-color: #ffcc00;
-      --card-shadow: rgba(255, 204, 0, 0.4);
-      --card-bg: linear-gradient(135deg, #ff6b6b, #ffcc00);
-    }
-    .aventura {
-      --card-color: #6cc8ff;
-      --card-shadow: rgba(108, 200, 255, 0.4);
-      --card-bg: linear-gradient(135deg, #1a6fb0, #ff6a2a);
-    }
-    .space {
-      --card-color: #8fb6ff;
-      --card-shadow: rgba(143, 182, 255, 0.4);
-      --card-bg: linear-gradient(135deg, #1a2050, #4050a0);
-    }
-    .nocaute {
-      --card-color: #e8b53a;
-      --card-shadow: rgba(232, 181, 58, 0.4);
-      --card-bg: linear-gradient(135deg, #6b4f36, #c9342b);
-    }
-    .tatico {
-      --card-color: #d8a24a;
-      --card-shadow: rgba(216, 162, 74, 0.4);
-      --card-bg: linear-gradient(135deg, #3a3226, #8a6a2a);
-    }
-    .blocos {
-      --card-color: #7ccf4a;
-      --card-shadow: rgba(124, 207, 74, 0.4);
-      --card-bg: linear-gradient(135deg, #6b4a2b, #5f9f35);
-    }
-    /* Botão de notificações de jogos novos */
+    /* Cores de cada jogo */
+    .luta     { --card-color: #ffc93c; --card-deep: #ff8a3d; }
+    .aventura { --card-color: #6fd0ff; --card-deep: #2f8fe0; }
+    .space    { --card-color: #b6a4ff; --card-deep: #7a5cf0; }
+    .nocaute  { --card-color: #ff8a73; --card-deep: #e0453a; }
+    .tatico   { --card-color: #e5c27a; --card-deep: #b58a3a; }
+    .blocos   { --card-color: #8fe05a; --card-deep: #4fa82e; }
+    .futebol  { --card-color: #3fe0a8; --card-deep: #13a874; }
+
     /* Botão fixo no canto: abre a página de mandar avisos (precisa do login da Base Secreta) */
     .send-notice {
       position: fixed; top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); z-index: 10;
-      width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-      background: rgba(20, 20, 40, 0.9); border: 2px solid #ffcc00; font-size: 22px; text-decoration: none;
+      width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      background: var(--sol); border: 3px solid var(--tinta); box-shadow: 0 4px 0 var(--tinta);
+      font-size: 22px; text-decoration: none;
     }
+    .send-notice:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
     .send-toast {
-      position: fixed; top: max(66px, calc(env(safe-area-inset-top) + 54px)); right: max(12px, env(safe-area-inset-right)); z-index: 10;
-      max-width: 240px; background: rgba(20, 20, 40, 0.95); border: 2px solid #ffcc00; border-radius: 10px;
-      padding: 8px 12px; font-size: 13px; display: none;
-    }
-    .futebol {
-      --card-color: #2fe0a0;
-      --card-shadow: rgba(47, 224, 160, 0.4);
-      --card-bg: linear-gradient(135deg, #1a5a3a, #2a8a3a);
+      position: fixed; top: max(70px, calc(env(safe-area-inset-top) + 58px)); right: max(12px, env(safe-area-inset-right)); z-index: 10;
+      max-width: 240px; background: var(--creme); color: var(--tinta); border: 3px solid var(--tinta); border-radius: 14px;
+      box-shadow: 0 4px 0 var(--tinta);
+      padding: 8px 12px; font-size: 14px; font-weight: 700; display: none;
     }
     /* Modo teste */
     .test-banner { position: fixed; top: max(12px, env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left)); z-index: 10;
-      background: #ff6ad5; color: #fff; font-weight: 900; padding: 6px 12px; border-radius: 20px; font-size: 13px; letter-spacing: 1px; display: none; }
-    .test-area { display: none; margin: 40px auto 0; max-width: 1100px; padding: 16px; border: 3px dashed #ff6ad5; border-radius: 16px; }
+      background: var(--rosa); color: var(--tinta); font-family: var(--display); padding: 8px 14px 6px; border-radius: 20px;
+      border: 3px solid var(--tinta); font-size: 13px; display: none; }
+    .test-area { display: none; margin: 44px auto 0; max-width: 1100px; width: 100%; padding: 18px; border: 3px dashed var(--rosa); border-radius: 22px; z-index: 1; }
     body.modo-teste .test-area, body.modo-teste .test-banner { display: block; }
-    .test-title { font-size: 22px; font-weight: 900; color: #ff6ad5; letter-spacing: 2px; }
-    .test-hint { opacity: 0.7; margin: 4px 0 16px; font-size: 14px; }
-    .test-games:empty::after { content: 'Nada em teste agora.'; opacity: 0.5; }
-    footer {
-      margin-top: 50px;
-      opacity: 0.5;
-      font-size: 13px;
-      z-index: 1;
-    }
+    .test-title { font-family: var(--display); font-size: 22px; color: var(--rosa); }
+    .test-hint { opacity: 0.8; margin: 4px 0 16px; font-size: 15px; }
+    .test-games:empty::after { content: 'Nada em teste agora.'; opacity: 0.6; }
+    footer { margin-top: 48px; opacity: 0.7; font-size: 15px; font-weight: 700; z-index: 1; }
     .secret-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 26px;
-      height: 26px;
-      margin-left: 8px;
-      vertical-align: middle;
-      border: 1.5px solid currentColor;
-      border-radius: 8px;
-      color: inherit;
-      opacity: 0.8;
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 30px; height: 30px;
+      border: 2px solid currentColor; border-radius: 10px;
+      color: inherit; opacity: 0.7;
       transition: opacity 0.2s ease, color 0.2s ease;
     }
-    .secret-btn:hover { opacity: 1; color: #4ecdc4; }
+    .secret-btn:hover { opacity: 1; color: var(--agua); }
     .secret-btn:active { transform: scale(0.92); }
     .secret { text-decoration: none; color: inherit; cursor: default; }
+    @media (max-width: 420px) {
+      .game-card { padding: 14px 14px 12px; column-gap: 12px; }
+      .game-icon { width: 70px; height: 70px; font-size: 40px; }
+      .game-desc { font-size: 14px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .star { animation: none; }
+      .game-card, .game-card:hover { transition: none; transform: none; }
+    }
   </style>
 </head>
 <body>
@@ -254,7 +199,7 @@
   <div class="send-toast" id="send-toast"></div>
 
   <header>
-    <h1>JOGOS DO DOMINIC</h1>
+    <h1><span>Jogos do</span>DOMINIC</h1>
     <div class="subtitle">
       Escolha um jogo para começar
       <a href="base-secreta/" class="secret-btn" aria-label="Entrar">
@@ -271,7 +216,7 @@
         Combate top-down com poderes elementais.
         Mire, atire e use seu super!
       </div>
-      <div class="play-btn">JOGAR ▶</div>
+      <div class="play-btn">JOGAR</div>
     </a>
 
     <a href="aventura-elemental/index.html" class="game-card aventura">
@@ -281,7 +226,7 @@
         1000 fases de pedra, cada vez mais
         difíceis. Será que alguém zera?
       </div>
-      <div class="play-btn">JOGAR ▶</div>
+      <div class="play-btn">JOGAR</div>
     </a>
 
     <a href="space-shooter/index.html" class="game-card space">
@@ -291,7 +236,7 @@
         Pilote sua nave pelo espaço,
         destrua inimigos e suba de nível!
       </div>
-      <div class="play-btn">JOGAR ▶</div>
+      <div class="play-btn">JOGAR</div>
     </a>
 
     <a href="nocaute/index.html" class="game-card nocaute">
@@ -301,7 +246,7 @@
         Boxe de desenho animado dos anos 30.
         Encare 5 lutadores no ringue!
       </div>
-      <div class="play-btn">JOGAR ▶</div>
+      <div class="play-btn">JOGAR</div>
     </a>
 
     <a href="contra-ataque/index.html" class="game-card tatico">
@@ -311,7 +256,7 @@
         Tiroteio tático em 3D e primeira pessoa.
         Encare os inimigos no mapa!
       </div>
-      <div class="play-btn">JOGAR ▶</div>
+      <div class="play-btn">JOGAR</div>
     </a>
 
     <a href="mundo-blocos/index.html" class="game-card blocos">
@@ -321,7 +266,7 @@
         Mundo 3D feito de blocos.
         Quebre, construa e voe!
       </div>
-      <div class="play-btn">JOGAR ▶</div>
+      <div class="play-btn">JOGAR</div>
     </a>
 
     <a href="futebol/index.html" class="game-card futebol">
@@ -331,7 +276,7 @@
         Futebol no estilo FC Mobile: cartas de 60 a 130,
         pacotes e partidas!
       </div>
-      <div class="play-btn">JOGAR ▶</div>
+      <div class="play-btn">JOGAR</div>
     </a>
   </div>
 
