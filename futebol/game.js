@@ -65,7 +65,7 @@
     { key: 'evento-prata-beckham', nome: 'Beckham', pos: 'PD', r: 128, face: '😉', time: '2º Bola de Ouro 1999', prata: true, preco: 30 },
     { key: 'evento-prata-suker', nome: 'Šuker', pos: 'ATA', r: 128, face: '😌', time: '2º Bola de Ouro 1998', prata: true, preco: 30 },
   ];
-  for (const ec of EVENT_CARDS) SPECIALS.push(Object.assign({ album: 'bolaouro', club: 'Bola de Ouro', badge: '🥇', evento: true }, ec));
+  for (const ec of EVENT_CARDS) SPECIALS.push(Object.assign({ album: 'bolaouro', club: 'Bola de Ouro', badge: ec.prata ? '🥈' : '🥇', evento: true }, ec));
   const eventoAtivo = () => Date.now() < EVENTO.fim;
   // Nome que aparece: o que você escreveu no ✏️, ou o da carta
   const nameOf = c => (data.renames && data.renames[c.key || c.id]) || c.nome;
@@ -629,7 +629,11 @@
     const list = $('evento-cards');
     list.innerHTML = '';
     const have = new Set(data.cards.map(c => c.key));
-    for (const ec of EVENT_CARDS) {
+    // Separado: primeiro os campeões (🥇), depois o segundo lugar (🥈)
+    let lastGroup;
+    for (const ec of [...EVENT_CARDS].sort((a, b) => !!a.prata - !!b.prata)) {
+      const group = ec.prata ? '🥈 SEGUNDO LUGAR' : '🥇 CAMPEÕES';
+      if (group !== lastGroup) { lastGroup = group; list.appendChild(Object.assign(document.createElement('div'), { className: 'pick-head evento-group', textContent: group })); }
       const w = document.createElement('div');
       w.className = 'evento-item';
       w.appendChild(cardEl(SPECIALS.find(x => x.key === ec.key)));
