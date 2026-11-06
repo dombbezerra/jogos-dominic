@@ -45,7 +45,7 @@
 
   /* A grade da música */
   .grade-box { overflow-x: auto; padding: 8px; background: rgba(0,0,0,.25); border: 3px solid var(--tinta); border-radius: 18px; }
-  .grade { display: grid; grid-template-columns: 64px repeat(16, minmax(22px, 1fr)); gap: 4px; min-width: 520px; }
+  .grade { display: grid; grid-template-columns: 92px repeat(16, minmax(22px, 1fr)); gap: 4px; min-width: 540px; }
   .rotulo { display: flex; align-items: center; gap: 4px; font-weight: 800; font-size: 12px; white-space: nowrap; cursor: pointer; border-radius: 8px; padding: 0 4px; }
   .rotulo .em { font-size: 18px; }
   .rotulo:active { background: rgba(255,255,255,.12); }
@@ -79,7 +79,7 @@
 <a href="../index.html" id="back-link">← Menu</a>
 <div class="wrap">
   <h1>🎵 ESTÚDIO DE <span>MÚSICA</span></h1>
-  <p class="sub">Toque nos quadradinhos e aperte TOCAR. Não tem como errar!</p>
+  <p class="sub">Aperte 🥁 RITMOS pra uma batida de funk pronta, depois mexa nos quadradinhos!</p>
   <div id="vis"></div>
 
   <div class="controles">
@@ -96,7 +96,7 @@
   <div id="msg"></div>
 
   <div class="grade-box"><div class="grade" id="grade"></div></div>
-  <p class="dica">Dica: toque no nome da linha pra ouvir o som dela.</p>
+  <p class="dica">Dica: toque no nome da linha pra ouvir o som dela. No 🎤, toque pra trocar o que a voz fala!</p>
 
   <div class="salvas">
     <h2>⭐ MINHAS MÚSICAS</h2>
@@ -112,10 +112,16 @@ const PASSOS = 16;
 // ── As linhas: 4 de bateria e 8 notas (escala pentatônica: sempre fica bonito junto) ──
 const BATERIA = [
   { id: 'bumbo',   nome: 'Bumbo',   em: '🥁', cor: '#ff5d5d' },
-  { id: 'caixa',   nome: 'Caixa',   em: '🪘', cor: '#ff9a3d' },
+  { id: 'caixa',   nome: 'Caixa',   em: '💥', cor: '#ff9a3d' },
   { id: 'palma',   nome: 'Palmas',  em: '👏', cor: '#ffd23f' },
   { id: 'chimbal', nome: 'Chimbal', em: '🔔', cor: '#9be36a' },
+  { id: 'tambor',  nome: 'Tamborzão', em: '🪘', cor: '#e0a35a' },
+  { id: 'grave',   nome: 'Grave 808', em: '🔊', cor: '#ff3b8a' },
+  { id: 'voz',     nome: 'Voz',     em: '🎤', cor: '#5cb8ff' },
 ];
+// O que a voz fala (toque no 🎤 pra trocar)
+const FALAS = ['Vai!', 'Ahn!', 'Uh!', 'Ê!', 'Tá tá!', 'Joga!', 'Dominic!'];
+let fala = 0;
 const NOTAS = [   // de cima (mais aguda) pra baixo
   { nome: 'Lá',  f: 880.00 }, { nome: 'Sol', f: 783.99 }, { nome: 'Mi', f: 659.25 }, { nome: 'Ré', f: 587.33 },
   { nome: 'Dó',  f: 523.25 }, { nome: 'Lá',  f: 440.00 }, { nome: 'Sol', f: 392.00 }, { nome: 'Mi', f: 329.63 },
@@ -137,11 +143,15 @@ const KEY = 'estudioMusica' + (PERFIL ? ':' + PERFIL : '');
 const ler = (d) => { try { return JSON.parse(localStorage.getItem(KEY)) || d; } catch (e) { return d; } };
 const grava = v => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) { /* ok */ } };
 const dados = ler({ salvas: [], atual: null });
+const ajeita = g => { if (g && g.length === 12) g.splice(4, 0, ...[0, 1, 2].map(() => Array(PASSOS).fill(false))); return g; };
+if (dados.atual) ajeita(dados.atual.grade);
+dados.salvas.forEach(m => ajeita(m.grade));
+fala = dados.fala || 0;
 
 let grade = dados.atual && dados.atual.grade ? dados.atual.grade : LINHAS.map(() => Array(PASSOS).fill(false));
 let inst = dados.atual && dados.atual.inst || 'piano';
 $('tempo').value = dados.atual && dados.atual.bpm || 110;
-const guardaAtual = () => { dados.atual = { grade, inst, bpm: +$('tempo').value }; grava(dados); };
+const guardaAtual = () => { dados.atual = { grade, inst, bpm: +$('tempo').value }; dados.fala = fala; grava(dados); };
 
 // ══════════════ SONS (feitos na hora) ══════════════
 let ac = null, mestre = null, ruido = null;
@@ -157,8 +167,40 @@ function audio() {
   if (ac.state === 'suspended') ac.resume();
   return ac;
 }
-function tocaBateria(id, t) {
+function falar(atraso) {
+  if (!window.speechSynthesis) return;
+  const dizer = () => {
+    const u = new SpeechSynthesisUtterance(FALAS[fala]);
+    u.lang = 'pt-BR'; u.rate = 1.5; u.pitch = 0.9; u.volume = 1;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  };
+  atraso > 10 ? setTimeout(dizer, atraso) : dizer();
+}
+function tocaBateria(id, t, passoN) {
   const a = audio(); t = t || a.currentTime;
+  if (id === 'voz') { falar((t - a.currentTime) * 1000); return; }
+  if (id === 'tambor') {   // tamborzão: dois tambores, um grave e um agudo
+    const agudo = (passoN || 0) % 2 === 1;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(agudo ? 260 : 170, t); o.frequency.exponentialRampToValueAtTime(agudo ? 180 : 95, t + 0.18);
+    g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+    o.connect(g); g.connect(mestre); o.start(t); o.stop(t + 0.25);
+    const n = a.createBufferSource(), f = a.createBiquadFilter(), g2 = a.createGain();
+    n.buffer = ruido; f.type = 'bandpass'; f.frequency.value = 900; g2.gain.setValueAtTime(0.25, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+    n.connect(f); f.connect(g2); g2.connect(mestre); n.start(t); n.stop(t + 0.04);
+    return;
+  }
+  if (id === 'grave') {   // 808: grave comprido que treme
+    const o = a.createOscillator(), g = a.createGain(), sat = a.createWaveShaper();
+    const curva = new Float32Array(256); for (let i = 0; i < 256; i++) { const x = i / 128 - 1; curva[i] = Math.tanh(x * 2.5); }
+    sat.curve = curva;
+    o.type = 'sine';
+    o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.12);
+    g.gain.setValueAtTime(0.9, t); g.gain.setValueAtTime(0.85, t + 0.25); g.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
+    o.connect(sat); sat.connect(g); g.connect(mestre); o.start(t); o.stop(t + 0.75);
+    return;
+  }
   if (id === 'bumbo') {
     const o = a.createOscillator(), g = a.createGain();
     o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.25);
@@ -188,7 +230,7 @@ function tocaNota(f, t) {
   o.connect(filtro); filtro.connect(g); g.connect(mestre); o.start(t); o.stop(t + I.dura + 0.05);
   if (I.sino) { const o2 = a.createOscillator(), g2 = a.createGain(); o2.type = 'sine'; o2.frequency.value = f * 2.76; g2.gain.setValueAtTime(0.06, t); g2.gain.exponentialRampToValueAtTime(0.0008, t + 0.5); o2.connect(g2); g2.connect(mestre); o2.start(t); o2.stop(t + 0.55); }
 }
-const tocaLinha = (L, t) => L.tipo === 'bateria' ? tocaBateria(L.id, t) : tocaNota(L.f, t);
+const tocaLinha = (L, t, passoN) => L.tipo === 'bateria' ? tocaBateria(L.id, t, passoN) : tocaNota(L.f, t);
 
 // ══════════════ GRADE ══════════════
 const cels = [];   // cels[linha][passo]
@@ -207,8 +249,11 @@ function monta() {
     r.innerHTML = '<span class="em"></span><span class="nm"></span>';
     r.querySelector('.em').textContent = L.tipo === 'nota' ? '●' : L.em;
     if (L.tipo === 'nota') r.querySelector('.em').style.color = L.cor;
-    r.querySelector('.nm').textContent = L.nome;
-    r.onclick = () => tocaLinha(L);
+    r.querySelector('.nm').textContent = L.id === 'voz' ? FALAS[fala] : L.nome;
+    r.onclick = () => {
+      if (L.id === 'voz') { fala = (fala + 1) % FALAS.length; r.querySelector('.nm').textContent = FALAS[fala]; guardaAtual(); mensagem('🎤 A voz agora fala: ' + FALAS[fala]); }
+      tocaLinha(L);
+    };
     g.appendChild(r);
     cels[li] = [];
     for (let p = 0; p < PASSOS; p++) {
@@ -241,7 +286,7 @@ function agenda() {
   const a = audio();
   const dur = 60 / +$('tempo').value / 4;   // cada quadradinho = 1/4 de batida
   while (proxTempo < a.currentTime + 0.12) {
-    LINHAS.forEach((L, li) => { if (grade[li][passo]) tocaLinha(L, proxTempo); });
+    LINHAS.forEach((L, li) => { if (grade[li][passo]) tocaLinha(L, proxTempo, passo); });
     filaVisual.push({ passo, t: proxTempo });
     passo = (passo + 1) % PASSOS;
     proxTempo += dur;
@@ -299,22 +344,29 @@ function montaInstrumentos() {
 }
 // Ritmos prontos (só a bateria; as notas ficam)
 const RITMOS = [
-  { nome: 'Funk', b: { bumbo: [0, 3, 6, 10], caixa: [4, 12], palma: [4, 12, 14], chimbal: [0, 2, 4, 6, 8, 10, 12, 14] } },
-  { nome: 'Rock', b: { bumbo: [0, 8, 10], caixa: [4, 12], palma: [], chimbal: [0, 2, 4, 6, 8, 10, 12, 14] } },
-  { nome: 'Eletrônica', b: { bumbo: [0, 4, 8, 12], caixa: [], palma: [4, 12], chimbal: [2, 6, 10, 14] } },
-  { nome: 'Trap', b: { bumbo: [0, 7, 10], caixa: [8], palma: [8], chimbal: [0, 1, 2, 4, 5, 6, 8, 9, 10, 11, 12, 14, 15] } },
+  { nome: 'Tamborzão 🔥', bpm: 128, b: { bumbo: [0, 6, 10], caixa: [], palma: [4, 12], chimbal: [2, 6, 10, 14], tambor: [0, 3, 6, 8, 10, 13], grave: [0, 10], voz: [0] } },
+  { nome: 'Mandelão 🔥', bpm: 130, b: { bumbo: [0, 3, 8, 11], caixa: [], palma: [4, 12], chimbal: [0, 2, 4, 6, 8, 10, 12, 14], tambor: [], grave: [0, 3, 8, 11], voz: [8] } },
+  { nome: 'Funk Rave 🔥', bpm: 135, b: { bumbo: [0, 4, 8, 12], caixa: [], palma: [4, 12], chimbal: [2, 6, 10, 14], tambor: [3, 7, 11, 15], grave: [0, 6, 10], voz: [0, 12] } },
+  { nome: 'Funk Melody', bpm: 120, b: { bumbo: [0, 6, 10], caixa: [4, 12], palma: [], chimbal: [0, 2, 4, 6, 8, 10, 12, 14], tambor: [0, 3, 6], grave: [0, 8], voz: [] } },
+  { nome: 'Trap', bpm: 140, b: { bumbo: [0, 7, 10], caixa: [8], palma: [8], chimbal: [0, 1, 2, 4, 5, 6, 8, 9, 10, 11, 12, 14, 15], tambor: [], grave: [0, 7, 10], voz: [] } },
+  { nome: 'Rock', bpm: 115, b: { bumbo: [0, 8, 10], caixa: [4, 12], palma: [], chimbal: [0, 2, 4, 6, 8, 10, 12, 14], tambor: [], grave: [], voz: [] } },
 ];
+// Coloca a bateria de um ritmo (as notas ficam como estão)
+function aplicaRitmo(R) {
+  LINHAS.forEach((L, li) => { if (L.tipo !== 'bateria') return; grade[li] = Array(PASSOS).fill(false); for (const p of R.b[L.id] || []) grade[li][p] = true; });
+  if (R.bpm) $('tempo').value = R.bpm;
+}
 let ritmoIdx = 0;
 $('b-ritmo').onclick = () => {
   const R = RITMOS[ritmoIdx++ % RITMOS.length];
-  BATERIA.forEach((B, li) => { grade[li] = Array(PASSOS).fill(false); for (const p of R.b[B.id]) grade[li][p] = true; });
+  aplicaRitmo(R);
   pintaTudo(); guardaAtual();
   mensagem('🥁 Ritmo: ' + R.nome + ' (toque de novo pra trocar)');
   if (!tocando) play();
 };
 $('b-sorteia').onclick = () => {
-  const R = RITMOS[Math.floor(Math.random() * RITMOS.length)];
-  BATERIA.forEach((B, li) => { grade[li] = Array(PASSOS).fill(false); for (const p of R.b[B.id]) grade[li][p] = true; });
+  const R = RITMOS[Math.random() < 0.8 ? Math.floor(Math.random() * 3) : Math.floor(Math.random() * RITMOS.length)];   // quase sempre funk
+  aplicaRitmo(R);
   // melodia: anda pelas notas aos pulinhos (fica com cara de música)
   for (let li = BATERIA.length; li < LINHAS.length; li++) grade[li] = Array(PASSOS).fill(false);
   let n = 3 + Math.floor(Math.random() * 3);
@@ -322,9 +374,10 @@ $('b-sorteia').onclick = () => {
     if (Math.random() < (p % 2 === 0 ? 0.65 : 0.2)) { grade[BATERIA.length + n][p] = true; n = Math.max(0, Math.min(NOTAS.length - 1, n + [-2, -1, -1, 0, 1, 1, 2][Math.floor(Math.random() * 7)])); }
   }
   inst = INSTRUMENTOS[Math.floor(Math.random() * INSTRUMENTOS.length)].id;
-  $('tempo').value = 90 + Math.floor(Math.random() * 60);
+  fala = Math.floor(Math.random() * FALAS.length);
+  monta();
   montaInstrumentos(); pintaTudo(); guardaAtual();
-  mensagem('🎲 Música surpresa! Mexa nela do seu jeito.');
+  mensagem('🎲 Surpresa: ' + R.nome + '! Mexa nela do seu jeito.');
   if (!tocando) play();
 };
 $('b-limpa').onclick = () => {
@@ -365,7 +418,7 @@ monta();
 montaInstrumentos();
 lista();
 // primeira vez: já começa com um ritmo pra brincar
-if (!dados.atual) { const R = RITMOS[0]; BATERIA.forEach((B, li) => { for (const p of R.b[B.id]) grade[li][p] = true; }); pintaTudo(); }
+if (!dados.atual) { aplicaRitmo(RITMOS[0]); pintaTudo(); }
 })();
 </script>
 </body>
