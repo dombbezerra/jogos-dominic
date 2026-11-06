@@ -677,12 +677,13 @@
   const norm01 = r => clamp((r - MIN_R) / (MAX_R - MIN_R), 0, 1.15);
 
   // Mais fácil: o time do computador é um pouco mais lento, rouba menos e o goleiro dele pega menos
-  const EASY = { speed: 0.9, tackle: 0.65, reach: 0.85 };
+  const EASY = { speed: 0.92, tackle: 0.6, reach: 0.92 };
+  const PACE = 0.68;   // ritmo do FC Mobile: todo mundo corre mais devagar
   function makePlayer(team, slot, rating, card) {
     const k = norm01(rating), cpu = team === 1;
     return {
       team, slot, gk: slot === 0, r: rating, card, x: 0, y: 0, vx: 0, vy: 0, face: team === 0 ? 0 : Math.PI,
-      speed: (1.0 + k * 0.9) * (cpu ? EASY.speed : 1), power: 5 + k * 3.2, err: Math.max(0.03, 0.24 - k * 0.19),
+      speed: (1.0 + k * 0.9) * PACE * (cpu ? EASY.speed : 1), power: (5 + k * 3.2) * 0.85, err: Math.max(0.03, 0.24 - k * 0.19),
       tackle: (0.01 + k * 0.022) * (cpu ? EASY.tackle : 1.3), reach: (11 + k * 11) * (cpu ? EASY.reach : 1),
       cd: 0, lunge: 0, hold: 0,
     };
@@ -826,7 +827,7 @@
       if (s > bs) { bs = s; best = q; }
     }
     const d = dist(p, best);
-    kick(p, best.x + best.vx * 10, best.y + best.vy * 10, clamp(2.6 + d / 40, 3, 6.5), p.err * 0.5);
+    kick(p, best.x + best.vx * 10, best.y + best.vy * 10, clamp(2.2 + d / 45, 2.6, 5.5), p.err * 0.5);
     beep(500, 0.05, 'triangle');
     return best;
   }
@@ -878,7 +879,7 @@
         if (foe && dist(foe, p) < 28) tgt.y += (p.y < foe.y ? -1 : 1) * 40;   // drible pro lado
         moveTo(p, tgt.x, clamp(tgt.y, FY0 + 10, FY1 - 10), dist(foe, p) < 40);
         const toGoal = Math.abs(gx - p.x);
-        if (p.cd === 0 && (toGoal < 100 && Math.random() < 0.012 || toGoal < 45)) shoot(p, (Math.random() - 0.5) * 1.6, 0.3 + Math.random() * 0.5);
+        if (p.cd === 0 && (toGoal < 90 && Math.random() < 0.008 || toGoal < 40)) shoot(p, (Math.random() - 0.5) * 1.6, 0.3 + Math.random() * 0.5);
         else if (p.cd === 0 && foe && dist(foe, p) < 18 && Math.random() < 0.04) pass(p, null);
         continue;
       }
