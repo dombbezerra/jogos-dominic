@@ -162,6 +162,7 @@ window.ALBUM_FC = [
   ["meu-ing-1793915922328-26", "Pickfordo", "GOL", 115, "🧤", "inglaterra"],
   ["meu-lenda-1793916875890", "Pelézinho", "PD", 131, "🤖", "lendas"],
   ["meu-lenda-endrick-1793916907803", "Dominic", "ATA", 131, "👑", "lendas"],
+  ["meu-lenda-endrick2", "Endrick", "ATA", 131, "🔥", "lendas"],
   ["meu-lenda-1793916936771-mara", "Maradonna", "PE", 131, "🐐", "lendas"],
   ["meu-lenda-1793916936771-zizou", "Zidani", "ATA", 131, "🧙", "lendas"]
 ];
