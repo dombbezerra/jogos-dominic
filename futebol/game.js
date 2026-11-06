@@ -246,6 +246,7 @@
   let page = 'main', picking = -1;
   function show(p) {
     page = p; picking = -1;
+    document.body.classList.toggle('pg-evento', p === 'evento');   // evento: fundo preto
     document.querySelectorAll('.page').forEach(el => el.classList.toggle('on', el.id === 'page-' + p));
     render();
   }

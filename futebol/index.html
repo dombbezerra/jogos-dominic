@@ -75,6 +75,11 @@
     .evento-item { display: inline-flex; flex-direction: column; align-items: center; gap: 8px; }
     .evento-buy { background: #ffd23a; color: #3a2a00; border: none; border-radius: 8px; padding: 8px 14px; font-weight: 900; cursor: pointer; font-family: inherit; }
     .evento-buy:disabled { opacity: 0.5; cursor: default; }
+    /* Página do evento: fundo todo preto e as cartas lado a lado, de ponta a ponta da tela */
+    body.pg-evento #menu { background: #000; padding-left: 0; padding-right: 0; }
+    body.pg-evento .panel { width: 100%; padding-left: 10px; padding-right: 10px; }
+    body.pg-evento #evento-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 16px 6px; justify-items: center; }
+    body.pg-evento .evento-group { grid-column: 1 / -1; justify-self: stretch; margin-top: 18px; padding-bottom: 6px; border-bottom: 2px solid #222; }
     /* Carta da Bola de Ouro: dourada brilhando, com a bola de ouro embaixo do rosto */
     .card.t-bolaouro {   /* fundo arco-íris (igual LENDA) e borda dourada brilhando */
       box-shadow: 0 0 0 3px #fff3a0, 0 0 18px #ffd23a, 0 0 32px rgba(255, 180, 0, 0.6); animation: lenda 3s linear infinite, ouro-brilho 1.6s ease-in-out infinite alternate; }
@@ -406,6 +411,6 @@
   <div id="keys-help">Setas/WASD: andar · J: passe (sem bola: trocar) · K: chute, segure pra mais força (sem bola: carrinho) · Shift: correr</div>
 
   <script src="album.js?v=7"></script>
-  <script src="game.js?v=60"></script>
+  <script src="game.js?v=61"></script>
 </body>
 </html>
