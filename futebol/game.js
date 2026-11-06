@@ -294,8 +294,16 @@
     $('pack-msg').textContent = 'Ganhe moedas jogando partidas! Vitória: 500 · Empate: 250 · Derrota: 100 · Gol: +50';
   }
   // Os pacotes dão os jogadores que você criou no álbum (os de nota baixa saem mais)
+  // Conta sem álbum (jogador novo): o pacote cria jogadores com nomes inventados, pra dar pra começar a jogar
+  const FIRST = ['Léo', 'Davi', 'Rafa', 'Gui', 'Theo', 'Enzo', 'Juca', 'Beto', 'Caio', 'Duda', 'Tito', 'Nico', 'Lipe', 'Vini', 'Kauã', 'Bento', 'Iago', 'Zeca', 'Maxi', 'Rudi'];
+  const LAST = ['Raio', 'Bala', 'Foguete', 'Trovão', 'Muralha', 'Furacão', 'Canhão', 'Mágico', 'Flecha', 'Tigre', 'Gelo', 'Chama', 'Onda', 'Cometa', 'Dragão', 'Faísca', 'Paredão', 'Tanque'];
+  function inventCard(min, max, pos) {
+    const r = Math.min(MAX_R, min + Math.floor((max - min + 1) * Math.pow(Math.random(), 1.6)));   // as notas baixas saem mais
+    return { id: data.next++, nome: pick(FIRST) + ' ' + pick(LAST), pos: pos || pick(POS), r, face: pick(FACES) };
+  }
   function drawCard(min, max, pos) {
     let pool = allSpecials();
+    if (!pool.length) return inventCard(min, max, pos);
     if (pos && pool.some(sp => sp.pos === pos)) pool = pool.filter(sp => sp.pos === pos);   // pacote de time: essa posição
     let ok = pool.filter(sp => sp.r >= min && sp.r <= max);
     if (!ok.length) {   // nenhum nessa faixa: vem o de nota mais perto
@@ -310,7 +318,6 @@
     return { id: data.next++, key: sp.key, nome: sp.nome, pos: sp.pos, r: sp.r, face: sp.face, club: sp.club, badge: sp.badge, time: sp.time };
   }
   function openPack(p) {
-    if (!allSpecials().length) { $('pack-msg').textContent = 'O álbum ainda não tem jogadores.'; return; }
     if (!isAdm()) {   // o ADM abre de graça
       if (data.coins < p.price) return;
       data.coins -= p.price;
