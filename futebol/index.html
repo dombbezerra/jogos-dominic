@@ -293,6 +293,17 @@
       .tile small { font-size: 12px; }
     }
     @media (prefers-reduced-motion: reduce) { .tile, .tile.evento { transition: none; animation: none; } }
+
+    /* Tela inicial: fundo preto com as cartas do evento repetidas, lado a lado, passando devagar */
+    #bg-cartas { position: absolute; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; opacity: 0.28; display: none; }
+    body.pg-main #menu { background: #000; }
+    body.pg-main #bg-cartas { display: block; }
+    #menu .panel { position: relative; z-index: 1; }
+    .bg-row { display: flex; gap: 8px; width: max-content; margin-bottom: 8px; animation: bg-anda 90s linear infinite; }
+    .bg-row:nth-child(even) { animation-direction: reverse; margin-left: -50px; }
+    #bg-cartas .card { animation: none !important; flex: none; }
+    @keyframes bg-anda { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    @media (prefers-reduced-motion: reduce) { .bg-row { animation: none; } }
   </style>
 </head>
 <body>
@@ -302,6 +313,7 @@
   <button id="pause-btn">SAIR</button>
 
   <div id="menu">
+    <div id="bg-cartas" aria-hidden="true"></div>
     <div class="panel">
       <div class="top"><div class="logo">DOMINIC <b>FC</b></div><div class="top-right"><button class="name-tag" data-go="name" id="name-tag"></button><div class="coins">🪙 <span id="coins">0</span></div></div></div>
 
@@ -411,6 +423,6 @@
   <div id="keys-help">Setas/WASD: andar · J: passe (sem bola: trocar) · K: chute, segure pra mais força (sem bola: carrinho) · Shift: correr</div>
 
   <script src="album.js?v=7"></script>
-  <script src="game.js?v=61"></script>
+  <script src="game.js?v=62"></script>
 </body>
 </html>

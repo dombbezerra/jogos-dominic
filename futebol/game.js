@@ -247,10 +247,28 @@
   function show(p) {
     page = p; picking = -1;
     document.body.classList.toggle('pg-evento', p === 'evento');   // evento: fundo preto
+    document.body.classList.toggle('pg-main', p === 'main');   // tela inicial: fundo preto com as cartas
     document.querySelectorAll('.page').forEach(el => el.classList.toggle('on', el.id === 'page-' + p));
     render();
   }
   document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
+  // Fundo da tela inicial: as cartas do evento repetidas, lado a lado (cada fileira passa devagar)
+  function fundoCartas() {
+    const bg = $('bg-cartas');
+    bg.innerHTML = '';
+    const cartas = EVENT_CARDS.map(ec => SPECIALS.find(x => x.key === ec.key));
+    const fileiras = Math.ceil(innerHeight / 136) + 1;
+    for (let f = 0; f < fileiras; f++) {
+      const row = document.createElement('div');
+      row.className = 'bg-row';
+      const ordem = [];
+      for (let i = 0; i < 20; i++) ordem.push(cartas[(f * 7 + i) % cartas.length]);   // 20 cartas: mais largo que a tela
+      for (let v = 0; v < 2; v++) for (const c of ordem) row.appendChild(cardEl(c));   // duas vezes: a volta não tem emenda
+      bg.appendChild(row);
+    }
+  }
+  document.body.classList.add('pg-main');
+  addEventListener('resize', () => { clearTimeout(fundoCartas.t); fundoCartas.t = setTimeout(fundoCartas, 300); });
 
   // ADM: quem tem o nome Dominic. Pacotes de graça e coroa
   const isAdm = () => (data.nome || '').trim().toLowerCase() === 'dominic';
@@ -1243,6 +1261,7 @@
 
   load();
   fillClubList();
+  fundoCartas();
   show('main');
   syncFC();
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !M) syncFC(); });
