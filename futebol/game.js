@@ -64,8 +64,21 @@
     { key: 'evento-prata-robertocarlos', nome: 'Roberto Carlos', pos: 'LE', r: 128, face: '💪', time: '2º Bola de Ouro 2002', prata: true, preco: 30 },
     { key: 'evento-prata-beckham', nome: 'Beckham', pos: 'PD', r: 127, face: '😉', time: '2º Bola de Ouro 1999', prata: true, preco: 30 },
     { key: 'evento-prata-suker', nome: 'Šuker', pos: 'ATA', r: 127, face: '😌', time: '2º Bola de Ouro 1998', prata: true, preco: 30 },
+    // 🥉 Terceiro lugar desses anos (bola de bronze)
+    { key: 'evento-bronze-yamal', nome: 'Lamine Yamal', pos: 'PD', r: 127, face: '🤩', time: '3º Bola de Ouro 2026', bronze: true, preco: 20 },
+    { key: 'evento-bronze-vitinha', nome: 'Vitinha', pos: 'PE', r: 126, face: '🙂', time: '3º Bola de Ouro 2025', bronze: true, preco: 20 },
+    { key: 'evento-bronze-bellingham', nome: 'Bellingham', pos: 'ATA', r: 127, face: '😎', time: '3º Bola de Ouro 2024', bronze: true, preco: 20 },
+    { key: 'evento-bronze-mbappe', nome: 'Mbappé', pos: 'ATA', r: 127, face: '😃', time: '3º Bola de Ouro 2023', bronze: true, preco: 20 },
+    { key: 'evento-bronze-debruyne', nome: 'De Bruyne', pos: 'PD', r: 126, face: '🧐', time: '3º Bola de Ouro 2022', bronze: true, preco: 20 },
+    { key: 'evento-bronze-neymar', nome: 'Neymar', pos: 'PE', r: 127, face: '😜', time: '3º Bola de Ouro 2017', bronze: true, preco: 20 },
+    { key: 'evento-bronze-messi', nome: 'Messi', pos: 'PD', r: 127, face: '😊', time: '3º Bola de Ouro 2007', bronze: true, preco: 20 },
+    { key: 'evento-bronze-henry', nome: 'Thierry Henry', pos: 'ATA', r: 127, face: '😏', time: '3º Bola de Ouro 2006', bronze: true, preco: 20 },
+    { key: 'evento-bronze-gerrard', nome: 'Gerrard', pos: 'ATA', r: 126, face: '💪', time: '3º Bola de Ouro 2005', bronze: true, preco: 20 },
+    { key: 'evento-bronze-kahn', nome: 'Oliver Kahn', pos: 'GOL', r: 126, face: '😤', time: '3º Bola de Ouro 2002', bronze: true, preco: 20 },
+    { key: 'evento-bronze-shevchenko', nome: 'Shevchenko', pos: 'ATA', r: 126, face: '😄', time: '3º Bola de Ouro 1999', bronze: true, preco: 20 },
+    { key: 'evento-bronze-ronaldo', nome: 'Ronaldo Fenômeno', pos: 'ATA', r: 127, face: '😁', time: '3º Bola de Ouro 1998', bronze: true, preco: 20 },
   ];
-  for (const ec of EVENT_CARDS) SPECIALS.push(Object.assign({ album: 'bolaouro', club: 'Bola de Ouro', badge: ec.prata ? '🥈' : '🥇', evento: true }, ec));
+  for (const ec of EVENT_CARDS) SPECIALS.push(Object.assign({ album: 'bolaouro', club: 'Bola de Ouro', badge: ec.prata ? '🥈' : ec.bronze ? '🥉' : '🥇', evento: true }, ec));
   const eventoAtivo = () => Date.now() < EVENTO.fim;
   // Nome que aparece: o que você escreveu no ✏️, ou o da carta
   const nameOf = c => (data.renames && data.renames[c.key || c.id]) || c.nome;
@@ -200,11 +213,11 @@
     d.querySelector('.rt').textContent = c.r;
     d.querySelector('.ps').textContent = c.pos;
     d.querySelector('.face').textContent = c.face;
-    const ev = c.key && SPECIALS.find(x => x.key === c.key && (x.ouro || x.prata));
-    if (c.ouro || c.prata || ev) {   // carta do evento: bola de ouro (1º) ou de prata (2º) embaixo do rosto
-      const prata = c.prata || (ev && ev.prata);
-      d.classList.add(prata ? 't-bolaprata' : 't-bolaouro');
-      d.querySelector('.face').appendChild(Object.assign(document.createElement('div'), { className: prata ? 'silver-ball' : 'gold-ball', textContent: '⚽' }));
+    const ev = c.key && SPECIALS.find(x => x.key === c.key && (x.ouro || x.prata || x.bronze));
+    if (c.ouro || c.prata || c.bronze || ev) {   // carta do evento: bola de ouro (1º), de prata (2º) ou de bronze (3º) embaixo do rosto
+      const lugar = (c.prata || (ev && ev.prata)) ? 'prata' : (c.bronze || (ev && ev.bronze)) ? 'bronze' : 'ouro';
+      d.classList.add('t-bola' + lugar);
+      d.querySelector('.face').appendChild(Object.assign(document.createElement('div'), { className: { ouro: 'gold-ball', prata: 'silver-ball', bronze: 'bronze-ball' }[lugar], textContent: '⚽' }));
     }
     d.querySelector('.nm').textContent = nameOf(c);
     d.querySelector('.tier').textContent = c.time || c.club || t[2];
@@ -630,10 +643,11 @@
     const list = $('evento-cards');
     list.innerHTML = '';
     const have = new Set(data.cards.map(c => c.key));
-    // Separado: primeiro os campeões (🥇), depois o segundo lugar (🥈)
+    // Separado: primeiro os campeões (🥇), depois o segundo (🥈) e o terceiro lugar (🥉)
+    const lugar = ec => ec.prata ? 1 : ec.bronze ? 2 : 0;
     let lastGroup;
-    for (const ec of [...EVENT_CARDS].sort((a, b) => !!a.prata - !!b.prata)) {
-      const group = ec.prata ? '🥈 SEGUNDO LUGAR' : '🥇 CAMPEÕES';
+    for (const ec of [...EVENT_CARDS].sort((a, b) => lugar(a) - lugar(b))) {
+      const group = ['🥇 CAMPEÕES', '🥈 SEGUNDO LUGAR', '🥉 TERCEIRO LUGAR'][lugar(ec)];
       if (group !== lastGroup) { lastGroup = group; list.appendChild(Object.assign(document.createElement('div'), { className: 'pick-head evento-group', textContent: group })); }
       const w = document.createElement('div');
       w.className = 'evento-item';

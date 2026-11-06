@@ -81,6 +81,10 @@
     .silver-ball { font-size: 22px; line-height: 1; margin-top: 2px; position: relative; display: inline-block; filter: drop-shadow(0 0 2px #ffffff) drop-shadow(0 0 6px #c8d2e0); }
     .silver-ball::after { content: ''; position: absolute; left: 4%; right: 4%; top: 9%; bottom: 4%; border-radius: 50%; background: radial-gradient(circle at 32% 28%, #ffffff 0%, #c9d2de 22%, #8d98a8 55%, #4f5866 90%); mix-blend-mode: multiply; pointer-events: none; }
     .silver-ball::before { content: ''; position: absolute; left: 22%; top: 14%; width: 30%; height: 22%; border-radius: 50%; background: radial-gradient(#ffffff, rgba(255,255,255,0)); z-index: 2; pointer-events: none; }
+    .card.t-bolabronze { box-shadow: 0 0 0 3px #ffd2a8, 0 0 16px #cd7f32, 0 0 28px rgba(205, 127, 50, 0.6); animation: lenda 3s linear infinite; }
+    .bronze-ball { font-size: 22px; line-height: 1; margin-top: 2px; position: relative; display: inline-block; filter: drop-shadow(0 0 2px #ffe0c0) drop-shadow(0 0 6px #cd7f32); }
+    .bronze-ball::after { content: ''; position: absolute; left: 4%; right: 4%; top: 9%; bottom: 4%; border-radius: 50%; background: radial-gradient(circle at 32% 28%, #fff1e0 0%, #f0b27a 22%, #c27a3a 55%, #7a4519 90%); mix-blend-mode: multiply; pointer-events: none; }
+    .bronze-ball::before { content: ''; position: absolute; left: 22%; top: 14%; width: 30%; height: 22%; border-radius: 50%; background: radial-gradient(#fff6ea, rgba(255,246,234,0)); z-index: 2; pointer-events: none; }
     .gold-ball { font-size: 22px; line-height: 1; margin-top: 2px; filter: sepia(1) saturate(6) hue-rotate(5deg) brightness(1.15) drop-shadow(0 0 4px #ffd23a); }
     .tile.album { background: linear-gradient(135deg, #2fb060, #1a6a3a); }
     .album-team { margin: 12px 0; background: rgba(0, 0, 0, 0.25); border-radius: 12px; padding: 10px; }
@@ -339,6 +343,6 @@
   <div id="keys-help">Setas/WASD: andar · J: passe (sem bola: trocar) · K: chute, segure pra mais força (sem bola: carrinho) · Shift: correr</div>
 
   <script src="album.js?v=7"></script>
-  <script src="game.js?v=53"></script>
+  <script src="game.js?v=54"></script>
 </body>
 </html>
