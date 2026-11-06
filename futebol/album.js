@@ -163,6 +163,5 @@ window.ALBUM_FC = [
   ["meu-lenda-1793916875890", "Pelé", "PD", 131, "🤖", "lendas", "Aposentado"],
   ["meu-lenda-1793916936771-mara", "Maradona", "PE", 131, "🐐", "lendas", "Aposentado"],
   ["meu-lenda-1793916936771-zizou", "Zidane", "ATA", 131, "🧙", "lendas", "Aposentado"],
-  ["meu-lenda-endrick2", "Endrick", "ATA", 131, "🔥", "lendas", "Brasil"],
-  ["meu-dominic-1793980601709", "Dominic", "ATA", 132, "👑", "lendas", "Corinthians"]
+  ["meu-lenda-endrick2", "Endrick", "ATA", 131, "🔥", "lendas", "Brasil"]
 ];
