@@ -674,6 +674,10 @@
     document.body.classList.toggle('portrait', a < 1);
   }
   addEventListener('resize', fitScreen);
+  // Durante a partida a tela não rola nem dá zoom com os dedos
+  document.addEventListener('touchmove', e => { if (M) e.preventDefault(); }, { passive: false });
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  document.addEventListener('dblclick', e => { if (M) e.preventDefault(); });
   const MIDY = (FY0 + FY1) / 2, GOAL_H = 70;
   const GY0 = MIDY - GOAL_H / 2, GY1 = MIDY + GOAL_H / 2;   // boca do gol
   const MATCH_FRAMES = 60 * 120;                            // 2 minutos
