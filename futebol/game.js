@@ -80,10 +80,11 @@
   }
   // Chegaram jogadores novos enquanto o jogo está aberto (outra aba): junta na hora
   addEventListener('storage', e => { if (e.key === KEY + ':novos' && e.newValue && takeNovos()) { save(); render(); } });
-  let loading = false;
+  let loading = false, synced = false;
   function save() {
     if (data.tactics && data.tactics[data.tactic]) data.tactics[data.tactic].team = data.team;
-    if (!loading) { data.updatedAt = Date.now(); schedulePush(); }   // mudou algo: manda pra conta
+    // Só conta como mudança depois de ver a versão da conta (senão um aparelho novo passava por cima)
+    if (!loading && synced) { data.updatedAt = Date.now(); schedulePush(); }
     try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* sem salvar */ }
   }
 
@@ -109,17 +110,32 @@
     setCloud(r ? '☁️ salvo na conta ' + u.nome : '☁️ não deu pra salvar agora');
   }
   // Ao abrir: se a conta tem uma versão mais nova (de outro aparelho), usa ela
+  // Junta dois saves sem perder jogador do álbum: fica a versão mais nova de cada um,
+  // menos os que foram tirados (removedKeys). Times, táticas e nomes vêm do outro se faltarem
+  function mergeFC(base, other) {
+    if (!other) return base;
+    const removed = new Set([...(base.removedKeys || []), ...(other.removedKeys || [])]);
+    const byKey = new Map();
+    for (const c of other.custom || []) byKey.set(c.key, c);
+    for (const c of base.custom || []) byKey.set(c.key, c);
+    base.custom = [...byKey.values()].filter(c => !removed.has(c.key));
+    base.removedKeys = [...removed];
+    for (const k of ['clubs', 'tactics', 'renames', 'myClub', 'nome']) if (base[k] == null && other[k] != null) base[k] = other[k];
+    return base;
+  }
   async function syncFC() {
     const u = conta();
-    if (!u) { setCloud('☁️ entre na Aventura Elemental com seu e-mail pra salvar online'); return; }
+    if (!u) { synced = true; setCloud('☁️ entre na Aventura Elemental com seu e-mail pra salvar online'); return; }
     const r = await contaApi({ action: 'carregarFC', email: u.email }).catch(() => null);
     if (!r) { setCloud('☁️ sem internet agora'); return; }
     const remote = r.dados;
+    synced = true;
     if (remote && (remote.updatedAt || 0) > (data.updatedAt || 0)) {
-      try { localStorage.setItem(KEY, JSON.stringify(remote)); } catch (e) { /* ok */ }
+      const merged = mergeFC(remote, data);
+      try { localStorage.setItem(KEY, JSON.stringify(merged)); } catch (e) { /* ok */ }
       load(); fillClubList(); render();
       setCloud('☁️ carregado da conta ' + u.nome);
-    } else if (!remote || (data.updatedAt || 0) > (remote.updatedAt || 0)) push();
+    } else if (!remote || (data.updatedAt || 0) > (remote.updatedAt || 0)) { mergeFC(data, remote); save(); push(); }
     else setCloud('☁️ salvo na conta ' + u.nome);
   }
   const cardById = id => data.cards.find(c => c.id === id);
@@ -140,6 +156,8 @@
   const teamOvr = () => Math.round(data.team.reduce((s, id, i) => s + effR(cardById(id), i), 0) / SLOTS.length);
 
   function cardEl(c, extra) {
+    const al = c.key && data && (data.custom || []).find(x => x.key === c.key);   // o jogador do álbum manda (nome, rosto, time)
+    if (al) c = Object.assign({}, c, { nome: al.nome, face: al.face, time: al.time, pos: al.pos, r: al.r });
     const t = tierOf(c.r);
     const d = document.createElement('div');
     d.className = 'card t-' + t[1] + (extra ? ' ' + extra : '');

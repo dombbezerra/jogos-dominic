@@ -304,11 +304,22 @@ module.exports = async (req, res) => {
 
     // Dominic FC: cartas, álbum, times e táticas da conta (o mesmo e-mail em todo aparelho)
     if (action === 'salvarFC') {
-      const txt = JSON.stringify(body.dados || null);
-      if (!body.dados || typeof body.dados !== 'object' || txt.length > 600000) return res.status(400).json({ error: 'Dados inválidos.' });
-      const [exists] = await redis(['EXISTS', 'aventura:user:' + email]);
+      const dados = body.dados;
+      if (!dados || typeof dados !== 'object' || JSON.stringify(dados).length > 600000) return res.status(400).json({ error: 'Dados inválidos.' });
+      const [exists, oldRaw] = await redis(['EXISTS', 'aventura:user:' + email], ['GET', 'aventura:fc:' + email]);
       if (!exists) return res.status(404).json({ error: 'Usuário não encontrado.' });
-      await redis(['SET', 'aventura:fc:' + email, txt]);
+      // Nenhum jogador do álbum some (só os marcados em removedKeys): um aparelho atrasado não apaga nada
+      const old = oldRaw ? JSON.parse(oldRaw) : null;
+      if (old && Array.isArray(old.custom)) {
+        const removed = new Set([...(old.removedKeys || []), ...(dados.removedKeys || [])]);
+        const byKey = new Map();
+        for (const c of old.custom) byKey.set(c.key, c);
+        for (const c of dados.custom || []) byKey.set(c.key, c);
+        dados.custom = [...byKey.values()].filter((c) => !removed.has(c.key));
+        dados.removedKeys = [...removed];
+        for (const k of ['clubs', 'tactics', 'renames', 'myClub']) if (dados[k] == null && old[k] != null) dados[k] = old[k];
+      }
+      await redis(['SET', 'aventura:fc:' + email, JSON.stringify(dados)]);
       return res.status(200).json({ ok: true });
     }
     if (action === 'carregarFC') {
