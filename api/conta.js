@@ -36,6 +36,15 @@ async function redis(...commands) {
 }
 
 // ── Chat de amigos: só entra quem o ADM convidou (na página de avisos). Escreve livre, mas com filtro ──
+// Foto do chat: um emoji desta lista ou um emoji montado no Monta Emoji
+const FOTOS_CHAT = ['😀', '😎', '🤩', '😜', '🥳', '😇', '🤠', '👻', '🤖', '👽', '😈', '🤡', '🐶', '🐱', '🦊', '🐼', '🐸', '🦁', '🐯', '🐵',
+  '🦄', '🐲', '🦖', '🐙', '🦈', '⚽', '🏆', '🎮', '🚀', '⭐', '🔥', '💎', '👑', '🌈', '⚡', '🍕', '🍩', '🎃', '❄️', '💀'];
+function limparFotoChat(f) {
+  if (!f || typeof f !== 'object') return null;
+  if (FOTOS_CHAT.includes(f.e)) return { e: f.e };
+  const m = limparEmoji(f.m);
+  return m ? { m } : null;
+}
 // Emoji do Monta Emoji (figurinha): só os nomes das partes, cada um curtinho
 const PARTES_EMOJI = ['rosto', 'olhos', 'nariz', 'boca', 'sobrancelha', 'cabelo', 'chapeu', 'maos'];
 function limparEmoji(e) {
@@ -253,12 +262,24 @@ module.exports = async (req, res) => {
         if (!ok) return res.status(429).json({ error: 'Calma! Espera um pouquinho.' });
         const u = JSON.parse(raw);
         const [id] = await redis(['INCR', 'aventura:chat:id']);
-        const msg = { id, nome: u.nome, cor: u.cor || 'branco', foto: u.foto || 'skin:gotinha', moldura: u.moldura || 'nenhuma', texto, gif, emoji, t: Date.now() };
+        const msg = { id, nome: u.nome, cor: u.cor || 'branco', foto: u.foto || 'skin:gotinha', moldura: u.moldura || 'nenhuma', fotoChat: u.fotoChat || null, texto, gif, emoji, t: Date.now() };
         await redis(['RPUSH', sala, JSON.stringify(msg)], ['LTRIM', sala, -100, -1]);
       }
       const [lista, limpo] = await redis(['LRANGE', sala, 0, -1], ['GET', oculto ? 'aventura:chat:limpo:teste' : 'aventura:chat:limpo']);
       const desde = Number(body.desde) || 0;
       return res.status(200).json({ membro: true, limpo: Number(limpo) || 0, msgs: (lista || []).map((m) => JSON.parse(m)).filter((m) => m.id > desde) });
+    }
+
+    // Foto do chat (escolhida no PERSONALIZAR do chat)
+    if (action === 'fotoChat') {
+      const [raw] = await redis(['GET', 'aventura:user:' + email]);
+      if (!raw) return res.status(404).json({ error: 'Usuário não encontrado.' });
+      const u = JSON.parse(raw);
+      if (!body.ler) {   // ler: só devolve a foto de agora
+        u.fotoChat = limparFotoChat(body.fotoChat);
+        await redis(['SET', 'aventura:user:' + email, JSON.stringify(u)]);
+      }
+      return res.status(200).json({ ok: true, fotoChat: u.fotoChat, cor: u.cor || 'branco', nome: u.nome });
     }
 
     // Figurinhas: os emojis do Monta Emoji que a pessoa guardou pra mandar no chat (até 40, a mais nova primeiro)
@@ -392,6 +413,7 @@ module.exports = async (req, res) => {
     if (dono && dono !== email) return res.status(409).json({ error: 'Esse nome já é de outra pessoa. Escolha outro!' });
     const prev = old ? JSON.parse(old) : null;
     const user = { email, nome, cor, foto, moldura, criado: prev ? prev.criado : Date.now(), atualizado: Date.now() };
+    if (prev && prev.fotoChat) user.fotoChat = prev.fotoChat;   // a foto do chat continua
     const cmds = [['SET', key, JSON.stringify(user)], ['SADD', 'aventura:users', email], ['HSET', 'aventura:nomes', nomeKey(nome), email]];
     if (prev && nomeKey(prev.nome) !== nomeKey(nome)) cmds.push(['HDEL', 'aventura:nomes', nomeKey(prev.nome)]);   // trocou de nome
     await redis(...cmds);

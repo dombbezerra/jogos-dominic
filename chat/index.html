@@ -41,7 +41,8 @@
     #list li.mine { align-self: flex-end; background: #1f6a4a; border-color: #2fa070; border-radius: 16px 16px 4px 16px; }
     #list li.info { align-self: center; max-width: 100%; background: none; border: none; text-align: center; opacity: 0.85; }
     .who { display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 14px; }
-    .bola { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; color: var(--tinta); font-weight: 800; flex: none; }
+    .bola { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; color: var(--tinta); font-weight: 800; flex: none; background: #3a2f80; overflow: hidden; line-height: 1; }
+    .bola svg { width: 118%; height: 118%; }
     .hora { font-weight: 500; font-size: 11px; opacity: 0.6; }
     .txt { font-size: 16px; line-height: 1.3; overflow-wrap: anywhere; margin-top: 2px; }
     .arco { background: linear-gradient(90deg, #ff5d5d, #ffb02e, #ffe36b, #5fe08a, #5cb8ff, #b06cff); -webkit-background-clip: text; background-clip: text; color: transparent; }
@@ -51,6 +52,31 @@
     .btn { font-family: var(--texto); font-weight: 800; font-size: 16px; cursor: pointer; border: 3px solid var(--tinta); border-radius: 14px; padding: 0 14px; color: #fff; box-shadow: 0 4px 0 var(--tinta); }
     .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
     #gif-btn { background: var(--roxo); } #emoji-btn { background: var(--sol); color: var(--tinta); font-size: 20px; } #send { background: var(--verde); font-size: 20px; }
+    #perso-btn {
+      position: fixed; top: 10px; right: 10px; z-index: 10; font-family: var(--texto); font-weight: 800; font-size: 15px; cursor: pointer;
+      background: var(--agua); color: var(--tinta); border: 3px solid var(--tinta); border-radius: 12px; padding: 4px 12px; box-shadow: 0 4px 0 var(--tinta);
+    }
+    #perso-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
+    #perso { position: fixed; inset: 0; z-index: 20; background: rgba(5, 4, 25, 0.75); display: none; align-items: center; justify-content: center; padding: 12px; }
+    #perso.on { display: flex; }
+    .caixa { width: min(560px, 100%); max-height: 100%; overflow-y: auto; background: var(--noite); border: 4px solid var(--tinta); border-radius: 22px; box-shadow: 0 0 0 3px var(--sol), 0 8px 0 var(--tinta); padding: 16px; }
+    .caixa h2 { font-family: var(--display); font-weight: 400; text-align: center; font-size: 24px; color: var(--sol); }
+    .previa { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 12px 0; font-weight: 800; font-size: 22px; background: #2e2366; border-radius: 16px; padding: 10px; }
+    .previa .bola { width: 56px; height: 56px; font-size: 32px; }
+    .caixa .sec { margin-top: 12px; }
+    .fotos { display: flex; flex-wrap: wrap; gap: 6px; }
+    .fotos button { width: 50px; height: 50px; border-radius: 50%; background: #2e2366; border: 3px solid #4a3a8a; font-size: 26px; cursor: pointer; display: grid; place-items: center; padding: 0; overflow: hidden; }
+    .fotos button.on, .cores button.on { border-color: var(--sol); box-shadow: 0 0 0 3px var(--sol); }
+    .fotos button svg { width: 100%; height: 100%; }
+    #p-nome { width: 100%; padding: 10px 12px; font-size: 18px; border-radius: 14px; border: 3px solid var(--tinta); background: var(--creme); color: var(--tinta); font-family: inherit; font-weight: 800; }
+    .aviso-adm { font-size: 13px; color: #ffb3b3; margin-top: 4px; }
+    .cores { display: flex; flex-wrap: wrap; gap: 8px; }
+    .cores button { font-family: inherit; font-weight: 800; font-size: 15px; padding: 6px 12px; border-radius: 12px; background: #2e2366; border: 3px solid #4a3a8a; cursor: pointer; }
+    .cores button:disabled { opacity: 0.45; cursor: default; }
+    .botoes { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+    .botoes .btn { padding: 8px 18px; }
+    #p-salvar { background: var(--verde); } #p-fechar { background: var(--rosa); }
+    #p-msg { text-align: center; min-height: 20px; margin-top: 8px; font-weight: 700; color: var(--sol); }
     .limpar { align-self: center; margin-bottom: 8px; background: none; border: 2px solid #e04848; color: #ff8a8a; border-radius: 10px; padding: 3px 12px; font-weight: 800; font-size: 13px; cursor: pointer; font-family: inherit; }
     .limpar.armado { background: #e04848; color: #fff; }
     #msg { min-height: 20px; font-size: 13px; color: #ff9a9a; margin-top: 4px; text-align: center; }
@@ -94,6 +120,26 @@
 </head>
 <body>
   <a href="../index.html" id="back-link">← Menu</a>
+  <button id="perso-btn" style="display:none">✏️ PERSONALIZAR</button>
+  <div id="perso">
+    <div class="caixa">
+      <h2>✏️ PERSONALIZAR</h2>
+      <div class="previa" id="p-previa"></div>
+      <div class="sec">📸 FOTO</div>
+      <div class="fotos" id="p-fotos"></div>
+      <div class="sec">✍️ NOME</div>
+      <input id="p-nome" maxlength="20" autocomplete="off">
+      <div class="aviso-adm" id="p-aviso"></div>
+      <div class="sec">🎨 COR DO NOME</div>
+      <div class="cores" id="p-cores"></div>
+      <div class="dica" id="p-dica"></div>
+      <div class="botoes">
+        <button class="btn" id="p-fechar">CANCELAR</button>
+        <button class="btn" id="p-salvar">💾 SALVAR</button>
+      </div>
+      <div id="p-msg"></div>
+    </div>
+  </div>
   <div class="app">
     <h1>💬 CHAT DE <span>AMIGOS</span></h1>
     <div class="eu" id="eu"></div>
@@ -156,6 +202,15 @@
       return s;
     }
 
+    // Foto do chat: um emoji, um emoji montado, ou a primeira letra do nome
+    function fotoEl(f, nome, cor) {
+      const b = el('span', null, 'bola');
+      if (f && f.e) b.textContent = f.e;
+      else if (f && f.m && window.MontaEmoji) b.innerHTML = MontaEmoji.desenha(MontaEmoji.limpa(f.m));
+      else { b.textContent = (nome || '?').slice(0, 1).toUpperCase(); b.style.background = CORES[cor] || '#ffd23f'; }
+      return b;
+    }
+
     async function api(body) {
       const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const d = await r.json().catch(() => ({}));
@@ -188,8 +243,7 @@
       for (const m of msgs) {
         const li = el('li', null, m.nome === u.nome ? 'mine' : '');
         const who = el('div', null, 'who');
-        const bola = el('span', (m.nome || '?').slice(0, 1).toUpperCase(), 'bola');
-        bola.style.background = CORES[m.cor] || '#ffd23f';
+        const bola = fotoEl(m.fotoChat, m.nome, m.cor);
         const d = new Date(m.t);
         who.append(bola, nomeEl(m.nome, m.cor), el('span', String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'), 'hora'));
         const txt = el('div', m.texto || null, 'txt');
@@ -272,10 +326,92 @@
     $('gif-btn').onclick = () => picker('gif');
     $('emoji-btn').onclick = () => picker('emoji');
 
+    // ── PERSONALIZAR: foto, nome e cor do nome ──
+    const FOTOS = ['😀', '😎', '🤩', '😜', '🥳', '😇', '🤠', '👻', '🤖', '👽', '😈', '🤡', '🐶', '🐱', '🦊', '🐼', '🐸', '🦁', '🐯', '🐵',
+      '🦄', '🐲', '🦖', '🐙', '🦈', '⚽', '🏆', '🎮', '🚀', '⭐', '🔥', '💎', '👑', '🌈', '⚡', '🍕', '🍩', '🎃', '❄️', '💀'];
+    const NOMES_COR = { branco: 'Branco', verde: 'Verde', azul: 'Azul', vermelho: 'Vermelho', laranja: 'Laranja', roxo: 'Roxo', rosa: 'Rosa', dourado: 'Dourado', arcoiris: 'Arco-íris' };
+    let minhaFoto = null, pFoto = null, pCor = 'branco';
+    const minhasCores = () => adm ? Object.keys(NOMES_COR) : ['branco', ...(conta().colors || [])];
+    function previa() {
+      const p = $('p-previa');
+      p.innerHTML = '';
+      p.append(fotoEl(pFoto, $('p-nome').value || eu().nome, pCor), nomeEl($('p-nome').value.trim() || eu().nome, pCor));
+    }
+    function abrirPerso() {
+      const u = eu();
+      pFoto = minhaFoto; pCor = conta().nameColor || 'branco';
+      $('p-nome').value = u.nome;
+      $('p-msg').textContent = '';
+      $('p-aviso').textContent = adm ? '👑 Cuidado: você é ADM pelo nome. Se trocar o nome, deixa de ser ADM!' : '';
+      const fotos = $('p-fotos');
+      fotos.innerHTML = '';
+      const botaoFoto = (f, conteudo) => {
+        const b = el('button'); b.type = 'button';
+        if (typeof conteudo === 'string') b.textContent = conteudo; else b.appendChild(conteudo);
+        if (JSON.stringify(f) === JSON.stringify(pFoto)) b.classList.add('on');
+        b.onclick = () => { pFoto = f; fotos.querySelectorAll('button').forEach(x => x.classList.remove('on')); b.classList.add('on'); previa(); };
+        fotos.appendChild(b);
+      };
+      botaoFoto(null, 'Aa');
+      for (const e of FOTOS) botaoFoto({ e }, e);
+      // Os emojis que você montou também viram foto
+      api({ action: 'figurinhas', email: u.email }).then(d => {
+        for (const m of (d.figurinhas || []).slice(0, 20)) {
+          const sp = el('span'); sp.innerHTML = MontaEmoji.desenha(MontaEmoji.limpa(m));
+          botaoFoto({ m: MontaEmoji.limpa(m) }, sp.firstChild);
+        }
+      }).catch(() => {});
+      const cores = $('p-cores');
+      cores.innerHTML = '';
+      const tenho = minhasCores();
+      for (const id of Object.keys(NOMES_COR)) {
+        const b = el('button'); b.type = 'button';
+        const t = nomeEl(NOMES_COR[id], id);
+        b.appendChild(t);
+        if (!tenho.includes(id)) { b.disabled = true; b.appendChild(document.createTextNode(' 🔒')); }
+        if (id === pCor) b.classList.add('on');
+        b.onclick = () => { pCor = id; cores.querySelectorAll('button').forEach(x => x.classList.remove('on')); b.classList.add('on'); previa(); };
+        cores.appendChild(b);
+      }
+      $('p-dica').textContent = tenho.length < Object.keys(NOMES_COR).length ? '🔒 As outras cores você compra na loja da Aventura Elemental.' : '';
+      previa();
+      $('perso').classList.add('on');
+    }
+    $('p-nome').addEventListener('input', previa);
+    $('perso-btn').onclick = abrirPerso;
+    $('p-fechar').onclick = () => $('perso').classList.remove('on');
+    $('perso').addEventListener('click', e => { if (e.target.id === 'perso') $('perso').classList.remove('on'); });
+    $('p-salvar').onclick = async () => {
+      const u = eu(), c = conta();
+      const nome = $('p-nome').value.trim().slice(0, 20);
+      if (!nome) { $('p-msg').textContent = 'Escreva um nome!'; return; }
+      $('p-salvar').disabled = true;
+      $('p-msg').textContent = 'Salvando...';
+      try {
+        // Nome e cor: o mesmo usuário da Aventura (a foto e a moldura de lá continuam iguais)
+        await api({ email: u.email, nome, cor: pCor, foto: c.avatar || 'skin:gotinha', moldura: c.frame || 'nenhuma' });
+        const d = await api({ action: 'fotoChat', email: u.email, fotoChat: pFoto });
+        minhaFoto = d.fotoChat;
+        const novo = conta();
+        novo.user = Object.assign({}, novo.user, { nome });
+        novo.nameColor = pCor;
+        try { localStorage.setItem(KEY, JSON.stringify(novo)); } catch (e) { /* ok */ }
+        $('p-msg').textContent = '✅ Pronto! As próximas mensagens vão com o seu visual novo.';
+        render();
+        setTimeout(() => $('perso').classList.remove('on'), 1200);
+      } catch (e) { $('p-msg').textContent = e.message; }
+      $('p-salvar').disabled = false;
+    };
+
     // ADM: só ele vê o botão de apagar todas as conversas (toca duas vezes)
     let adm = false;
     function botaoLimpar() { $('limpar').style.display = adm && membro && msgs.length ? '' : 'none'; }
-    if (eu()) api({ action: 'online', email: eu().email }).then(d => { adm = !!d.adm; botaoLimpar(); }).catch(() => {});
+    if (eu()) {
+      $('perso-btn').style.display = '';
+      api({ action: 'online', email: eu().email }).then(d => { adm = !!d.adm; botaoLimpar(); }).catch(() => {});
+      // A foto do chat que eu já escolhi
+      api({ action: 'fotoChat', email: eu().email, ler: true }).then(d => { minhaFoto = d.fotoChat || null; }).catch(() => {});
+    }
     $('limpar').onclick = async () => {
       const b = $('limpar');
       if (!b.classList.contains('armado')) {
