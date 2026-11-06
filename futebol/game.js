@@ -25,7 +25,7 @@
 
   const SPECIALS = [];   // álbum de todo mundo: vem do album.js quando ele está no site (desligado por enquanto)
   const ALBUM = [['brasil', '🇧🇷 BRASIL'], ['argentina', '🇦🇷 ARGENTINA'], ['portugal', '🇵🇹 PORTUGAL'], ['franca', '🇫🇷 FRANÇA'],
-    ['inglaterra', '🏴 INGLATERRA'], ['espanha', '🇪🇸 ESPANHA'], ['lendas', '🏆 LENDAS']];   // LENDAS: jogadores aposentados
+    ['inglaterra', '🏴 INGLATERRA'], ['espanha', '🇪🇸 ESPANHA'], ['lendas', '🏆 LENDAS'], ['bolaouro', '🥇 BOLA DE OURO']];   // LENDAS: aposentados; BOLA DE OURO: evento
   const ALBUM_PRIZE = 1500;   // completou uma seleção: ganha moedas
   // Os craques do álbum: os do jogo e os que você adicionou (➕)
   // O mesmo jogador (mesma chave) do seu álbum vale mais que o de todo mundo (ex.: o nome de verdade, no seu)
@@ -33,9 +33,16 @@
     const mine = (data && data.custom) || [], keys = new Set(mine.map(c => c.key));
     return SPECIALS.filter(sp => !keys.has(sp.key)).concat(mine);
   };
-  const BADGES = { brasil: ['🇧🇷', 'Brasil'], argentina: ['🇦🇷', 'Argentina'], portugal: ['🇵🇹', 'Portugal'], franca: ['🇫🇷', 'França'], inglaterra: ['🏴', 'Inglaterra'], espanha: ['🇪🇸', 'Espanha'], lendas: ['🏆', 'Lendas'] };
+  const BADGES = { brasil: ['🇧🇷', 'Brasil'], argentina: ['🇦🇷', 'Argentina'], portugal: ['🇵🇹', 'Portugal'], franca: ['🇫🇷', 'França'], inglaterra: ['🏴', 'Inglaterra'], espanha: ['🇪🇸', 'Espanha'], lendas: ['🏆', 'Lendas'], bolaouro: ['🥇', 'Bola de Ouro'] };
   for (const [key, nome, pos, r, face, album, time] of window.ALBUM_FC || [])
     SPECIALS.push({ key, nome, pos, r, face, album, time: time || undefined, club: BADGES[album][1], badge: BADGES[album][0] });
+  // ── Evento BOLA DE OURO (novembro e dezembro): ganha 🥇 jogando e troca pelas cartas douradas ──
+  const EVENTO = { fim: new Date(2026, 11, 31, 23, 59, 59).getTime() };   // 31 de dezembro de 2026
+  const EVENT_CARDS = [
+    { key: 'evento-bola-kaka', nome: 'Kaká', pos: 'ATA', r: 130, face: '😄', time: 'Bola de Ouro 2007', ouro: true, preco: 30 },
+  ];
+  for (const ec of EVENT_CARDS) SPECIALS.push(Object.assign({ album: 'bolaouro', club: 'Bola de Ouro', badge: '🥇', evento: true }, ec));
+  const eventoAtivo = () => Date.now() < EVENTO.fim;
   // Nome que aparece: o que você escreveu no ✏️, ou o da carta
   const nameOf = c => (data.renames && data.renames[c.key || c.id]) || c.nome;
   let data;
@@ -168,6 +175,11 @@
     d.querySelector('.rt').textContent = c.r;
     d.querySelector('.ps').textContent = c.pos;
     d.querySelector('.face').textContent = c.face;
+    const ev = c.key && SPECIALS.find(x => x.key === c.key && x.ouro);
+    if (c.ouro || ev) {   // carta da Bola de Ouro: bola dourada embaixo do rosto
+      d.classList.add('t-bolaouro');
+      d.querySelector('.face').appendChild(Object.assign(document.createElement('div'), { className: 'gold-ball', textContent: '⚽' }));
+    }
     d.querySelector('.nm').textContent = nameOf(c);
     d.querySelector('.tier').textContent = c.time || c.club || t[2];
     const cl = c.time && findClub(c.time);
@@ -214,6 +226,9 @@
     if (page === 'packs') renderPacks();
     if (page === 'cards') renderCards();
     if (page === 'album') renderAlbum();
+    if (page === 'evento') renderEvento();
+    $('evento-tile').style.display = eventoAtivo() ? '' : 'none';
+    $('evento-tempo').textContent = tempoEvento();
     if (page === 'name') { $('name-input').value = data.nome || ''; $('name-msg').textContent = ''; }
   }
 
@@ -310,7 +325,7 @@
     return { id: data.next++, nome: pick(FIRST) + ' ' + pick(LAST), pos: pos || pick(POS), r, face: pick(FACES) };
   }
   function drawCard(min, max, pos) {
-    let pool = allSpecials();
+    let pool = allSpecials().filter(sp => !sp.evento);   // carta de evento só na loja do evento
     if (!pool.length) return inventCard(min, max, pos);
     if (pos && pool.some(sp => sp.pos === pos)) pool = pool.filter(sp => sp.pos === pos);   // pacote de time: essa posição
     let ok = pool.filter(sp => sp.r >= min && sp.r <= max);
@@ -575,6 +590,40 @@
     $('name-msg').textContent = isAdm() ? '👑 Bem-vindo, ADM! Pacotes de graça liberados.' : '✅ Pronto, ' + v + '!';
   });
   $('name-input').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') $('name-save').click(); });
+
+  // Quanto falta pro evento acabar
+  function tempoEvento() {
+    const ms = EVENTO.fim - Date.now();
+    if (ms <= 0) return 'O evento acabou!';
+    const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24;
+    return 'Acaba em ' + d + ' dias e ' + h + ' horas';
+  }
+  function renderEvento() {
+    $('evento-bolas').textContent = data.bolas || 0;
+    $('evento-tempo2').textContent = tempoEvento();
+    const list = $('evento-cards');
+    list.innerHTML = '';
+    const have = new Set(data.cards.map(c => c.key));
+    for (const ec of EVENT_CARDS) {
+      const w = document.createElement('div');
+      w.className = 'evento-item';
+      w.appendChild(cardEl(SPECIALS.find(x => x.key === ec.key)));
+      const b = document.createElement('button');
+      const got = have.has(ec.key);
+      b.className = 'evento-buy';
+      b.textContent = got ? '✅ JÁ É SUA' : 'TROCAR 🥇 ' + ec.preco;
+      b.disabled = got || !eventoAtivo() || (data.bolas || 0) < ec.preco;
+      b.addEventListener('click', () => {
+        const sp = SPECIALS.find(x => x.key === ec.key);
+        data.bolas -= ec.preco;
+        data.cards.push({ id: data.next++, key: sp.key, nome: sp.nome, pos: sp.pos, r: sp.r, face: sp.face, club: sp.club, badge: sp.badge, time: sp.time });
+        save(); render();
+        beep(1046, 0.4, 'triangle');
+      });
+      w.appendChild(b);
+      list.appendChild(w);
+    }
+  }
 
   // ✏️ Muda o nome da carta (fica guardado só neste aparelho). Vale pra todas as cartas iguais
   function editName(c, wrap) {
@@ -997,8 +1046,11 @@
     const res = a > c ? 'win' : a === c ? 'draw' : 'loss';
     const prize = { win: 500, draw: 250, loss: 100 }[res] + a * 50;
     data.coins += prize; data.played++; if (res === 'win') data.wins++;
+    // Evento: vitória dá 3 🥇, empate 1, e cada gol mais 1
+    const bolas = eventoAtivo() ? ({ win: 3, draw: 1, loss: 0 }[res] + a) : 0;
+    data.bolas = (data.bolas || 0) + bolas;
     save();
-    $('main-msg').textContent = (res === 'win' ? '🏆 Vitória' : res === 'draw' ? '🤝 Empate' : '😢 Derrota') + ` ${a} x ${c} contra ${M.opp}! Você ganhou 🪙 ${prize}`;
+    $('main-msg').textContent = (res === 'win' ? '🏆 Vitória' : res === 'draw' ? '🤝 Empate' : '😢 Derrota') + ` ${a} x ${c} contra ${M.opp}! Você ganhou 🪙 ${prize}` + (bolas ? ` e 🥇 ${bolas}` : '');
     M = null;
     document.body.classList.remove('in-match');
     if (window.FC3D) FC3D.stop();

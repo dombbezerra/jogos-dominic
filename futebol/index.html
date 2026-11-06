@@ -63,6 +63,20 @@
     .form-row { display: flex; gap: 8px; justify-content: center; }
     .form-row input { padding: 10px; font-size: 16px; border-radius: 8px; border: 2px solid #3a7aff; font-family: inherit; user-select: text; -webkit-user-select: text; }
     .form-row button { background: #2fb060; color: #fff; border: none; border-radius: 8px; padding: 0 16px; font-weight: 900; cursor: pointer; font-family: inherit; }
+    .tile.evento { grid-column: 1 / -1; color: #3a2a00; background: linear-gradient(135deg, #fff3a0, #ffd23a, #e0a810, #ffd23a); background-size: 300% 100%;
+      animation: ouro 3s linear infinite; box-shadow: 0 0 18px rgba(255, 210, 58, 0.6), inset 0 -5px 0 rgba(0, 0, 0, 0.2); }
+    @keyframes ouro { from { background-position: 0 0; } to { background-position: 300% 0; } }
+    .evento-h { color: #ffd23a; text-shadow: 0 0 12px rgba(255, 210, 58, 0.7); }
+    .evento-saldo { font-size: 18px; margin: 8px 0; } .evento-saldo b { color: #ffd23a; font-size: 24px; }
+    .evento-item { display: inline-flex; flex-direction: column; align-items: center; gap: 8px; }
+    .evento-buy { background: #ffd23a; color: #3a2a00; border: none; border-radius: 8px; padding: 8px 14px; font-weight: 900; cursor: pointer; font-family: inherit; }
+    .evento-buy:disabled { opacity: 0.5; cursor: default; }
+    /* Carta da Bola de Ouro: dourada brilhando, com a bola de ouro embaixo do rosto */
+    .card.t-bolaouro { background: linear-gradient(135deg, #fff8c0, #ffd23a 40%, #b8860b 70%, #ffe94a); color: #3a2a00;
+      box-shadow: 0 0 0 3px #fff3a0, 0 0 18px #ffd23a, 0 0 32px rgba(255, 180, 0, 0.6); animation: ouro-brilho 1.6s ease-in-out infinite alternate; }
+    @keyframes ouro-brilho { to { box-shadow: 0 0 0 3px #fff, 0 0 26px #ffe94a, 0 0 44px rgba(255, 200, 0, 0.8); } }
+    .card .face { display: flex; flex-direction: column; align-items: center; }
+    .gold-ball { font-size: 22px; line-height: 1; margin-top: 2px; filter: sepia(1) saturate(6) hue-rotate(5deg) brightness(1.15) drop-shadow(0 0 4px #ffd23a); }
     .tile.album { background: linear-gradient(135deg, #2fb060, #1a6a3a); }
     .album-team { margin: 12px 0; background: rgba(0, 0, 0, 0.25); border-radius: 12px; padding: 10px; }
     .album-title { font-weight: 900; font-size: 17px; margin-bottom: 8px; letter-spacing: 1px; }
@@ -221,6 +235,7 @@
           <button class="tile team" data-go="team">👕 MEU TIME<small>Escolha os 7 titulares</small></button>
           <button class="tile packs" data-go="packs">🎁 PACOTES<small>Ganhe jogadores novos</small></button>
           <button class="tile cards" data-go="cards">🃏 MINHAS CARTAS<small id="n-cards"></small></button>
+          <button class="tile evento" data-go="evento" id="evento-tile">⚽ EVENTO BOLA DE OURO 🥇<small id="evento-tempo"></small></button>
           <button class="tile album" data-go="album">📒 ÁLBUM<small>Complete as seleções e ganhe 🪙 1500</small></button>
         </div>
         <div class="msg" id="main-msg"></div>
@@ -269,6 +284,15 @@
         <button class="back" data-go="main">◀ VOLTAR</button>
       </div>
 
+      <div class="page" id="page-evento">
+        <h2 class="evento-h">⚽ EVENTO BOLA DE OURO 🥇</h2>
+        <div class="hint">Jogue partidas pra ganhar Bolas de Ouro: vitória 🥇 3, empate 🥇 1 e cada gol 🥇 +1. Troque pelas cartas douradas antes do evento acabar!</div>
+        <div class="evento-saldo">Suas Bolas de Ouro: 🥇 <b id="evento-bolas">0</b></div>
+        <div class="hint" id="evento-tempo2"></div>
+        <div class="grid" id="evento-cards"></div>
+        <button class="back" data-go="main">◀ VOLTAR</button>
+      </div>
+
       <div class="page" id="page-album">
         <h2>📒 ÁLBUM DE SELEÇÕES</h2>
         <div class="hint">Os craques saem nos pacotes (os melhores, nos pacotes Ouro e Lenda). Complete uma seleção e ganhe 🪙 1500!</div>
@@ -310,6 +334,6 @@
   <div id="keys-help">Setas/WASD: andar · J: passe (sem bola: trocar) · K: chute, segure pra mais força (sem bola: carrinho) · Shift: correr</div>
 
   <script src="album.js?v=7"></script>
-  <script src="game.js?v=43"></script>
+  <script src="game.js?v=44"></script>
 </body>
 </html>
