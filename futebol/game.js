@@ -23,7 +23,7 @@
   const tierOf = r => TIERS.find(t => r >= t[0]);
   const pick = a => a[Math.floor(Math.random() * a.length)];
 
-  const SPECIALS = [];   // preenchido depois do BADGES com o álbum de todo mundo (album.js)
+  const SPECIALS = [];   // os jogadores do álbum ficam no álbum de cada um (data.custom)
   const ALBUM = [['brasil', '🇧🇷 BRASIL'], ['argentina', '🇦🇷 ARGENTINA'], ['portugal', '🇵🇹 PORTUGAL'], ['franca', '🇫🇷 FRANÇA'],
     ['inglaterra', '🏴 INGLATERRA'], ['espanha', '🇪🇸 ESPANHA'], ['lendas', '🏆 LENDAS']];   // LENDAS: jogadores aposentados
   const ALBUM_PRIZE = 1500;   // completou uma seleção: ganha moedas
@@ -34,8 +34,6 @@
     return SPECIALS.filter(sp => !keys.has(sp.key)).concat(mine);
   };
   const BADGES = { brasil: ['🇧🇷', 'Brasil'], argentina: ['🇦🇷', 'Argentina'], portugal: ['🇵🇹', 'Portugal'], franca: ['🇫🇷', 'França'], inglaterra: ['🏴', 'Inglaterra'], espanha: ['🇪🇸', 'Espanha'], lendas: ['🏆', 'Lendas'] };
-  for (const [key, nome, pos, r, face, album] of window.ALBUM_FC || [])
-    SPECIALS.push({ key, nome, pos, r, face, album, club: BADGES[album][1], badge: BADGES[album][0] });
   // Nome que aparece: o que você escreveu no ✏️, ou o da carta
   const nameOf = c => (data.renames && data.renames[c.key || c.id]) || c.nome;
   let data;
