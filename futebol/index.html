@@ -78,7 +78,9 @@
     @keyframes ouro-brilho { to { box-shadow: 0 0 0 3px #fff, 0 0 26px #ffe94a, 0 0 44px rgba(255, 200, 0, 0.8); } }
     .card .face { display: flex; flex-direction: column; align-items: center; }
     .card.t-bolaprata { box-shadow: 0 0 0 3px #f0f4ff, 0 0 16px #c8d0dc, 0 0 28px rgba(200, 210, 230, 0.6); animation: lenda 3s linear infinite; }
-    .silver-ball { font-size: 22px; line-height: 1; margin-top: 2px; filter: grayscale(1) brightness(1.5) drop-shadow(0 0 4px #ffffff); }
+    .silver-ball { font-size: 22px; line-height: 1; margin-top: 2px; position: relative; display: inline-block; filter: drop-shadow(0 0 2px #ffffff) drop-shadow(0 0 6px #c8d2e0); }
+    .silver-ball::after { content: ''; position: absolute; left: 4%; right: 4%; top: 9%; bottom: 4%; border-radius: 50%; background: radial-gradient(circle at 32% 28%, #ffffff 0%, #c9d2de 22%, #8d98a8 55%, #4f5866 90%); mix-blend-mode: multiply; pointer-events: none; }
+    .silver-ball::before { content: ''; position: absolute; left: 22%; top: 14%; width: 30%; height: 22%; border-radius: 50%; background: radial-gradient(#ffffff, rgba(255,255,255,0)); z-index: 2; pointer-events: none; }
     .gold-ball { font-size: 22px; line-height: 1; margin-top: 2px; filter: sepia(1) saturate(6) hue-rotate(5deg) brightness(1.15) drop-shadow(0 0 4px #ffd23a); }
     .tile.album { background: linear-gradient(135deg, #2fb060, #1a6a3a); }
     .album-team { margin: 12px 0; background: rgba(0, 0, 0, 0.25); border-radius: 12px; padding: 10px; }
@@ -337,6 +339,6 @@
   <div id="keys-help">Setas/WASD: andar · J: passe (sem bola: trocar) · K: chute, segure pra mais força (sem bola: carrinho) · Shift: correr</div>
 
   <script src="album.js?v=7"></script>
-  <script src="game.js?v=52"></script>
+  <script src="game.js?v=53"></script>
 </body>
 </html>
