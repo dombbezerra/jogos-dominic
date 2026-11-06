@@ -241,13 +241,21 @@ module.exports = async (req, res) => {
     }
 
     // Chat de amigos (só convidados)
-    if (action === 'chatLer' || action === 'chatEnviar') {
+    if (action === 'chatLer' || action === 'chatEnviar' || action === 'chatAudio') {
       const [membro, raw, marcado, oculto] = await redis(['SISMEMBER', 'aventura:chat:membros', email], ['GET', 'aventura:user:' + email],
         ['SISMEMBER', 'aventura:adm', email], ['SISMEMBER', 'aventura:ocultos', email]);
       const adm = !!marcado && admPeloNome(raw);
       if (!(membro || adm || oculto) || !raw) return res.status(200).json({ membro: false });
       // Conta de teste: tem um chat só dela, sem ninguém
       const sala = oculto ? 'aventura:chat:msgs:teste:' + email : 'aventura:chat:msgs';
+      // Ouvir um áudio do chat (fica guardado 7 dias)
+      if (action === 'chatAudio') {
+        const id = String(body.id || '');
+        if (!/^[a-z0-9]{6,40}$/.test(id)) return res.status(400).json({ error: 'Áudio inválido.' });
+        const [a] = await redis(['GET', 'aventura:chat:audio:' + id]);
+        if (!a) return res.status(404).json({ error: 'Esse áudio já sumiu.' });
+        return res.status(200).json(JSON.parse(a));
+      }
       if (action === 'chatEnviar') {
         const texto = filtrar(body.texto);
         let gif = CHAT_GIFS.includes(body.gif) || GIFS_LOJA.includes(body.gif) ? body.gif : null;
@@ -257,12 +265,20 @@ module.exports = async (req, res) => {
           if (!tem) return res.status(403).json({ error: 'Esse GIF é da loja. Compre lá primeiro!' });
         }
         const emoji = limparEmoji(body.emoji);   // figurinha do Monta Emoji
-        if (!texto && !gif && !emoji) return res.status(400).json({ error: 'Mensagem vazia.' });
+        // Áudio: até 20 segundos, guardado à parte (a mensagem só leva o número dele)
+        let audio = null;
+        if (body.audio && typeof body.audio === 'object') {
+          const dados = String(body.audio.dados || ''), tipo = String(body.audio.tipo || '');
+          if (!/^audio\/(webm|mp4|ogg|mpeg|aac)/.test(tipo) || !/^[A-Za-z0-9+/=]+$/.test(dados) || dados.length > 600000) return res.status(400).json({ error: 'Áudio muito grande ou inválido.' });
+          audio = { id: crypto.randomBytes(9).toString('hex'), dur: Math.max(1, Math.min(20, Math.round(Number(body.audio.dur) || 1))) };
+          await redis(['SET', 'aventura:chat:audio:' + audio.id, JSON.stringify({ dados, tipo }), 'EX', 7 * 24 * 3600]);
+        }
+        if (!texto && !gif && !emoji && !audio) return res.status(400).json({ error: 'Mensagem vazia.' });
         const [ok] = await redis(['SET', 'aventura:chat:rl:' + email, '1', 'PX', 1200, 'NX']);
         if (!ok) return res.status(429).json({ error: 'Calma! Espera um pouquinho.' });
         const u = JSON.parse(raw);
         const [id] = await redis(['INCR', 'aventura:chat:id']);
-        const msg = { id, nome: u.nomeChat || u.nome, cor: u.cor || 'branco', foto: u.foto || 'skin:gotinha', moldura: u.moldura || 'nenhuma', fotoChat: u.fotoChat || null, texto, gif, emoji, t: Date.now() };
+        const msg = { id, nome: u.nomeChat || u.nome, cor: u.cor || 'branco', foto: u.foto || 'skin:gotinha', moldura: u.moldura || 'nenhuma', fotoChat: u.fotoChat || null, texto, gif, emoji, audio, t: Date.now() };
         await redis(['RPUSH', sala, JSON.stringify(msg)], ['LTRIM', sala, -100, -1]);
       }
       const [lista, limpo] = await redis(['LRANGE', sala, 0, -1], ['GET', oculto ? 'aventura:chat:limpo:teste' : 'aventura:chat:limpo']);

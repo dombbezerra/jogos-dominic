@@ -116,7 +116,7 @@
     <div class="gallery" id="gallery"></div>
 
     <h2 class="gallery-title">💬 MEUS GIFS DO CHAT</h2>
-    <p class="gif-hint" id="gif-hint">Aperte 💬 SALVAR GIF e depois mande no chat dos amigos (na Aventura Elemental, botão GIF).</p>
+    <p class="gif-hint" id="gif-hint">Aperte 💬 SALVAR GIF e depois mande no CHAT dos amigos (no menu dos jogos, botão GIF).</p>
     <div class="gallery" id="gifs"></div>
   </div>
 
@@ -208,7 +208,7 @@
     function renderGifs() {
       const box = $('gifs');
       box.innerHTML = '';
-      if (!conta()) { $('gif-hint').textContent = 'Pra mandar no chat, entre na Aventura Elemental com seu e-mail primeiro.'; return; }
+      if (!conta()) { $('gif-hint').textContent = 'Pra mandar no chat, entre com seu e-mail na Aventura Elemental primeiro.'; return; }
       figs.forEach((e, i) => {
         const d = document.createElement('div');
         d.className = 'saved figura';
@@ -230,7 +230,7 @@
       $('b-gif').disabled = true;
       const ok = await figurinhas({ salvar: emoji });
       $('b-gif').disabled = false;
-      if (ok) { som(880); som(1320, 0.12); aviso('💬 Salvo! Mande no chat: Aventura Elemental → CHAT → GIF'); }
+      if (ok) { som(880); som(1320, 0.12); aviso('💬 Salvo! Abra o CHAT no menu e toque em GIF.'); }
       else aviso('Não deu pra salvar agora. Tem internet?');
     };
 

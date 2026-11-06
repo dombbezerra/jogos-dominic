@@ -1368,6 +1368,8 @@
   const HERO_DIRS = [[0, 1], [1, 0], [0, -1], [-1, 0]];   // a prévia do herói vai girando
 
   function showPage(name) {
+    // O chat agora é uma página só dele (no menu dos jogos)
+    if (name === 'chat') { location.href = '../chat/' + (PERFIL ? '?perfil=' + PERFIL : ''); return; }
     menuPage = name;
     document.querySelectorAll('#menu .page').forEach(p => p.classList.toggle('on', p.id === 'page-' + name));
     if (name === 'chat') { chatBusy = false; setTimeout(pollChat, 0); }
@@ -1451,7 +1453,7 @@
 
   // Abas da loja. Fotos, cores e molduras somem quando você já tem todas
   let shopTab = 'melhorias';
-  const SHOP_TABS = [['melhorias', 'MELHORIAS'], ['gemas', 'RECURSOS ELEMENTAIS'], ['fotos', 'FOTOS DE PERFIL'], ['cores', 'COR DO NOME'], ['molduras', 'MOLDURAS'], ['gifs', 'GIFS DO CHAT'], ['pets', 'PETS']];
+  const SHOP_TABS = [['melhorias', 'MELHORIAS'], ['gemas', 'RECURSOS ELEMENTAIS'], ['fotos', 'FOTOS DE PERFIL'], ['cores', 'COR DO NOME'], ['molduras', 'MOLDURAS'], ['pets', 'PETS']];   // GIFs do chat saíram: agora os GIFs são os emojis do Monta Emoji
   const tabDone = id => id === 'fotos' ? BICHOS.every(b => meta.avatars.includes(b.id))
     : id === 'cores' ? NAME_COLORS.every(c => meta.colors.includes(c.id))
     : id === 'molduras' ? FRAMES.every(f => f.price === 0 || meta.frames.includes(f.id))
