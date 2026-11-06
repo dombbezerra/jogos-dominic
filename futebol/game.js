@@ -51,6 +51,19 @@
     { key: 'evento-bola-benzema', nome: 'Benzema', pos: 'ATA', r: 129, face: '😌', time: 'Bola de Ouro 2022', ouro: true, preco: 35 },
     { key: 'evento-bola-rodri', nome: 'Rodri', pos: 'ZAG', r: 129, face: '🤓', time: 'Bola de Ouro 2024', ouro: true, preco: 35 },
     { key: 'evento-bola-cannavaro', nome: 'Cannavaro', pos: 'ZAG', r: 129, face: '😏', time: 'Bola de Ouro 2006', ouro: true, preco: 35 },
+    // 🥈 Segundo lugar desses anos (bola de prata)
+    { key: 'evento-prata-mbappe', nome: 'Mbappé', pos: 'ATA', r: 128, face: '😁', time: '2º Bola de Ouro 2026', prata: true, preco: 30 },
+    { key: 'evento-prata-yamal', nome: 'Lamine Yamal', pos: 'PD', r: 128, face: '😎', time: '2º Bola de Ouro 2025', prata: true, preco: 30 },
+    { key: 'evento-prata-vini', nome: 'Vini Júnior', pos: 'PE', r: 128, face: '😃', time: '2º Bola de Ouro 2024', prata: true, preco: 30 },
+    { key: 'evento-prata-haaland', nome: 'Haaland', pos: 'ATA', r: 128, face: '🤖', time: '2º Bola de Ouro 2023', prata: true, preco: 30 },
+    { key: 'evento-prata-mane', nome: 'Sadio Mané', pos: 'PE', r: 128, face: '😊', time: '2º Bola de Ouro 2022', prata: true, preco: 30 },
+    { key: 'evento-prata-messi', nome: 'Messi', pos: 'PD', r: 128, face: '🙂', time: '2º Bola de Ouro 2017', prata: true, preco: 30 },
+    { key: 'evento-prata-cr7', nome: 'Cristiano Ronaldo', pos: 'ATA', r: 128, face: '😏', time: '2º Bola de Ouro 2007', prata: true, preco: 30 },
+    { key: 'evento-prata-buffon', nome: 'Buffon', pos: 'GOL', r: 128, face: '🧤', time: '2º Bola de Ouro 2006', prata: true, preco: 30 },
+    { key: 'evento-prata-lampard', nome: 'Lampard', pos: 'ATA', r: 128, face: '😄', time: '2º Bola de Ouro 2005', prata: true, preco: 30 },
+    { key: 'evento-prata-robertocarlos', nome: 'Roberto Carlos', pos: 'LE', r: 128, face: '💪', time: '2º Bola de Ouro 2002', prata: true, preco: 30 },
+    { key: 'evento-prata-beckham', nome: 'Beckham', pos: 'PD', r: 128, face: '😉', time: '2º Bola de Ouro 1999', prata: true, preco: 30 },
+    { key: 'evento-prata-suker', nome: 'Šuker', pos: 'ATA', r: 128, face: '😌', time: '2º Bola de Ouro 1998', prata: true, preco: 30 },
   ];
   for (const ec of EVENT_CARDS) SPECIALS.push(Object.assign({ album: 'bolaouro', club: 'Bola de Ouro', badge: '🥇', evento: true }, ec));
   const eventoAtivo = () => Date.now() < EVENTO.fim;
@@ -186,10 +199,11 @@
     d.querySelector('.rt').textContent = c.r;
     d.querySelector('.ps').textContent = c.pos;
     d.querySelector('.face').textContent = c.face;
-    const ev = c.key && SPECIALS.find(x => x.key === c.key && x.ouro);
-    if (c.ouro || ev) {   // carta da Bola de Ouro: bola dourada embaixo do rosto
-      d.classList.add('t-bolaouro');
-      d.querySelector('.face').appendChild(Object.assign(document.createElement('div'), { className: 'gold-ball', textContent: '⚽' }));
+    const ev = c.key && SPECIALS.find(x => x.key === c.key && (x.ouro || x.prata));
+    if (c.ouro || c.prata || ev) {   // carta do evento: bola de ouro (1º) ou de prata (2º) embaixo do rosto
+      const prata = c.prata || (ev && ev.prata);
+      d.classList.add(prata ? 't-bolaprata' : 't-bolaouro');
+      d.querySelector('.face').appendChild(Object.assign(document.createElement('div'), { className: prata ? 'silver-ball' : 'gold-ball', textContent: '⚽' }));
     }
     d.querySelector('.nm').textContent = nameOf(c);
     d.querySelector('.tier').textContent = c.time || c.club || t[2];
