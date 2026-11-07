@@ -35,6 +35,12 @@
   #b-play { background: var(--verde); color: #fff; font-family: var(--display); font-weight: 400; font-size: 20px; padding: 6px 22px 2px; min-width: 150px; }
   #b-play.tocando { background: var(--rosa); }
   .btn.sol { background: var(--sol); } .btn.agua { background: var(--agua); } .btn.roxo { background: var(--roxo); color: #fff; }
+  .modos { display: flex; justify-content: center; gap: 8px; margin-top: 10px; }
+  .modo { font-family: var(--display); font-weight: 400; font-size: 15px; cursor: pointer; border: 3px solid rgba(255,255,255,.2); border-radius: 14px; padding: 5px 14px 2px; background: rgba(255,255,255,.07); color: var(--creme); }
+  .modo.on { background: var(--sol); color: var(--tinta); border-color: var(--tinta); box-shadow: 0 4px 0 var(--tinta); }
+  #m-dificil.on { background: #ff5d3a; color: #fff; }
+  .cel.sust { background: rgba(0,0,0,.35); }   /* notas pretas do piano */
+  .rotulo.sust .nm { opacity: .75; }
   .velo { display: flex; align-items: center; gap: 6px; font-weight: 800; background: rgba(255,255,255,.08); border-radius: 14px; padding: 4px 12px; }
   .velo input { width: 110px; accent-color: var(--sol); }
 
@@ -79,7 +85,8 @@
 <a href="../index.html" id="back-link">← Menu</a>
 <div class="wrap">
   <h1>🎵 ESTÚDIO DE <span>MÚSICA</span></h1>
-  <p class="sub">Aperte 🥁 RITMOS pra uma batida de funk pronta, depois mexa nos quadradinhos!</p>
+  <p class="sub">😊 FÁCIL tem ritmos prontos. 🔥 DIFÍCIL é só você: capricha!</p>
+  <div class="modos"><button class="modo" id="m-facil">😊 FÁCIL</button><button class="modo" id="m-dificil">🔥 DIFÍCIL</button></div>
   <div id="vis"></div>
 
   <div class="controles">
@@ -107,7 +114,7 @@
 <script>
 (() => {
 const $ = id => document.getElementById(id);
-const PASSOS = 16;
+let PASSOS = 16;   // 16 no fácil, 32 no difícil
 
 // ── As linhas: 4 de bateria e 8 notas (escala pentatônica: sempre fica bonito junto) ──
 const BATERIA = [
@@ -127,7 +134,17 @@ const NOTAS = [   // de cima (mais aguda) pra baixo
   { nome: 'Dó',  f: 523.25 }, { nome: 'Lá',  f: 440.00 }, { nome: 'Sol', f: 392.00 }, { nome: 'Mi', f: 329.63 },
 ];
 const CORES_NOTAS = ['#ff5dc8', '#c46bff', '#8a7bff', '#5cb8ff', '#3fe0d0', '#4fe08a', '#a6e84a', '#ffd23f'];
-const LINHAS = [...BATERIA.map(b => ({ ...b, tipo: 'bateria' })), ...NOTAS.map((n, i) => ({ id: 'n' + i, nome: n.nome, em: '🎵', cor: CORES_NOTAS[i], tipo: 'nota', f: n.f }))];
+// Difícil: as 13 notas do piano, com as pretas (pode ficar feio se errar!)
+const NOMES_CROMA = ['Dó', 'Si', 'Lá#', 'Lá', 'Sol#', 'Sol', 'Fá#', 'Fá', 'Mi', 'Ré#', 'Ré', 'Dó#', 'Dó'];
+const NOTAS_DIFICIL = NOMES_CROMA.map((nome, i) => ({ nome, f: 1046.5 / Math.pow(2, i / 12), sust: nome.includes('#') }));
+const corDificil = i => `hsl(${(i * 26) % 360} 80% 62%)`;
+const LINHAS_DE = {
+  facil: [...BATERIA.map(b => ({ ...b, tipo: 'bateria' })), ...NOTAS.map((n, i) => ({ id: 'n' + i, nome: n.nome, em: '🎵', cor: CORES_NOTAS[i], tipo: 'nota', f: n.f }))],
+  dificil: [...BATERIA.map(b => ({ ...b, tipo: 'bateria' })), ...NOTAS_DIFICIL.map((n, i) => ({ id: 'd' + i, nome: n.nome, em: '🎵', cor: corDificil(i), tipo: 'nota', f: n.f, sust: n.sust }))],
+};
+const PASSOS_DE = { facil: 16, dificil: 32 };
+let modo = 'dificil';
+let LINHAS = LINHAS_DE.facil;
 
 const INSTRUMENTOS = [
   { id: 'piano',  nome: '🎹 Piano',   onda: 'triangle', ataque: 0.005, dura: 0.6 },
@@ -148,10 +165,24 @@ if (dados.atual) ajeita(dados.atual.grade);
 dados.salvas.forEach(m => ajeita(m.grade));
 fala = dados.fala || 0;
 
-let grade = dados.atual && dados.atual.grade ? dados.atual.grade : LINHAS.map(() => Array(PASSOS).fill(false));
-let inst = dados.atual && dados.atual.inst || 'piano';
-$('tempo').value = dados.atual && dados.atual.bpm || 110;
-const guardaAtual = () => { dados.atual = { grade, inst, bpm: +$('tempo').value }; dados.fala = fala; grava(dados); };
+// dados.atual = a música do fácil; dados.dificil = a do difícil
+modo = dados.modo || 'dificil';
+let grade = [], inst = 'piano';
+function carregaModo() {
+  LINHAS = LINHAS_DE[modo]; PASSOS = PASSOS_DE[modo];
+  const a = modo === 'facil' ? dados.atual : dados.dificil;
+  grade = a && a.grade && a.grade.length === LINHAS.length && a.grade[0].length === PASSOS ? a.grade : LINHAS.map(() => Array(PASSOS).fill(false));
+  inst = a && a.inst || 'piano';
+  $('tempo').value = a && a.bpm || 110;
+  document.body.classList.toggle('dificil', modo === 'dificil');
+  $('m-facil').classList.toggle('on', modo === 'facil'); $('m-dificil').classList.toggle('on', modo === 'dificil');
+  $('b-sorteia').style.display = $('b-ritmo').style.display = modo === 'dificil' ? 'none' : '';   // no difícil você faz tudo sozinho
+}
+const guardaAtual = () => {
+  const v = { grade, inst, bpm: +$('tempo').value };
+  if (modo === 'facil') dados.atual = v; else dados.dificil = v;
+  dados.modo = modo; dados.fala = fala; grava(dados);
+};
 
 // ══════════════ SONS (feitos na hora) ══════════════
 let ac = null, mestre = null, ruido = null;
@@ -239,13 +270,16 @@ function monta() {
   const g = $('grade');
   g.innerHTML = '';
   cels.length = 0; marcas.length = 0;
+  const pequeno = innerWidth <= 560;
+  g.style.gridTemplateColumns = (pequeno ? '44px' : '92px') + ` repeat(${PASSOS}, minmax(${pequeno && PASSOS === 16 ? 17 : 22}px, 1fr))`;
+  g.style.minWidth = PASSOS === 32 ? (pequeno ? '820px' : '900px') : '';
   // linha de cima: marca onde a música está
   g.appendChild(document.createElement('div'));
   for (let p = 0; p < PASSOS; p++) { const m = document.createElement('div'); m.className = 'marca'; g.appendChild(m); marcas.push(m); }
   LINHAS.forEach((L, li) => {
     if (li === BATERIA.length) { const s = document.createElement('div'); s.className = 'sep'; g.appendChild(s); }
     const r = document.createElement('div');
-    r.className = 'rotulo';
+    r.className = 'rotulo' + (L.sust ? ' sust' : '');
     r.innerHTML = '<span class="em"></span><span class="nm"></span>';
     r.querySelector('.em').textContent = L.tipo === 'nota' ? '●' : L.em;
     if (L.tipo === 'nota') r.querySelector('.em').style.color = L.cor;
@@ -258,7 +292,7 @@ function monta() {
     cels[li] = [];
     for (let p = 0; p < PASSOS; p++) {
       const c = document.createElement('button');
-      c.className = 'cel' + (p % 4 === 0 ? ' batida' : '');
+      c.className = 'cel' + (p % 4 === 0 ? ' batida' : '') + (L.sust ? ' sust' : '');
       c.setAttribute('aria-label', L.nome + ' ' + (p + 1));
       c.onclick = () => {
         grade[li][p] = !grade[li][p];
@@ -302,7 +336,7 @@ function play() {
 function stop() {
   tocando = false; clearInterval(timer);
   $('b-play').textContent = '▶ TOCAR'; $('b-play').classList.remove('tocando');
-  filaVisual.length = 0;
+  filaVisual.length = 0; ultimoPasso = -1;
   marcas.forEach(m => m.classList.remove('agora'));
   cels.forEach(l => l.forEach(c => c.classList.remove('agora', 'toca')));
 }
@@ -390,7 +424,7 @@ $('b-limpa').onclick = () => {
 $('b-guarda').onclick = () => {
   if (!grade.some(l => l.some(Boolean))) { mensagem('Coloque alguns sons antes de salvar!'); return; }
   const nome = 'Música ' + (dados.salvas.length + 1);
-  dados.salvas.unshift({ nome, grade: JSON.parse(JSON.stringify(grade)), inst, bpm: +$('tempo').value });
+  dados.salvas.unshift({ nome: nome + (modo === 'dificil' ? ' 🔥' : ''), modo, grade: JSON.parse(JSON.stringify(grade)), inst, bpm: +$('tempo').value });
   if (dados.salvas.length > 30) dados.salvas.length = 30;
   grava(dados); lista();
   mensagem('💾 Salva como "' + nome + '"!');
@@ -401,7 +435,7 @@ function lista() {
     const d = document.createElement('div');
     d.className = 'musica';
     d.textContent = '🎵 ' + m.nome;
-    d.onclick = () => { grade = JSON.parse(JSON.stringify(m.grade)); inst = m.inst; $('tempo').value = m.bpm; montaInstrumentos(); pintaTudo(); guardaAtual(); mensagem('▶ ' + m.nome); if (!tocando) play(); };
+    d.onclick = () => { trocaModo(m.modo || 'facil'); grade = JSON.parse(JSON.stringify(m.grade)); inst = m.inst; monta(); $('tempo').value = m.bpm; montaInstrumentos(); pintaTudo(); guardaAtual(); mensagem('▶ ' + m.nome); if (!tocando) play(); };
     const x = document.createElement('button');
     x.textContent = '✕';
     x.onclick = e => {
@@ -414,11 +448,21 @@ function lista() {
   });
 }
 
+function trocaModo(novo) {
+  if (novo === modo && cels.length) return;
+  if (tocando) stop();
+  if (cels.length) guardaAtual();
+  modo = novo;
+  carregaModo(); monta(); montaInstrumentos(); guardaAtual();
+}
+$('m-facil').onclick = () => { trocaModo('facil'); mensagem('😊 Modo FÁCIL: ritmos prontos e as notas sempre combinam.'); };
+$('m-dificil').onclick = () => { trocaModo('dificil'); mensagem('🔥 Modo DIFÍCIL: 32 quadradinhos, 13 notas, e você faz tudo sozinho!'); };
+carregaModo();
 monta();
 montaInstrumentos();
 lista();
-// primeira vez: já começa com um ritmo pra brincar
-if (!dados.atual) { aplicaRitmo(RITMOS[0]); pintaTudo(); }
+// primeira vez no fácil: já começa com um ritmo pra brincar
+if (modo === 'facil' && !dados.atual) { aplicaRitmo(RITMOS[0]); pintaTudo(); }
 })();
 </script>
 </body>
