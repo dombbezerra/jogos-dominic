@@ -842,7 +842,7 @@
 
   // Mais fácil: o time do computador é um pouco mais lento, rouba menos e o goleiro dele pega menos
   // Dificuldade (interruptor no menu): no celular o computador joga um pouco melhor
-  const DIFFS = { computador: { speed: 0.88, tackle: 0.5, reach: 0.88 }, celular: { speed: 0.92, tackle: 0.6, reach: 0.9 } };
+  const DIFFS = { computador: { speed: 0.88, tackle: 0.5, reach: 0.88 }, celular: { speed: 0.87, tackle: 0.5, reach: 0.87 } };   // celular é um pouquinho mais fácil
   const EASY = () => DIFFS[data.diff] || DIFFS[isTouch ? 'celular' : 'computador'];
   const PACE = 0.68;   // ritmo do FC Mobile: todo mundo corre mais devagar
   function makePlayer(team, slot, rating, card) {
@@ -1099,7 +1099,8 @@
       // Roubada de bola
       for (const p of M.players) {
         if (p.team === o.team || p.cd > 0 || dist(p, o) > (p.lunge > 0 ? 13 : 10)) continue;
-        const chance = (p.tackle * (p.lunge > 0 ? 6 : 1)) * (1.2 - norm01(o.r) * 0.5);
+        // Com a bola no seu pé, o computador tem bem mais dificuldade de roubar
+        const chance = (p.tackle * (p.lunge > 0 ? 6 : 1)) * (1.2 - norm01(o.r) * 0.5) * (o.team === 0 ? 0.7 : 1);
         if (Math.random() < chance) { b.owner = p; o.cd = 30; p.lunge = 0; beep(300, 0.05, 'square'); break; }
       }
     } else {
