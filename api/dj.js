@@ -44,11 +44,12 @@ Como montar a música (o JSON):
 - "lead" (instrumento da melodia): piano, pluck, synth, gamer, sino, guitarra, cavaco ou sanfona.
 - "pad": acordes longos de fundo (true/false). "pesado": 0 a 3 (força do grave). "bpm": 70 a 170.
 - "voz": true se a voz fala alguma coisa; "palavra": o que ela fala quando não tem letra (ex: "Vai!").
+- "tipoVoz": "grossa" (padrão), "bemgrossa", "masculina", "feminina", "dueto" (homem e mulher alternando), "normal" ou "fina".
 - "capa": um emoji e duas cores hex pro degradê. "titulo": um nome criativo e curto.
 - "humor": "", "triste", "alegre", "terror" ou "epico".
 
 Responda SOMENTE com um objeto JSON neste formato, sem texto antes ou depois:
-{"resposta": "...", "musica": {"titulo":"","estilo":"","humor":"","bpm":120,"raiz":0,"escala":"menor","prog":[0,5,2,6],"lead":"synth","pad":true,"baixo":"808","pesado":1,"bateria":{"bumbo":[],"caixa":[],"palma":[],"chimbal":[],"tambor":[]},"baixoPassos":[],"melodia":[...64 itens...],"voz":false,"palavra":"Vai!","letra":null,"capa":{"emoji":"🔥","c1":"#ff5d3a","c2":"#7a1a5a"}}}`;
+{"resposta": "...", "musica": {"titulo":"","estilo":"","humor":"","bpm":120,"raiz":0,"escala":"menor","prog":[0,5,2,6],"lead":"synth","pad":true,"baixo":"808","pesado":1,"bateria":{"bumbo":[],"caixa":[],"palma":[],"chimbal":[],"tambor":[]},"baixoPassos":[],"melodia":[...64 itens...],"voz":false,"palavra":"Vai!","tipoVoz":"grossa","letra":null,"capa":{"emoji":"🔥","c1":"#ff5d3a","c2":"#7a1a5a"}}}`;
 
 const cliente = () => new Anthropic();
 

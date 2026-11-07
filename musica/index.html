@@ -276,20 +276,28 @@ function tocaLead(m, n, t, dur) {
   }
 }
 // Voz: grossa (padrão, tipo MC), bem grossa, normal ou fina. Usa uma voz de homem em português se o aparelho tiver
-const TIPOS_VOZ = { grossa: { pitch: 0.45, rate: 0.95 }, bemgrossa: { pitch: 0.1, rate: 0.85 }, normal: { pitch: 1, rate: 1.1 }, fina: { pitch: 1.7, rate: 1.15 } };
-let vozHomem = null;
+const TIPOS_VOZ = {
+  grossa: { pitch: 0.45, rate: 0.95, quem: 'homem' }, bemgrossa: { pitch: 0.1, rate: 0.85, quem: 'homem' },
+  normal: { pitch: 1, rate: 1.1, quem: 'homem' }, fina: { pitch: 1.7, rate: 1.15, quem: 'mulher' },
+  masculina: { pitch: 0.75, rate: 1, quem: 'homem' }, feminina: { pitch: 1.2, rate: 1.05, quem: 'mulher' },
+};
+let vozHomem = null, vozMulher = null;
 function achaVoz() {
   const vs = (window.speechSynthesis && speechSynthesis.getVoices()) || [];
   const pt = vs.filter(v => /^pt(-|_)?br/i.test(v.lang) || /portugu/i.test(v.name));
-  vozHomem = pt.find(v => /male|masculin|daniel|felipe|ricardo|antonio|ant[oô]nio|fabio|f[aá]bio|thiago|homem/i.test(v.name) && !/female|feminin/i.test(v.name)) || pt[0] || null;
+  const mulher = v => /female|feminin|luciana|francisca|maria|vit[oó]ria|helena|joana|fernanda|leticia|let[ií]cia|camila|flo|sandy|shelley|grandma|mulher/i.test(v.name);
+  vozHomem = pt.find(v => /male|masculin|daniel|felipe|ricardo|antonio|ant[oô]nio|fabio|f[aá]bio|thiago|eddy|reed|rocko|grandpa|homem/i.test(v.name) && !mulher(v)) || pt.find(v => !mulher(v)) || pt[0] || null;
+  vozMulher = pt.find(mulher) || pt.find(v => v !== vozHomem) || pt[0] || null;
 }
 if (window.speechSynthesis) { achaVoz(); speechSynthesis.onvoiceschanged = achaVoz; }
-function falar(palavra, atraso, letra, tipo) {
+function falar(palavra, atraso, letra, tipo, vez) {
   if (!window.speechSynthesis || !palavra) return;
+  if (tipo === 'dueto') tipo = vez % 2 ? 'feminina' : 'masculina';   // dueto: um pedaço homem, outro mulher
   const T = TIPOS_VOZ[tipo] || TIPOS_VOZ.grossa;
   setTimeout(() => {
     const u = new SpeechSynthesisUtterance(palavra);
-    u.lang = 'pt-BR'; if (vozHomem && tipo !== 'fina') u.voice = vozHomem;
+    u.lang = 'pt-BR';
+    const voz = T.quem === 'mulher' ? vozMulher : vozHomem; if (voz) u.voice = voz;
     u.rate = T.rate * (letra ? 1 : 1.2); u.pitch = T.pitch;
     speechSynthesis.cancel(); speechSynthesis.speak(u);
   }, Math.max(0, atraso));
@@ -307,8 +315,8 @@ function agenda() {
     if (m.pad && p16 === 0) tocaPad(m, [0, 2, 4].map(k => notaDoGrau(m, acorde + k, 1)), prox, dur * 16);
     if (m.melodia[p] != null) tocaLead(m, notaDoGrau(m, m.melodia[p], 2), prox, dur * 2);
     if (m.voz && p16 === 0) {
-      if (m.letra && m.letra.length) falar(m.letra[(Math.floor(passo / 16)) % m.letra.length], (prox - ac.currentTime) * 1000, true, m.tipoVoz);   // um pedaço da letra em cada compasso
-      else if (c === 0 || c === 2) falar(m.palavra, (prox - ac.currentTime) * 1000, false, m.tipoVoz);
+      if (m.letra && m.letra.length) falar(m.letra[(Math.floor(passo / 16)) % m.letra.length], (prox - ac.currentTime) * 1000, true, m.tipoVoz, Math.floor(passo / 16));   // um pedaço da letra em cada compasso
+      else if (c === 0 || c === 2) falar(m.palavra, (prox - ac.currentTime) * 1000, false, m.tipoVoz, c);
     }
     passo++; prox += dur;
   }
@@ -418,7 +426,10 @@ function entende(original) {
     if (tem('leve', 'suave')) { m.pesado = 0; m.baixo = 'suave'; feito.push('deixei mais leve'); }
     if (tem('melodia')) { fazMelodia(m); feito.push('fiz uma melodia nova'); }
     if (tem('sem voz', 'tira a voz')) { m.voz = false; feito.push('tirei a voz'); }
-    if (tem('voz bem grossa', 'voz muito grossa', 'bem grossa', 'muito grossa')) { m.tipoVoz = 'bemgrossa'; m.voz = true; feito.push('deixei a voz BEM grossa 🗣️'); }
+    if (tem('dueto', 'homem e mulher', 'mulher e homem', 'masculina e feminina', 'feminina e masculina', 'as duas voz', 'duas vozes')) { m.tipoVoz = 'dueto'; m.voz = true; feito.push('fiz um dueto: um pedaço voz de homem, outro de mulher 👨👩'); }
+    else if (tem('feminina', 'voz de mulher', 'cantora', 'menina')) { m.tipoVoz = 'feminina'; m.voz = true; feito.push('troquei pra voz feminina 👩'); }
+    else if (tem('masculina', 'voz de homem', 'cantor')) { m.tipoVoz = 'masculina'; m.voz = true; feito.push('troquei pra voz masculina 👨'); }
+    else if (tem('voz bem grossa', 'voz muito grossa', 'bem grossa', 'muito grossa')) { m.tipoVoz = 'bemgrossa'; m.voz = true; feito.push('deixei a voz BEM grossa 🗣️'); }
     else if (tem('voz grossa', 'grossa', 'voz de mc', 'voz de homem', 'voz grave')) { m.tipoVoz = 'grossa'; m.voz = true; feito.push('deixei a voz grossa 🗣️'); }
     else if (tem('voz fina', 'fininha', 'voz de crianca', 'voz aguda')) { m.tipoVoz = 'fina'; m.voz = true; feito.push('deixei a voz fininha'); }
     else if (tem('voz normal')) { m.tipoVoz = 'normal'; m.voz = true; feito.push('deixei a voz normal'); }
@@ -445,7 +456,10 @@ function entende(original) {
   m.id = Date.now() + Math.random();
   if (tem('pesad', 'grave', 'estoura')) { m.pesado = 2; m.baixo = '808'; }
   if (tem('sem voz')) m.voz = false;
-  if (tem('bem grossa', 'muito grossa')) { m.tipoVoz = 'bemgrossa'; m.voz = true; }
+  if (tem('dueto', 'homem e mulher', 'mulher e homem', 'masculina e feminina', 'feminina e masculina', 'duas vozes')) { m.tipoVoz = 'dueto'; m.voz = true; }
+  else if (tem('feminina', 'voz de mulher', 'cantora')) { m.tipoVoz = 'feminina'; m.voz = true; }
+  else if (tem('masculina', 'voz de homem', 'cantor')) { m.tipoVoz = 'masculina'; m.voz = true; }
+  else if (tem('bem grossa', 'muito grossa')) { m.tipoVoz = 'bemgrossa'; m.voz = true; }
   else if (tem('voz grossa', 'grossa', 'voz de mc', 'voz grave')) { m.tipoVoz = 'grossa'; m.voz = true; }
   else if (tem('voz fina', 'fininha')) { m.tipoVoz = 'fina'; m.voz = true; }
   const letra = pegaLetra(original);
@@ -480,6 +494,7 @@ function limpaMusica(x) {
   if (Array.isArray(x.baixoPassos)) m.baixoPassos = passos16(x.baixoPassos);
   if (Array.isArray(x.melodia) && x.melodia.length) { m.melodia = Array(64).fill(null); for (let i = 0; i < 64; i++) { const v = x.melodia[i]; m.melodia[i] = v == null ? null : n(v, -2, 9, null); } }
   m.voz = !!x.voz;
+  if (TIPOS_VOZ[x.tipoVoz] || x.tipoVoz === 'dueto') m.tipoVoz = x.tipoVoz;
   if (x.palavra) m.palavra = String(x.palavra).slice(0, 24);
   m.letra = Array.isArray(x.letra) && x.letra.length ? x.letra.slice(0, 8).map(t => String(t).slice(0, 40)).filter(Boolean) : null;
   if (x.capa && typeof x.capa === 'object') {
