@@ -292,12 +292,22 @@
     $('form').addEventListener('submit', e => { e.preventDefault(); const t = $('input').value.trim(); if (t) mandar(t, null, null); });
 
     // ── GIFs: os emojis que você montou no Monta Emoji (se mexem igual GIF) ──
-    function picker() {
+    // apagando = modo de tirar GIF da lista (toca no 🗑️ e depois no GIF)
+    let apagando = false;
+    function picker(manter) {
       const p = $('picker');
-      if (p.classList.contains('on')) { p.classList.remove('on'); return; }
+      if (!manter && p.classList.contains('on')) { p.classList.remove('on'); apagando = false; return; }
       p.innerHTML = '';
       p.classList.add('on');
-      p.appendChild(el('div', '🎞️ MEUS GIFS', 'sec'));
+      const topo = el('div', null, 'sec');
+      topo.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:8px';
+      topo.appendChild(el('span', apagando ? '🗑️ TOQUE NO GIF PRA TIRAR' : '🎞️ MEUS GIFS'));
+      const lixo = el('button', apagando ? '✅ PRONTO' : '🗑️ APAGAR', 'btn');
+      lixo.type = 'button';
+      lixo.style.cssText = 'padding:2px 10px 0;font-size:13px;' + (apagando ? 'background:var(--verde);' : 'background:var(--rosa);');
+      lixo.onclick = () => { apagando = !apagando; picker(true); };
+      topo.appendChild(lixo);
+      p.appendChild(topo);
       const g = el('div', 'Carregando...', 'dica');
       p.appendChild(g);
       const link = '../monta-emoji/' + (PERFIL ? '?perfil=' + encodeURIComponent(PERFIL) : '');
@@ -305,21 +315,28 @@
         const figs = d.figurinhas || [];
         g.textContent = '';
         if (!figs.length) {
+          lixo.style.display = 'none';
           g.innerHTML = 'Você ainda não tem GIFs. Monte um emoji no <a href="' + link + '">MONTA EMOJI</a> e aperte 💬 SALVAR GIF!';
           return;
         }
         g.className = 'grade';
-        for (const e of figs) {
+        figs.forEach((e, i) => {
           const b = el('button'); b.type = 'button'; b.appendChild(emojiEl(e));
-          b.onclick = () => mandar('', null, e);
+          if (apagando) { b.style.borderColor = '#ff5d8f'; b.style.position = 'relative'; const x = el('span', '✕'); x.style.cssText = 'position:absolute;top:-6px;right:-6px;background:#ff5d8f;color:#fff;border-radius:50%;width:20px;height:20px;font-size:12px;font-weight:800;display:grid;place-items:center;border:2px solid #0e0c33'; b.appendChild(x); }
+          b.onclick = async () => {
+            if (!apagando) return mandar('', null, e);
+            b.disabled = true;
+            try { await api({ action: 'figurinhas', email: eu().email, apagar: i }); picker(true); }
+            catch (err) { $('msg').textContent = 'Não deu pra tirar agora.'; b.disabled = false; }
+          };
           g.appendChild(b);
-        }
+        });
         const mais = el('div', null, 'dica');
         mais.innerHTML = '<a href="' + link + '">➕ Fazer mais GIFs</a>';
         p.appendChild(mais);
       }).catch(() => { g.textContent = 'Não deu pra carregar seus GIFs.'; });
     }
-    $('gif-btn').onclick = picker;
+    $('gif-btn').onclick = () => picker();
 
     // ── Áudio: toca no 🎤 pra gravar, toca de novo pra mandar (até 20 segundos) ──
     let grava = null;
