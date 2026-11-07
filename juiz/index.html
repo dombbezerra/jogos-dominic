@@ -212,20 +212,8 @@ function boneco(cor, cor2, pele = '#f2c18d', num = 0, o = {}) {
     const n = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.55), new THREE.MeshBasicMaterial({ map: textoNumero(num, o.detalhe || '#ffffff'), transparent: true }));
     n.position.set(0, 1.68, -0.28); n.rotation.y = Math.PI; g.add(n);
   }
-  // cabeça com olhinhos, boca e cabelo
-  const cab = peca(new THREE.SphereGeometry(0.4, 16, 14), pele, 0, 2.62, 0);
-  for (const s of [-1, 1]) {
-    peca(new THREE.SphereGeometry(0.075, 8, 8), '#ffffff', s * 0.14, 2.68, 0.33);
-    peca(new THREE.SphereGeometry(0.045, 8, 8), '#1a1a2a', s * 0.14, 2.68, 0.39);
-    peca(new THREE.SphereGeometry(0.06, 8, 8), '#ff9a9a', s * 0.24, 2.55, 0.3).scale.z = 0.4;   // bochecha
-  }
-  peca(new THREE.BoxGeometry(0.16, 0.04, 0.03), '#7a3a2a', 0, 2.5, 0.38);
-  const cc = o.cabelo || sorteia(['#2a1a10', '#3b2414', '#f0c040', '#111111', '#a0522d']);
-  const estilo = o.estilo != null ? o.estilo : Math.floor(Math.random() * 5);
-  if (estilo === 0 || estilo === 4) peca(new THREE.SphereGeometry(0.43, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2.3), cc, 0, 2.66, -0.03);
-  if (estilo === 4) peca(new THREE.BoxGeometry(0.55, 0.14, 0.2), cc, 0, 2.98, 0.24).rotation.x = -0.4;   // topete
-  if (estilo === 1) peca(new THREE.BoxGeometry(0.13, 0.3, 0.7), cc, 0, 3.0, -0.02);   // moicano
-  if (estilo === 2) peca(new THREE.SphereGeometry(0.52, 16, 12), cc, 0, 2.8, -0.1);   // black power
+  // cabeça de manequim: lisinha, sem rosto
+  const cab = peca(new THREE.SphereGeometry(0.4, 18, 16), pele, 0, 2.66, 0); cab.scale.set(0.9, 1.12, 0.95);
   // pernas: calção, canela, meião e chuteira
   const pernas = [], bracos = [];
   for (const s of [-1, 1]) {
@@ -329,7 +317,7 @@ function novoJogo() {
   for (let time = 0; time < 2; time++) {
     FORMACAO.forEach(([x, z], i) => {
       const gk = i === 0, num = gk ? 1 : [0, 3, 4, 8, 10, 9][i];
-      const b = boneco(gk ? (time ? '#ffd23f' : '#2fd15a') : (time ? '#3c8fe0' : '#e04848'), time ? '#1a3a7a' : '#ffffff', sorteia(['#f2c18d', '#d9a070', '#8a5a3a', '#e8b98a', '#5a3a22']), num,
+      const b = boneco(gk ? (time ? '#ffd23f' : '#2fd15a') : (time ? '#3c8fe0' : '#e04848'), time ? '#1a3a7a' : '#ffffff', '#e9e4da', num,
         { meia: time ? '#ffffff' : '#e04848', detalhe: time ? '#ffd23f' : '#ffffff', luva: gk ? '#ff7a00' : null, manga: gk });
       const sx = time ? -1 : 1;
       jogadores.push({ b, time, gk: i === 0, casa: { x: x * sx, z }, x: x * sx, z, vx: 0, vz: 0, vel: (0.16 + Math.random() * 0.03) * E.vel, caido: 0, fora: false, amarelo: false, t: Math.random() * 10 });
