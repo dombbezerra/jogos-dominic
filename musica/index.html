@@ -42,6 +42,24 @@
   .aviso-caixa h2 { font-family: var(--display); font-weight: 400; font-size: 40px; color: #ff5d3a; text-shadow: 3px 3px 0 var(--tinta); margin: 6px 0 4px; }
   .aviso-caixa p { font-weight: 800; font-size: 18px; margin-bottom: 14px; }
   #b-entendi { background: var(--verde); color: #fff; font-family: var(--display); font-weight: 400; font-size: 20px; padding: 8px 28px 4px; }
+  /* Chat do DJ Robô */
+  .ia { margin: 14px auto 6px; max-width: 720px; background: rgba(0,0,0,.28); border: 3px solid var(--tinta); border-radius: 20px; padding: 10px; box-shadow: 0 0 0 3px var(--roxo); }
+  .ia-topo { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .ia-rosto { font-size: 34px; line-height: 1; animation: ia-pula 1.6s ease-in-out infinite; }
+  .ia.pensando .ia-rosto { animation: ia-pensa .5s linear infinite; }
+  @keyframes ia-pula { 50% { transform: translateY(-4px); } }
+  @keyframes ia-pensa { 50% { transform: rotate(12deg); } }
+  .ia-topo b { font-family: var(--display); font-weight: 400; font-size: 20px; color: var(--roxo); display: block; line-height: 1; }
+  .ia-topo small { font-weight: 700; opacity: .85; font-size: 13px; }
+  .ia-msgs { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 2px; }
+  .ia-msg { max-width: 88%; padding: 6px 12px 4px; border-radius: 14px; font-weight: 700; font-size: 15px; line-height: 1.3; }
+  .ia-msg.robo { align-self: flex-start; background: #2e2366; border: 2px solid #4a3a8a; border-bottom-left-radius: 4px; }
+  .ia-msg.eu { align-self: flex-end; background: #1f6a4a; border: 2px solid #2fa070; border-bottom-right-radius: 4px; }
+  .ia-sug { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+  .ia-sug button { font-family: var(--texto); font-weight: 800; font-size: 13px; cursor: pointer; border: 2px solid var(--roxo); background: rgba(176,108,255,.15); color: var(--creme); border-radius: 12px; padding: 3px 10px 1px; }
+  .ia-form { display: flex; gap: 6px; }
+  #ia-input { flex: 1; min-width: 0; padding: 9px 12px; font-size: 16px; border-radius: 14px; border: 3px solid var(--tinta); background: var(--creme); color: var(--tinta); font-family: inherit; font-weight: 700; }
+  #ia-manda { background: var(--roxo); color: #fff; font-size: 20px; padding: 2px 16px 0; }
   .modos { display: flex; justify-content: center; gap: 8px; margin-top: 10px; }
   .modo { font-family: var(--display); font-weight: 400; font-size: 15px; cursor: pointer; border: 3px solid rgba(255,255,255,.2); border-radius: 14px; padding: 5px 14px 2px; background: rgba(255,255,255,.07); color: var(--creme); }
   .modo.on { background: var(--sol); color: var(--tinta); border-color: var(--tinta); box-shadow: 0 4px 0 var(--tinta); }
@@ -101,6 +119,15 @@
       <p>Recomendado jogar com os pais 👨‍👦</p>
       <button class="btn" id="b-entendi">ENTENDI</button>
     </div>
+  </div>
+  <div class="ia">
+    <div class="ia-topo"><span class="ia-rosto">🤖</span><div><b>DJ ROBÔ</b><small>Fala o que você quer, do seu jeito. Eu faço a música!</small></div></div>
+    <div class="ia-msgs" id="ia-msgs"></div>
+    <div class="ia-sug" id="ia-sug"></div>
+    <form class="ia-form" id="ia-form" autocomplete="off">
+      <input id="ia-input" maxlength="160" placeholder="Ex: faz um funk pesado com a voz falando bora">
+      <button class="btn" id="ia-manda" aria-label="Mandar">➤</button>
+    </form>
   </div>
   <div id="vis"></div>
 
@@ -179,6 +206,7 @@ const ajeita = g => { if (g && g.length === 12) g.splice(4, 0, ...[0, 1, 2].map(
 if (dados.atual) ajeita(dados.atual.grade);
 dados.salvas.forEach(m => ajeita(m.grade));
 fala = dados.fala || 0;
+let falaCustom = dados.falaCustom || '';   // o que o DJ Robô mandou a voz falar
 
 // dados.atual = a música do fácil; dados.dificil = a do difícil
 modo = dados.modo || 'dificil';
@@ -196,7 +224,7 @@ function carregaModo() {
 const guardaAtual = () => {
   const v = { grade, inst, bpm: +$('tempo').value };
   if (modo === 'facil') dados.atual = v; else dados.dificil = v;
-  dados.modo = modo; dados.fala = fala; grava(dados);
+  dados.modo = modo; dados.fala = fala; dados.falaCustom = falaCustom; grava(dados);
 };
 
 // ══════════════ SONS (feitos na hora) ══════════════
@@ -216,7 +244,7 @@ function audio() {
 function falar(atraso) {
   if (!window.speechSynthesis) return;
   const dizer = () => {
-    const u = new SpeechSynthesisUtterance(FALAS[fala]);
+    const u = new SpeechSynthesisUtterance(falaCustom || FALAS[fala]);
     u.lang = 'pt-BR'; u.rate = 1.5; u.pitch = 0.9; u.volume = 1;
     speechSynthesis.cancel(); speechSynthesis.speak(u);
   };
@@ -298,9 +326,9 @@ function monta() {
     r.innerHTML = '<span class="em"></span><span class="nm"></span>';
     r.querySelector('.em').textContent = L.tipo === 'nota' ? '●' : L.em;
     if (L.tipo === 'nota') r.querySelector('.em').style.color = L.cor;
-    r.querySelector('.nm').textContent = L.id === 'voz' ? FALAS[fala] : L.nome;
+    r.querySelector('.nm').textContent = L.id === 'voz' ? (falaCustom || FALAS[fala]) : L.nome;
     r.onclick = () => {
-      if (L.id === 'voz') { fala = (fala + 1) % FALAS.length; r.querySelector('.nm').textContent = FALAS[fala]; guardaAtual(); mensagem('🎤 A voz agora fala: ' + FALAS[fala]); }
+      if (L.id === 'voz') { falaCustom = ''; fala = (fala + 1) % FALAS.length; r.querySelector('.nm').textContent = FALAS[fala]; guardaAtual(); mensagem('🎤 A voz agora fala: ' + FALAS[fala]); }
       tocaLinha(L);
     };
     g.appendChild(r);
@@ -438,7 +466,7 @@ $('b-limpa').onclick = () => {
 };
 $('b-guarda').onclick = () => {
   if (!grade.some(l => l.some(Boolean))) { mensagem('Coloque alguns sons antes de salvar!'); return; }
-  const nome = 'Música ' + (dados.salvas.length + 1);
+  const nome = tituloIA || 'Música ' + (dados.salvas.length + 1);
   dados.salvas.unshift({ nome: nome + (modo === 'dificil' ? ' 🔥' : ''), modo, grade: JSON.parse(JSON.stringify(grade)), inst, bpm: +$('tempo').value });
   if (dados.salvas.length > 30) dados.salvas.length = 30;
   grava(dados); lista();
@@ -472,6 +500,160 @@ function trocaModo(novo) {
 }
 $('m-facil').onclick = () => { trocaModo('facil'); mensagem('😊 Modo FÁCIL: ritmos prontos e as notas sempre combinam.'); };
 $('m-dificil').onclick = () => { trocaModo('dificil'); mensagem('🔥 Modo DIFÍCIL: 32 quadradinhos, 13 notas, e você faz tudo sozinho!'); };
+// ══════════════ DJ ROBÔ: entende o pedido e monta a música sozinho ══════════════
+let tituloIA = '';
+const semAcento = t => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const sorteia = l => l[Math.floor(Math.random() * l.length)];
+// Estilos: bateria (16 passos, repete), velocidade, instrumento, escala e se tem voz
+const ESTILOS = {
+  funk:      { nome: 'funk tamborzão', palavras: ['funk', 'tamborzao', 'baile', 'favela', 'mc '], bpm: 128, inst: 'synth', escala: 'menor', voz: true,
+    b: { bumbo: [0, 6, 10], palma: [4, 12], chimbal: [2, 6, 10, 14], tambor: [0, 3, 6, 8, 10, 13], grave: [0, 10] } },
+  mandelao:  { nome: 'mandelão', palavras: ['mandelao', 'mandela', 'pesado', 'pancadao', 'grave', 'bass'], bpm: 130, inst: 'synth', escala: 'menor', voz: true,
+    b: { bumbo: [0, 3, 8, 11], palma: [4, 12], chimbal: [0, 2, 4, 6, 8, 10, 12, 14], grave: [0, 3, 8, 11] } },
+  rave:      { nome: 'funk rave', palavras: ['rave', 'balada', 'festa', 'danca', 'dancar'], bpm: 135, inst: 'gamer', escala: 'menor', voz: true,
+    b: { bumbo: [0, 4, 8, 12], palma: [4, 12], chimbal: [2, 6, 10, 14], tambor: [3, 7, 11, 15], grave: [0, 6, 10] } },
+  trap:      { nome: 'trap', palavras: ['trap', 'rap', 'hip hop', 'hiphop', 'drill'], bpm: 140, inst: 'sino', escala: 'menor', voz: true,
+    b: { bumbo: [0, 7, 10], caixa: [8], palma: [8], chimbal: [0, 1, 2, 4, 5, 6, 8, 9, 10, 11, 12, 14, 15], grave: [0, 7, 10] } },
+  eletronica:{ nome: 'eletrônica', palavras: ['eletronica', 'eletro', 'dj', 'edm', 'techno', 'house'], bpm: 128, inst: 'synth', escala: 'maior', voz: false,
+    b: { bumbo: [0, 4, 8, 12], palma: [4, 12], chimbal: [2, 6, 10, 14], grave: [2, 6, 10, 14] } },
+  rock:      { nome: 'rock', palavras: ['rock', 'guitarra', 'banda', 'metal'], bpm: 120, inst: 'synth', escala: 'menor', voz: false,
+    b: { bumbo: [0, 8, 10], caixa: [4, 12], chimbal: [0, 2, 4, 6, 8, 10, 12, 14] } },
+  game:      { nome: 'música de videogame', palavras: ['game', 'videogame', 'jogo', '8 bit', '8bit', 'mario', 'minecraft', 'pixel', 'fase', 'chefao', 'boss'], bpm: 145, inst: 'gamer', escala: 'maior', voz: false,
+    b: { bumbo: [0, 8], caixa: [4, 12], chimbal: [0, 2, 4, 6, 8, 10, 12, 14] } },
+  lofi:      { nome: 'lo-fi calminha', palavras: ['lofi', 'lo-fi', 'calma', 'calmo', 'dormir', 'relax', 'estudar', 'chill', 'tranquil'], bpm: 80, inst: 'piano', escala: 'penta', voz: false,
+    b: { bumbo: [0, 10], caixa: [8], chimbal: [0, 4, 8, 12] } },
+  pop:       { nome: 'pop', palavras: ['pop', 'radio', 'feliz', 'alegre', 'divertid'], bpm: 116, inst: 'piano', escala: 'maior', voz: false,
+    b: { bumbo: [0, 8, 11], palma: [4, 12], chimbal: [0, 2, 4, 6, 8, 10, 12, 14] } },
+};
+const ESCALAS = { maior: [0, 2, 4, 5, 7, 9, 11, 12], menor: [0, 2, 3, 5, 7, 8, 10, 12], penta: [0, 2, 4, 7, 9, 12], terror: [0, 1, 3, 6, 7, 8, 11, 12] };
+let estiloIA = null;
+const linha = id => LINHAS.findIndex(L => L.id === id);
+const notaLinha = semitom => LINHAS.findIndex(L => L.tipo === 'nota' && Math.abs(Math.log2(L.f / 523.25) * 12 - semitom) < 0.01);
+function pBateria(E) {
+  for (const L of LINHAS) if (L.tipo === 'bateria' && L.id !== 'voz') grade[linha(L.id)] = Array(PASSOS).fill(false);
+  for (const id in E.b) {
+    const li = linha(id); if (li < 0) continue;
+    for (let rep = 0; rep < PASSOS / 16; rep++) for (const p of E.b[id]) grade[li][rep * 16 + p] = true;
+  }
+  // virada no finalzinho: caixa rapidinha
+  const cx = linha('caixa'); if (cx >= 0 && PASSOS === 32 && Math.random() < 0.7) for (const p of [28, 29, 30, 31]) grade[cx][p] = Math.random() < 0.75;
+}
+function pVoz(E, ligada) {
+  const vz = linha('voz'); grade[vz] = Array(PASSOS).fill(false);
+  if (!ligada) return;
+  for (const p of (PASSOS === 32 ? [0, 16] : [0])) grade[vz][p] = true;
+  if (Math.random() < 0.5 && PASSOS === 32) grade[vz][24] = true;
+}
+function pMelodia(escala, densidade) {
+  for (const L of LINHAS) if (L.tipo === 'nota') grade[LINHAS.indexOf(L)] = Array(PASSOS).fill(false);
+  const graus = ESCALAS[escala];
+  // um pedacinho de 8 passos que se repete com variação (fica com cara de música)
+  let g = Math.floor(graus.length / 2);
+  const motivo = [];
+  for (let p = 0; p < 8; p++) {
+    if (Math.random() < (p % 2 === 0 ? densidade : densidade * 0.4)) { motivo.push(g); g = Math.max(0, Math.min(graus.length - 1, g + sorteia([-2, -1, -1, 1, 1, 2, 0]))); }
+    else motivo.push(null);
+  }
+  if (motivo.every(x => x == null)) motivo[0] = 0;
+  for (let p = 0; p < PASSOS; p++) {
+    let grau = motivo[p % 8];
+    if (grau == null) continue;
+    if (p >= 8 && p % 16 >= 8) grau = Math.max(0, Math.min(graus.length - 1, grau + sorteia([0, 0, 1, -1, 2])));   // variação na segunda parte
+    const li = notaLinha(graus[grau]); if (li >= 0) grade[li][p] = true;
+  }
+}
+const TITULOS_A = ['Batida', 'Pancada', 'Vibe', 'Noite', 'Onda', 'Baile', 'Trovão', 'Ritmo', 'Som'];
+const TITULOS_B = ['do Dominic', 'Elétrica', 'da Quebrada', 'Galáctica', 'do Futuro', 'Explosiva', 'do Trovão', 'de Ouro', 'Sinistra'];
+function falaRobo(t) {
+  const box = $('ia-msgs');
+  const m = document.createElement('div'); m.className = 'ia-msg robo'; m.textContent = t; box.appendChild(m);
+  box.scrollTop = box.scrollHeight;
+}
+function falaEu(t) {
+  const box = $('ia-msgs');
+  const m = document.createElement('div'); m.className = 'ia-msg eu'; m.textContent = t; box.appendChild(m);
+  box.scrollTop = box.scrollHeight;
+}
+function cerebro(original) {
+  const t = semAcento(original);
+  const tem = (...ps) => ps.some(p => new RegExp('(^|[^a-z0-9])' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(t));
+  const feito = [];
+  let mexeu = false, nova = false;
+  // a palavra que a voz vai falar (entre aspas, ou depois de "falando"/"fala"/"gritando")
+  let palavra = (original.match(/["“'”]([^"“'”]{1,20})["“'”]/) || [])[1];
+  if (!palavra) { const m = original.match(/(?:falando|fala|falar|grita|gritando|dizendo|diz)\s+([\p{L}\p{N}!?\s]{1,20})/iu); if (m) palavra = m[1].trim().split(/\s+/).slice(0, 3).join(' '); }
+  // estilo novo?
+  let E = null;
+  for (const k in ESTILOS) if (tem(...ESTILOS[k].palavras)) { E = ESTILOS[k]; break; }
+  // "coloca/troca/tira/mais..." com uma música já feita = só mexer nela (não fazer outra)
+  const ajuste = tem('coloca', 'bota', 'poe', 'troca', 'tira', 'muda', 'mais', 'menos', 'adiciona', 'aumenta', 'diminui', 'sem ');
+  const pedeNova = tem('faz', 'cria', 'crie', 'musica nova', 'outra musica', 'nova musica', 'me surpreend', 'surpreend', 'quero uma', 'quero um');
+  if (ajuste && !pedeNova && grade.some(l => l.some(Boolean))) E = null;
+  // humor
+  let escala = null, bpmDelta = 0, humor = '';
+  if (tem('trist', 'chorar', 'saudade', 'sad', 'deprê', 'depre')) { escala = 'menor'; bpmDelta -= 30; humor = 'triste'; }
+  if (tem('feliz', 'alegre', 'animad')) { escala = 'maior'; humor = 'alegre'; }
+  if (tem('terror', 'medo', 'assust', 'sinistr', 'misterio', 'suspense', 'fantasma', 'zumbi')) { escala = 'terror'; bpmDelta -= 15; humor = 'de terror'; }
+  if (tem('epic', 'batalha', 'guerra', 'heroi')) { escala = 'menor'; bpmDelta += 10; humor = 'épico'; }
+  const querNova = E || (humor && !ajuste) || pedeNova || tem('quero', 'manda', 'bota uma', 'qualquer');
+  if (querNova && !(ajuste && !pedeNova && grade.some(l => l.some(Boolean)))) {
+    if (!E) E = humor === 'triste' ? ESTILOS.lofi : humor === 'de terror' ? ESTILOS.trap : humor === 'épico' ? ESTILOS.rock : humor === 'alegre' ? ESTILOS.pop : sorteia(Object.values(ESTILOS));
+    estiloIA = E; nova = true; mexeu = true;
+    inst = E.inst;
+    $('tempo').value = Math.max(70, Math.min(170, E.bpm + bpmDelta));
+    pBateria(E);
+    pMelodia(escala || E.escala, humor === 'triste' ? 0.45 : 0.62);
+    pVoz(E, E.voz && !tem('sem voz') || !!palavra || tem('com voz', 'voz'));
+    tituloIA = sorteia(TITULOS_A) + ' ' + sorteia(TITULOS_B);
+    feito.push('Fiz ' + (E.nome.startsWith('música') ? 'uma ' : 'um ') + E.nome + (humor ? ' ' + humor : '') + ' a ' + $('tempo').value + ' BPM');
+    if (tem('pesad', 'grave', 'estoura', 'treme')) { const gv = linha('grave'), bb = linha('bumbo'); for (let p = 0; p < PASSOS; p++) if (grade[bb][p]) grade[gv][p] = true; feito.push('bem pesado com grave 808 🔊'); }
+  }
+  // ajustes na música de agora
+  if (tem('mais rapido', 'acelera', 'rapidao', 'mais rapida')) { $('tempo').value = Math.min(170, +$('tempo').value + 15); feito.push('deixei mais rápido (' + $('tempo').value + ' BPM)'); mexeu = true; }
+  if (tem('mais devagar', 'mais lento', 'mais lenta', 'devagarinho')) { $('tempo').value = Math.max(70, +$('tempo').value - 15); feito.push('deixei mais devagar (' + $('tempo').value + ' BPM)'); mexeu = true; }
+  if (!nova && tem('mais pesad', 'mais grave', 'pesad', 'treme', 'estoura')) { const gv = linha('grave'), bb = linha('bumbo'); for (let p = 0; p < PASSOS; p++) if (grade[bb][p]) grade[gv][p] = true; for (const p of [0, 16].filter(p => p < PASSOS)) grade[bb][p + 3] = true; feito.push('coloquei mais grave 808 🔊'); mexeu = true; }
+  if (tem('mais leve', 'suave', 'menos grave', 'tira o grave', 'sem grave')) { grade[linha('grave')] = Array(PASSOS).fill(false); feito.push('tirei o grave'); mexeu = true; }
+  if (tem('tamborzao', 'tambor') && !nova) { const tb = linha('tambor'); for (let r = 0; r < PASSOS / 16; r++) for (const p of [0, 3, 6, 8, 10, 13]) grade[tb][r * 16 + p] = true; feito.push('coloquei tamborzão 🪘'); mexeu = true; }
+  if (tem('palma') && !nova) { const pl = linha('palma'); for (let p = 4; p < PASSOS; p += 8) grade[pl][p] = true; feito.push('coloquei palmas 👏'); mexeu = true; }
+  if (tem('sem voz', 'tira a voz', 'sem a voz')) { grade[linha('voz')] = Array(PASSOS).fill(false); feito.push('tirei a voz'); mexeu = true; }
+  if (palavra) {
+    falaCustom = palavra.slice(0, 20);
+    const vz = linha('voz'); if (!grade[vz].some(Boolean)) pVoz(null, true);
+    feito.push('a voz agora fala "' + falaCustom + '" 🎤'); mexeu = true;
+  }
+  if (tem('muda a melodia', 'troca a melodia', 'outra melodia', 'melodia nova')) { pMelodia(escala || (estiloIA && estiloIA.escala) || 'penta', 0.6); feito.push('fiz uma melodia nova 🎵'); mexeu = true; }
+  if (tem('sem bateria', 'tira a bateria')) { for (const L of LINHAS) if (L.tipo === 'bateria' && L.id !== 'voz') grade[linha(L.id)] = Array(PASSOS).fill(false); feito.push('tirei a bateria'); mexeu = true; }
+  if (tem('so bateria', 'sem melodia', 'tira a melodia', 'sem nota')) { for (const L of LINHAS) if (L.tipo === 'nota') grade[LINHAS.indexOf(L)] = Array(PASSOS).fill(false); feito.push('deixei só a batida'); mexeu = true; }
+  for (const [p, id, nome] of [['piano', 'piano', 'piano 🎹'], ['8 bit', 'gamer', '8-bit 👾'], ['8bit', 'gamer', '8-bit 👾'], ['flauta', 'flauta', 'flauta 🪈'], ['synth', 'synth', 'synth 🎛️'], ['sintetiz', 'synth', 'synth 🎛️'], ['sino', 'sino', 'sininho 🔔']])
+    if (t.includes(p) && !nova) { inst = id; feito.push('troquei pro ' + nome); mexeu = true; break; }
+  if (tem('limpa', 'apaga tudo', 'zera')) { grade = LINHAS.map(() => Array(PASSOS).fill(false)); feito.length = 0; feito.push('apaguei tudo, tá limpinho'); mexeu = true; tituloIA = ''; }
+  if (tem('para de', 'pare', 'chega', 'stop', 'desliga') && !mexeu) { if (tocando) stop(); return 'Parei a música! ⏹ Quando quiser, é só pedir de novo.'; }
+  if (tem('nome', 'titulo') && !nova) { tituloIA = sorteia(TITULOS_A) + ' ' + sorteia(TITULOS_B); return 'Que tal o nome "' + tituloIA + '"? 😎 Aperte 💾 SALVAR que ela fica guardada com esse nome.'; }
+  if (!mexeu) {
+    // não entendeu: faz alguma coisa mesmo assim
+    return cerebro('faz uma música');
+  }
+  monta(); montaInstrumentos(); guardaAtual();
+  if (tocando) { stop(); } play();
+  let resposta = feito.join(', ') + '! ';
+  if (nova) resposta += 'O nome dela é "' + tituloIA + '". ';
+  resposta += sorteia(['Quer mais pesado? Mais rápido? Com voz falando alguma coisa?', 'Gostou? Fala o que mudar!', 'Ficou da hora? Posso deixar mais grave, mais rápido ou trocar o instrumento.', 'Quer que a voz fale alguma coisa? É só pedir: fala "bora"!']);
+  return resposta.charAt(0).toUpperCase() + resposta.slice(1);
+}
+function pedir(txt) {
+  txt = String(txt || '').trim();
+  if (!txt) return;
+  falaEu(txt);
+  $('ia-input').value = '';
+  $('ia-msgs').closest('.ia').classList.add('pensando');
+  setTimeout(() => { $('ia-msgs').closest('.ia').classList.remove('pensando'); falaRobo(cerebro(txt)); }, 650);
+}
+$('ia-form').addEventListener('submit', e => { e.preventDefault(); pedir($('ia-input').value); });
+for (const sug of ['Faz um funk pesado 🔥', 'Música triste 😢', 'De videogame 👾', 'Trap com voz falando "bora"', 'Mais rápido 🐇', 'Muda a melodia 🎵', 'Música de terror 👻', 'Me surpreenda 🎲']) {
+  const b = document.createElement('button'); b.type = 'button'; b.textContent = sug; b.onclick = () => pedir(sug.replace(/[^\p{L}\p{N}"\s]/gu, '').trim()); $('ia-sug').appendChild(b);
+}
+falaRobo('Oi! Eu sou o DJ ROBÔ 🤖🎧 Me fala que música você quer, do seu jeito! Pode ser "funk pesado", "música triste", "de videogame"... ou toca num botão aí embaixo.');
+
 modo = 'dificil';   // agora o estúdio é só no difícil
 carregaModo();
 $('b-entendi').onclick = () => $('aviso').classList.add('fechado');
