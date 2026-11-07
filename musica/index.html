@@ -435,6 +435,50 @@ function entende(original) {
   return [intro + ' "' + m.titulo + '", ' + (E.nome === 'Bossa Nova' ? 'uma ' : 'um ') + E.nome + (humor ? ' ' + HUMOR_NOME[humor] : '') + '. ' + (m.letra ? 'Coloquei a sua letra 🎤 ' : '') + sorteia(['Se quiser letra, fala: coloca a letra ... (o que você quiser) ✍️', 'Quer mais pesado, mais rápido ou com a voz falando alguma coisa?', 'Se quiser, posso mudar a melodia, o instrumento ou o nome.', 'Gostou? Aperta 💾 Salvar!']), m];
 }
 let ocupado = false;
+// ── Quando o pai colocar a chave, quem cria é o Claude (api/dj); sem chave, é o robozinho daqui ──
+let temCerebro = true;   // vira false se o servidor disser que não tem chave
+const historico = [];
+const n = (v, a, b, d) => { v = Math.round(Number(v)); return Number.isFinite(v) ? Math.max(a, Math.min(b, v)) : d; };
+const passos16 = l => Array.isArray(l) ? [...new Set(l.map(x => n(x, 0, 15, -1)).filter(x => x >= 0))] : [];
+// O que vem da IA é conferido antes de tocar (nada fora do lugar quebra o som)
+function limpaMusica(x) {
+  if (!x || typeof x !== 'object') return null;
+  const estilo = ESTILOS[x.estilo] ? x.estilo : 'pop';
+  const m = novaMusica(ESTILOS[estilo], ['triste', 'alegre', 'terror', 'epico'].includes(x.humor) ? x.humor : '');
+  m.titulo = String(x.titulo || m.titulo).slice(0, 40);
+  m.bpm = n(x.bpm, 70, 170, m.bpm);
+  m.raiz = n(x.raiz, -5, 6, m.raiz);
+  if (ESCALAS[x.escala]) m.escala = x.escala;
+  if (Array.isArray(x.prog) && x.prog.length >= 4) m.prog = x.prog.slice(0, 4).map(g => n(g, 0, 6, 0));
+  if (['piano', 'pluck', 'synth', 'gamer', 'sino', 'guitarra', 'cavaco', 'sanfona'].includes(x.lead)) m.lead = x.lead;
+  if (typeof x.pad === 'boolean') m.pad = x.pad;
+  if (['808', 'synth', 'suave', 'gamer', 'violao7', ''].includes(x.baixo)) m.baixo = x.baixo;
+  m.pesado = n(x.pesado, 0, 3, 0);
+  if (x.bateria && typeof x.bateria === 'object') { m.bateria = {}; for (const id of ['bumbo', 'caixa', 'palma', 'chimbal', 'tambor']) { const l = passos16(x.bateria[id]); if (l.length) m.bateria[id] = l; } }
+  if (Array.isArray(x.baixoPassos)) m.baixoPassos = passos16(x.baixoPassos);
+  if (Array.isArray(x.melodia) && x.melodia.length) { m.melodia = Array(64).fill(null); for (let i = 0; i < 64; i++) { const v = x.melodia[i]; m.melodia[i] = v == null ? null : n(v, -2, 9, null); } }
+  m.voz = !!x.voz;
+  if (x.palavra) m.palavra = String(x.palavra).slice(0, 24);
+  m.letra = Array.isArray(x.letra) && x.letra.length ? x.letra.slice(0, 8).map(t => String(t).slice(0, 40)).filter(Boolean) : null;
+  if (x.capa && typeof x.capa === 'object') {
+    const cor = c => /^#[0-9a-f]{6}$/i.test(String(c)) ? c : null;
+    m.capa = { emoji: String(x.capa.emoji || m.capa.emoji).slice(0, 8), c1: cor(x.capa.c1) || m.capa.c1, c2: cor(x.capa.c2) || m.capa.c2 };
+  }
+  m.id = Date.now() + Math.random();
+  return m;
+}
+async function perguntaClaude(texto) {
+  if (!temCerebro) return null;
+  try {
+    const r = await fetch('/api/dj/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto, atual: ultima, historico }) });
+    if (!r.ok) return null;
+    const d = await r.json();
+    if (d.semChave) { temCerebro = false; return null; }
+    if (d.limite) return { resposta: 'Ufa, já fiz muita música hoje! 😅 Por enquanto vou usar meu modo simples, tá?', musica: null, simples: true };
+    if (!d.resposta && !d.musica) return null;
+    return { resposta: d.resposta, musica: limpaMusica(d.musica) };
+  } catch (e) { return null; }
+}
 function pedir(texto) {
   texto = String(texto || '').trim();
   if (!texto || ocupado) return;
@@ -444,14 +488,21 @@ function pedir(texto) {
   $('texto').value = '';
   const d = document.createElement('div'); d.className = 'msg ia'; d.innerHTML = '<div class="av">🎧</div><div class="txt digitando"><span></span><span></span><span></span></div>';
   $('conversa').appendChild(d); $('main').scrollTop = $('main').scrollHeight;
-  setTimeout(() => {
-    d.remove();
-    const [resposta, musica] = entende(texto);
-    ultima = musica;
-    const c = msg('ia', resposta, musica);
-    toca(musica, c);   // já começa a tocar
-    ocupado = false; $('enviar').disabled = false;
-  }, 900 + Math.random() * 600);
+  const inicio = Date.now();
+  perguntaClaude(texto).then(ia => {
+    let resposta, musica;
+    if (ia && ia.musica) { resposta = ia.resposta || 'Fiz essa pra você!'; musica = ia.musica; }
+    else if (ia && ia.resposta && !ia.simples) { resposta = ia.resposta; musica = null; }   // a IA só respondeu (ex: recusou um pedido)
+    else { const r = entende(texto); resposta = (ia && ia.simples ? ia.resposta + '\n' : '') + r[0]; musica = r[1]; }
+    historico.push(texto); if (historico.length > 6) historico.shift();
+    setTimeout(() => {
+      d.remove();
+      if (musica) ultima = musica;
+      const c = msg('ia', resposta, musica);
+      if (musica) toca(musica, c);   // já começa a tocar
+      ocupado = false; $('enviar').disabled = false;
+    }, Math.max(0, 900 - (Date.now() - inicio)));
+  });
 }
 $('form').addEventListener('submit', e => { e.preventDefault(); pedir($('texto').value); });
 
