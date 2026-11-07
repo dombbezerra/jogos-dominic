@@ -62,7 +62,11 @@
   .op { font-family: var(--texto); font-weight: 800; font-size: 17px; cursor: pointer; border: 3px solid var(--tinta); border-radius: 14px; padding: 9px 14px 6px; box-shadow: 0 5px 0 var(--tinta); min-width: 104px; }
   .op:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--tinta); }
   .op.siga { background: #e6edf5; color: var(--tinta); } .op.falta { background: #5cb8ff; color: var(--tinta); }
-  .op.amarelo { background: #ffd23f; color: var(--tinta); } .op.vermelho { background: #ff3b3b; color: #fff; } .op.penalti { background: #2fd15a; color: #fff; }
+  .op.amarelo { background: #ffd23f; color: var(--tinta); } .op.vermelho { background: #ff3b3b; color: #fff; } .op.penalti, .op.gol { background: #2fd15a; color: #fff; } .op.impedimento { background: #ff8a3d; color: #fff; } .op.naogol { background: #e6edf5; color: var(--tinta); }
+  #var { margin-top: 8px; font-weight: 800; font-size: 14px; background: #7a3cff; border: 2px solid #fff; color: #fff; border-radius: 10px; padding: 3px 12px 1px; cursor: pointer; font-family: inherit; }
+  #var-tag small { display: block; font-family: var(--texto); font-weight: 800; font-size: 14px; }
+  #var-tag { position: fixed; left: 12px; top: calc(env(safe-area-inset-top) + 60px); z-index: 12; background: #7a3cff; color: #fff; font-family: var(--display); font-size: 20px; padding: 4px 12px 2px; border-radius: 10px; border: 3px solid #fff; display: none; }
+  body.var #var-tag { display: block; }
   #replay { margin-top: 8px; font-weight: 800; font-size: 14px; background: none; border: 2px solid rgba(255,255,255,.5); color: #fff; border-radius: 10px; padding: 3px 12px 1px; cursor: pointer; font-family: inherit; }
 
   /* Celular */
@@ -92,7 +96,8 @@
   <div class="botoes"><button class="btn" id="b-sair">SAIR</button><button class="btn grande" id="b-continuar" style="margin-top:0">▶ CONTINUAR</button></div>
 </div>
 <div id="longe">📏 Chegue mais perto do lance!</div>
-<div id="decisao"><h2>🧑‍⚖️ O QUE VOCÊ MARCA?</h2><div class="opcoes" id="opcoes"></div><button id="replay">🔁 Ver de novo</button></div>
+<div id="decisao"><h2>🧑‍⚖️ O QUE VOCÊ MARCA?</h2><div class="opcoes" id="opcoes"></div><button id="replay">🔁 Ver de novo</button> <button id="var">📺 VAR</button></div>
+<div id="var-tag">📺 VAR</div>
 <div id="toque"><div id="stick"><div id="knob"></div></div><button id="correr">CORRER</button></div>
 
 <div class="tela" id="menu">
@@ -129,11 +134,11 @@ const isAdm = (() => { try { const m = JSON.parse(localStorage.getItem('aventura
 if (isAdm) save.liberado = 4;   // ADM: carreira toda liberada
 const grava = () => { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { /* ok */ } };
 const ETAPAS = [
-  { nome: 'Várzea', ic: '🌳', torcida: 0.25, vel: 0.85, lances: 6, precisa: 6 },
-  { nome: 'Estadual', ic: '🏟️', torcida: 0.5, vel: 0.95, lances: 7, precisa: 6.5 },
-  { nome: 'Brasileirão', ic: '🇧🇷', torcida: 0.75, vel: 1.05, lances: 8, precisa: 7 },
-  { nome: 'Libertadores', ic: '🏆', torcida: 0.9, vel: 1.12, lances: 9, precisa: 7.5 },
-  { nome: 'Copa do Mundo', ic: '🌍', torcida: 1, vel: 1.2, lances: 10, precisa: 8 },
+  { nome: 'Várzea', ic: '🌳', torcida: 0.25, vel: 0.85, lances: 10, precisa: 6 },
+  { nome: 'Estadual', ic: '🏟️', torcida: 0.5, vel: 0.95, lances: 11, precisa: 6.5 },
+  { nome: 'Brasileirão', ic: '🇧🇷', torcida: 0.75, vel: 1.05, lances: 12, precisa: 7 },
+  { nome: 'Libertadores', ic: '🏆', torcida: 0.9, vel: 1.12, lances: 13, precisa: 7.5 },
+  { nome: 'Copa do Mundo', ic: '🌍', torcida: 1, vel: 1.2, lances: 14, precisa: 8 },
 ];
 function mostraCarreira() {
   const c = $('carreira'); c.innerHTML = '';
@@ -183,15 +188,19 @@ const CW = 100, CH = 64;
   fora.rotation.x = -Math.PI / 2; fora.position.y = -0.05; cena.add(fora);
 })();
 // Gols
+const gols = [];
 function gol(x) {
   const g = new THREE.Group(), m = new THREE.MeshLambertMaterial({ color: '#ffffff' });
   for (const z of [-3.7, 3.7]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.3, 2.6, 0.3), m); p.position.set(0, 1.3, z); g.add(p); }
   const t = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 7.7), m); t.position.y = 2.6; g.add(t);
   const rede = new THREE.Mesh(new THREE.BoxGeometry(2, 2.6, 7.4), new THREE.MeshLambertMaterial({ color: '#ffffff', transparent: true, opacity: 0.25 }));
   rede.position.set(Math.sign(x) * 1, 1.3, 0); g.add(rede);
-  g.position.set(x, 0, 0); cena.add(g);
+  g.position.set(x, 0, 0); cena.add(g); gols.push(g);
 }
 gol(-CW / 2 - 0.2); gol(CW / 2 + 0.2);
+// linhas que o VAR desenha no campo
+function faixa(cor, w, d) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshBasicMaterial({ color: cor, transparent: true, opacity: 0.85 })); m.rotation.x = -Math.PI / 2; m.position.y = 0.04; m.visible = false; cena.add(m); return m; }
+const linhaDef = faixa('#c03cff', 0.14, CH), linhaAtq = faixa('#ffd23f', 0.14, CH), linhaGol = faixa('#ffe14a', 0.1, 9);
 // Arquibancadas com torcida (pontinhos coloridos)
 const arquib = [];
 function arquibancada(w, d, x, z, rot) {
@@ -368,7 +377,7 @@ function novoJogo() {
   juiz.visible = false; anel.visible = false;   // você É o juiz (primeira pessoa)
   camera.fov = 72; camera.updateProjectionMatrix();
   M = { E, jogadores, juiz, anel, ref: { x: 0, z: 10 }, yaw: -Math.PI / 2, pitch: -0.12, olhou: 0, andando: 0, bola: { x: 0, z: 0, y: 0.22, vx: 0, vz: 0, vy: 0, dono: null, m: bolaM },
-    placar: [0, 0], tempo: 180 * 60, t: 0, pausa: 90, lances: 0, proximoLance: 360 + Math.random() * 300, acertos: 0, pontos: 0, max: 0, lance: null, lento: 1, replay: null, camAlvo: new THREE.Vector3() };
+    placar: [0, 0], tempo: 180 * 60, t: 0, pausa: 90, lances: 0, proximoLance: 240 + Math.random() * 200, proxTipo: null, esperaTipo: 0, var: false, acertos: 0, pontos: 0, max: 0, lance: null, lento: 1, replay: null, camAlvo: new THREE.Vector3() };
   for (const p of jogadores) p.b.position.set(p.x, 0, p.z);
   saidaDeBola(0);
   M.pausa = 0;
@@ -407,6 +416,7 @@ function limpa() {
   if (!M) return;
   for (const p of M.jogadores) cena.remove(p.b);
   cena.remove(M.juiz); cena.remove(M.bola.m); cena.remove(M.anel);
+  gols.forEach(g => { g.visible = true; }); linhaDef.visible = linhaAtq.visible = linhaGol.visible = false; document.body.classList.remove('var');
   M = null;
 }
 function saidaDeBola(time) {
@@ -486,7 +496,119 @@ function comecaLance(atacante, defensor) {
   M.bola.dono = null; M.bola.vx *= 0.3; M.bola.vz *= 0.3;
   M.lances++;
 }
+// 🚩 Impedimento: na hora do passe, o atacante está na frente do último defensor?
+const frente = dir => dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+function comecaImped(dono) {
+  const at = dono.time, dir = Math.sign(meta(at));
+  const defs = M.jogadores.filter(p => p.time !== at && !p.fora && !p.gk);
+  const ataq = M.jogadores.filter(p => p.time === at && !p.fora && !p.gk && p !== dono);
+  if (!defs.length || !ataq.length) return false;
+  const linhaX = dir * clamp(dono.x * dir + 14, 6, 30);
+  dono.x = linhaX - dir * 12;
+  const ultimo = defs.sort((p, q) => q.x * dir - p.x * dir)[0];
+  ultimo.x = linhaX; ultimo.z = clamp(dono.z + (Math.random() - 0.5) * 14, -22, 22);
+  for (const p of defs) if (p !== ultimo && p.x * dir > linhaX * dir - 2) p.x = linhaX - dir * (2 + Math.random() * 6);
+  const rec = ataq.sort((p, q) => q.x * dir - p.x * dir)[0];
+  const impedido = Math.random() < 0.5;
+  rec.x = linhaX + dir * (impedido ? 0.5 + Math.random() * 1.3 : -(0.3 + Math.random() * 1.2));
+  rec.z = clamp(ultimo.z + (Math.random() < 0.5 ? -1 : 1) * (3 + Math.random() * 5), -26, 26);
+  for (const p of ataq) if (p !== rec && p.x * dir > linhaX * dir - 1) p.x = linhaX - dir * (3 + Math.random() * 5);
+  for (const p of M.jogadores) { p.vx = p.vz = 0; }
+  const b = M.bola; b.dono = null; b.x = dono.x + dir * 0.5; b.z = dono.z; b.y = 0.22;
+  rec.b.rotation.y = frente(dir); ultimo.b.rotation.y = frente(dir); dono.b.rotation.y = frente(dir);
+  M.lance = { tipo: 'imped', certo: impedido ? 'impedimento' : 'siga', atacante: rec, defensor: ultimo, passador: dono, dir, linhaX, t: 0, x: linhaX, z: rec.z,
+    snap: { rx: rec.x, rz: rec.z, dx: ultimo.x, dz: ultimo.z, bx: b.x, bz: b.z } };
+  M.lento = 0.25; M.lances++;
+  return true;
+}
+// ⚽ Bola na linha: o goleiro tira em cima da linha. Entrou inteira ou não?
+function comecaLinha(dono) {
+  const at = dono.time, dir = Math.sign(meta(at)), gx = meta(at);
+  const gk = M.jogadores.find(p => p.time !== at && p.gk && !p.fora);
+  if (!gk) return false;
+  dono.x = gx - dir * 13; dono.z = clamp(dono.z, -8, 8);
+  const dentro = Math.random() < 0.5;
+  const fundo = dentro ? 0.3 + Math.random() * 0.35 : -0.25 + Math.random() * 0.3;   // gol só se passar inteira (> raio da bola)
+  const alvoZ = (Math.random() - 0.5) * 4, lado = alvoZ >= 0 ? 1 : -1;
+  gk.x = gx - dir * 1.3; gk.z = alvoZ - lado * 1.6;
+  for (const p of M.jogadores) {
+    p.vx = p.vz = 0;
+    if (p !== dono && p !== gk && Math.abs(p.x - gx) < 6) p.x = gx - dir * (7 + Math.random() * 6);
+  }
+  const b = M.bola; b.dono = null; b.x = dono.x + dir * 0.5; b.z = dono.z; b.y = 0.22;
+  dono.b.rotation.y = frente(dir); gk.b.rotation.y = frente(-dir);
+  M.lance = { tipo: 'linha', certo: dentro ? 'gol' : 'naogol', atacante: dono, defensor: gk, dir, gx, fundo, alvoZ, lado, t: 0, x: gx, z: alvoZ,
+    snap: { ax: dono.x, az: dono.z, gz: gk.z, bx: b.x, bz: b.z } };
+  M.lento = 0.25; M.lances++;
+  return true;
+}
+function animaImped(L, k) {
+  const a = L.atacante, d = L.defensor, b = M.bola, S = L.snap, dir = L.dir;
+  const u = Math.max(0, k - 0.35);
+  if (k >= 0.35 && !L.chutou) { L.chutou = true; L.passador.chuteT = 14; som('chute'); }
+  a.x = S.rx + dir * u * 9; a.z = S.rz; d.x = S.dx + dir * u * 6; d.z = S.dz;
+  a.b.rotation.y = frente(dir); d.b.rotation.y = frente(dir);
+  anda(a.b, u > 0 ? 0.2 : 0, M.t / 60); anda(d.b, u > 0 ? 0.15 : 0, M.t / 60 + 1);
+  const v = Math.min(1, u / 0.6), tx = S.rx + dir * 6;
+  b.x = S.bx + (tx - S.bx) * v; b.z = S.bz + (S.rz - S.bz) * v; b.y = 0.22;
+}
+function animaLinha(L, k) {
+  const a = L.atacante, g = L.defensor, b = M.bola, S = L.snap, dir = L.dir;
+  a.x = S.ax; a.z = S.az; g.x = L.gx - dir * 1.3;
+  a.b.rotation.y = frente(dir); g.b.rotation.y = frente(-dir); g.b.rotation.z = 0; g.b.position.y = 0;
+  const fx = L.gx + dir * L.fundo;
+  if (k < 0.2) { b.x = S.bx; b.z = S.bz; b.y = 0.22; g.z = S.gz; return; }
+  if (!L.chutou) { L.chutou = true; a.chuteT = 14; som('chute'); }
+  if (k < 0.7) {
+    const u = (k - 0.2) / 0.5;
+    b.x = S.bx + (fx - S.bx) * u; b.z = S.bz + (L.alvoZ - S.bz) * u; b.y = 0.22 + Math.sin(u * Math.PI) * 1.1;
+    g.z = S.gz + (L.alvoZ - S.gz) * u * 0.8; g.b.rotation.z = -dir * L.lado * 1.2 * u; g.b.position.y = 0.35 * Math.sin(u * Math.PI);   // goleiro se joga
+  } else {
+    const u = (k - 0.7) / 0.3;   // tira a bola de cima da linha
+    b.x = fx - dir * u * 4; b.z = L.alvoZ + L.lado * u * 3; b.y = 0.22 + Math.sin(u * Math.PI) * 1.4;
+    g.z = S.gz + (L.alvoZ - S.gz) * 0.8; g.b.rotation.z = -dir * L.lado * 1.2; g.b.position.y = 0.1;
+  }
+}
+// 📺 VAR: mostra o lance parado, com as linhas no campo
+function varLiga(liga) {
+  const L = M.lance;
+  M.var = liga; document.body.classList.toggle('var', liga);
+  $('var').textContent = liga ? '🔙 VOLTAR' : '📺 VAR';
+  linhaDef.visible = linhaAtq.visible = linhaGol.visible = false;
+  gols.forEach(g => { g.visible = !liga; });
+  if (!liga) return;
+  M.usouVar = true;
+  const b = M.bola;
+  if (L.tipo === 'imped') {
+    L.atacante.x = L.snap.rx; L.atacante.z = L.snap.rz; L.defensor.x = L.snap.dx; L.defensor.z = L.snap.dz;
+    b.x = L.snap.bx; b.z = L.snap.bz; b.y = 0.22;
+    linhaDef.position.x = L.snap.dx; linhaAtq.position.x = L.snap.rx; linhaDef.visible = linhaAtq.visible = true;
+  } else {
+    b.x = L.gx + L.dir * L.fundo; b.z = L.alvoZ; b.y = 0.22;
+    linhaGol.position.set(L.gx, 0.04, L.alvoZ); linhaGol.visible = true;
+  }
+  posiciona();
+}
+function cameraVar() {
+  const L = M.lance;
+  if (L.tipo === 'imped') {
+    const mz = (L.snap.rz + L.snap.dz) / 2, lado = mz > 0 ? -1 : 1;
+    camera.position.set(L.linhaX, 5.5, mz + lado * (Math.abs(L.snap.rz - L.snap.dz) / 2 + 9)); camera.lookAt(L.linhaX, 0.6, mz);
+    // pra que lado é o ataque nessa imagem?
+    camera.updateMatrixWorld();
+    const p1 = new THREE.Vector3(L.linhaX, 0, mz).project(camera), p2 = new THREE.Vector3(L.linhaX + L.dir * 5, 0, mz).project(camera);
+    const seta = p2.x > p1.x ? 'ataque ➡️' : '⬅️ ataque';
+    $('var-tag').innerHTML = '📺 VAR <small>🟡 atacante · 🟣 último defensor<br>' + seta + '</small>';
+  } else {
+    camera.position.set(L.gx, 0.9, L.alvoZ - 5); camera.lookAt(L.gx, 0.15, L.alvoZ);
+    $('var-tag').innerHTML = '📺 VAR <small>🟡 linha do gol: a bola tem que passar INTEIRA</small>';
+  }
+}
+$('var').onclick = () => { if (modo === 'decisao' && M.lance && ['imped', 'linha'].includes(M.lance.tipo)) varLiga(!M.var); };
+
 function animaLance(L, k) {   // k = 0..1 durante o lance
+  if (L.tipo === 'imped') return animaImped(L, k);
+  if (L.tipo === 'linha') return animaLinha(L, k);
   const a = L.atacante, d = L.defensor, ini = L.inicio;
   const ax = ini.ax + (meta(a.time) > 0 ? 1 : -1) * k * 3;
   a.x = ax; a.z = ini.az;
@@ -511,20 +633,29 @@ function terminaLance() {
   $('longe').style.display = dist > 22 ? 'block' : 'none';
   $('longe').textContent = dist > 30 ? '📏 Você estava MUITO longe do lance!' : '📏 Você estava meio longe...';
   const ops = $('opcoes'); ops.innerHTML = '';
-  for (const [id, txt] of [['siga', '✋ SIGA'], ['falta', '📣 FALTA'], ['amarelo', '🟨 AMARELO'], ['vermelho', '🟥 VERMELHO'], ['penalti', '⚽ PÊNALTI']]) {
+  const especial = L.tipo === 'imped' || L.tipo === 'linha';
+  $('var').style.display = especial ? '' : 'none'; $('var').textContent = '📺 VAR'; M.usouVar = false;
+  $('decisao').querySelector('h2').textContent = L.tipo === 'imped' ? '🚩 ESTAVA IMPEDIDO?' : L.tipo === 'linha' ? '⚽ FOI GOL OU NÃO?' : '🧑‍⚖️ O QUE VOCÊ MARCA?';
+  const lista = L.tipo === 'imped' ? [['impedimento', '🚩 IMPEDIMENTO'], ['siga', '✋ SIGA']]
+    : L.tipo === 'linha' ? [['gol', '⚽ FOI GOL'], ['naogol', '✋ NÃO FOI GOL']]
+    : [['siga', '✋ SIGA'], ['falta', '📣 FALTA'], ['amarelo', '🟨 AMARELO'], ['vermelho', '🟥 VERMELHO'], ['penalti', '⚽ PÊNALTI']];
+  for (const [id, txt] of lista) {
     const b = document.createElement('button'); b.className = 'op ' + id; b.textContent = txt; b.onclick = () => decide(id); ops.appendChild(b);
   }
   $('decisao').classList.add('on');
 }
-$('replay').onclick = () => { if (modo !== 'decisao') return; $('decisao').classList.remove('on'); const L = M.lance; L.t = 0; L.replay = true; M.lento = 0.25; modo = 'jogando'; };
+$('replay').onclick = () => { if (modo !== 'decisao') return; if (M.var) varLiga(false); $('decisao').classList.remove('on'); const L = M.lance; L.t = 0; L.replay = true; L.chutou = false; M.lento = 0.25; modo = 'jogando'; };
 function decide(id) {
   const L = M.lance;
+  const usouVar = M.usouVar; if (M.var) varLiga(false);
   $('decisao').classList.remove('on'); $('longe').style.display = 'none';
-  const vale = L.dist > 30 ? 0.5 : L.dist > 22 ? 0.75 : 1;   // longe do lance vale menos
+  const vale = usouVar ? 1 : L.dist > 30 ? 0.5 : L.dist > 22 ? 0.75 : 1;   // longe do lance vale menos (o VAR ajuda!)
   M.max += 1;
-  const nomes = { siga: 'SIGA O JOGO', falta: 'FALTA', amarelo: 'CARTÃO AMARELO', vermelho: 'CARTÃO VERMELHO', penalti: 'PÊNALTI' };
+  const nomes = { impedimento: 'IMPEDIMENTO', gol: 'GOL', naogol: 'NÃO FOI GOL', siga: 'SIGA O JOGO', falta: 'FALTA', amarelo: 'CARTÃO AMARELO', vermelho: 'CARTÃO VERMELHO', penalti: 'PÊNALTI' };
   const quase = (id === 'falta' && L.certo === 'amarelo') || (id === 'amarelo' && L.certo === 'falta') || (id === 'amarelo' && L.certo === 'vermelho');
-  const explica = { limpo: 'Ele tirou a bola certinho, sem falta!', caicai: 'Foi cai-cai! Ninguém encostou nele 🎭', empurrao: 'Foi empurrão!', carrinho: 'Carrinho perigoso: amarelo!', voadora: 'Voadora no adversário: expulsão!', mao: 'Ele pôs a mão na bola!' }[L.tipo] + (L.certo === 'penalti' ? ' E foi dentro da área: pênalti!' : '');
+  const explica = L.tipo === 'imped' ? (L.certo === 'impedimento' ? 'O atacante estava na frente do último defensor! 🚩' : 'Ele estava atrás do defensor: posição legal!')
+    : L.tipo === 'linha' ? (L.certo === 'gol' ? 'A bola passou inteirinha da linha! ⚽' : 'A bola não passou inteira da linha!')
+    : { limpo: 'Ele tirou a bola certinho, sem falta!', caicai: 'Foi cai-cai! Ninguém encostou nele 🎭', empurrao: 'Foi empurrão!', carrinho: 'Carrinho perigoso: amarelo!', voadora: 'Voadora no adversário: expulsão!', mao: 'Ele pôs a mão na bola!' }[L.tipo] + (L.certo === 'penalti' ? ' E foi dentro da área: pênalti!' : '');
   som(id === 'siga' ? 'apito' : 'apito');
   if (id === L.certo) {
     M.acertos++; M.pontos += vale;
@@ -540,10 +671,15 @@ function decide(id) {
   if (id === 'amarelo') { cartaoNaMao('#ffd23f'); mostraCartao(d.b, '#ffd23f'); if (d.amarelo) id = 'vermelho'; d.amarelo = true; }
   if (id === 'vermelho') { cartaoNaMao('#ff2a2a'); mostraCartao(d.b, '#ff2a2a'); setTimeout(() => { d.fora = true; d.b.visible = false; }, 1500); }
   const b = M.bola; b.y = 0.22; b.vx = b.vz = b.vy = 0;
-  if (id === 'siga') { b.dono = L.tipo === 'limpo' ? d : a; b.x = b.dono.x; b.z = b.dono.z; M.pausa = 40; }
+  if (id === 'gol') {
+    M.placar[a.time]++; som('gol'); M.pausa = 140; b.dono = null; b.x = L.gx + L.dir * 1; b.z = L.alvoZ;
+    const t = a.time; setTimeout(() => M && saidaDeBola(1 - t), 2200);
+  }
+  else if (id === 'naogol' || id === 'impedimento') { b.dono = d; b.x = d.x; b.z = d.z; M.pausa = 60; }   // bola pro goleiro / tiro livre da defesa
+  else if (id === 'siga') { b.dono = L.tipo === 'limpo' ? d : a; b.x = b.dono.x; b.z = b.dono.z; M.pausa = 40; }
   else if (id === 'penalti') { penalti(a.time); }
   else { b.x = L.x; b.z = L.z; b.dono = a; M.pausa = 80; for (const p of M.jogadores) if (p.time !== a.time && Math.hypot(p.x - b.x, p.z - b.z) < 8) { const dx = p.x - b.x, dz = p.z - b.z, l = Math.hypot(dx, dz) || 1; p.x = b.x + dx / l * 8; p.z = b.z + dz / l * 8; } }
-  M.lance = null; modo = 'jogando'; M.lento = 1;
+  M.lance = null; modo = 'jogando'; M.lento = 1; M.proxTipo = null; M.esperaTipo = 0;
   M.proximoLance = (M.tempo / Math.max(1, M.E.lances - M.lances)) * (0.6 + Math.random() * 0.6);
   hud();
 }
@@ -596,6 +732,19 @@ function atualiza() {
   M.tempo--;
   if (M.tempo <= 0) return fimDeJogo();
   M.proximoLance--;
+  // hora de um lance: falta, impedimento ou bola na linha?
+  if (M.proximoLance <= 0 && M.lances < M.E.lances) {
+    if (!M.proxTipo) { M.proxTipo = sorteia(['falta', 'falta', 'imped', 'linha']); M.esperaTipo = 0; }
+    const dn = M.bola.dono;
+    if (M.proxTipo !== 'falta') {
+      M.esperaTipo++;
+      if (dn && !dn.gk) {
+        const av = dn.x * Math.sign(meta(dn.time));
+        if ((M.proxTipo === 'imped' && av > -18 && av < 16 && comecaImped(dn)) || (M.proxTipo === 'linha' && av > 20 && comecaLinha(dn))) { M.proxTipo = null; posiciona(); return; }
+      }
+      if (M.esperaTipo > 600) M.proxTipo = 'falta';
+    }
+  }
 
   // bola
   const b = M.bola;
@@ -648,7 +797,7 @@ function atualiza() {
       // tem marcador chegando? dribla ou toca
       let marc = null, dm = 3.4;
       for (const q of M.jogadores) if (q.time !== p.time && !q.fora && !q.gk && (q.espera || 0) <= 0) { const dd = Math.hypot(q.x - p.x, q.z - p.z); if (dd < dm) { dm = dd; marc = q; } }
-      if (marc && !p.gk && (p.cdDrible || 0) <= 0 && M.proximoLance > 0) {
+      if (marc && !p.gk && (p.cdDrible || 0) <= 0 && !(M.proximoLance <= 0 && M.proxTipo === 'falta')) {
         p.cdDrible = 45;
         if (Math.random() < 0.62) drible(p, marc); else passe(p);
       } else if (dg < 18 && Math.random() < 0.035) chuta(p, meta(p.time) + Math.sign(meta(p.time)) * 2, (Math.random() - 0.5) * 7, 0.95, 0.1);
@@ -666,7 +815,7 @@ function atualiza() {
     p.x = clamp(p.x + p.vx, -CW / 2 - 1, CW / 2 + 1); p.z = clamp(p.z + p.vz, -CH / 2 - 1, CH / 2 + 1);
     // dividida: quem marca tenta tomar a bola (às vezes vira lance pro juiz!)
     if (dono && p.time !== dono.time && !p.gk && !dono.gk && Math.hypot(p.x - dono.x, p.z - dono.z) < 1.4 && (p.espera || 0) <= 0) {
-      if (M.proximoLance <= 0 && M.lances < M.E.lances) { comecaLance(dono, p); break; }
+      if (M.proximoLance <= 0 && M.lances < M.E.lances && M.proxTipo === 'falta') { comecaLance(dono, p); break; }
       if (Math.random() < 0.025) { b.dono = p; dono.espera = 40; p.cdDrible = 40; }
     }
   }
@@ -692,6 +841,7 @@ function posiciona() {
   olhos(); posJogada();
 }
 function olhos() {   // câmera nos olhos do juiz
+  if (M.var && M.lance) { cameraVar(); mapa(); return; }
   const bob = Math.sin(M.t / 60 * 13) * 0.05 * Math.min(1, M.andando * 4);
   camera.position.set(M.ref.x, 1.72 + bob, M.ref.z);
   const cp = Math.cos(M.pitch);
