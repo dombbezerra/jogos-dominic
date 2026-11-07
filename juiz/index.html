@@ -145,7 +145,44 @@ save = Object.assign({ liberado: 0, escolhido: 0, melhores: {} }, save);
 const isAdm = (() => { try { const m = JSON.parse(localStorage.getItem('aventuraConta' + (PERFIL ? ':' + PERFIL : ''))); return ['endrick', 'dominic'].includes(String(m && m.user && m.user.nome || '').trim().toLowerCase()); } catch (e) { return false; } })();
 const grava = () => { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { /* ok */ } };
 // cada liga: céu, torcida e 6 times (camisa, calção, meião, detalhe e listra). A cada jogo sorteia 2; o clássico sai mais vezes.
-const T = (nome, sigla, camisa, calcao, meia, detalhe, listra) => ({ nome, sigla, camisa, calcao, meia, detalhe, listra });
+// detalhes das camisas (parecidos com os de verdade): ombros, faixas no peito, faixa do meio, faixa diagonal e cor da manga
+const DET = {
+  'Corinthians': { ombros: '#111111', faixaH: ['#111111'] },
+  'Palmeiras': { ombros: '#ffffff', manga: '#0a5a2a' },
+  'São Paulo': { faixaH: ['#d8262c', '#111111', '#d8262c'] },
+  'Coritiba': { faixaH: ['#0a6a3a', '#f4f4f4', '#0a6a3a'] },
+  'Goiás': { ombros: '#ffffff', faixaH: ['#ffffff'] },
+  'Dominic FC': { sash: '#ffd23f', ombros: '#ffd23f' },
+  'Al-Hilal': { ombros: '#ffffff', faixaV: { cor: '#2f6fe0' } },
+  'Al-Nassr': { manga: '#1a3a8a', ombros: '#1a3a8a' },
+  'Al-Ittihad': { ombros: '#111111' },
+  'Al-Ahli': { faixaH: ['#ffffff'], ombros: '#ffffff' },
+  'Al-Shabab': { ombros: '#111111' },
+  'Al-Ettifaq': { ombros: '#ffffff' },
+  'Real Madrid': { ombros: '#d4af37', faixaH: ['#d4af37'] },
+  'Barcelona': { ombros: '#ffd23f' },
+  'Atlético de Madrid': { ombros: '#1a2a7a' },
+  'Sevilla': { ombros: '#d8262c', sash: '#d8262c' },
+  'Valencia': { ombros: '#111111', faixaH: ['#ff8a00'] },
+  'Villarreal': { ombros: '#1a3a8a', manga: '#1a3a8a' },
+  'Milan': { ombros: '#111111' },
+  'Inter de Milão': { ombros: '#ffd23f' },
+  'Roma': { ombros: '#ffb000', faixaH: ['#ffb000'] },
+  'Lazio': { ombros: '#ffffff', sash: '#ffffff' },
+  'Porto': { ombros: '#1f4fbf' },
+  'Ajax': { faixaV: { cor: '#d8262c', larga: true } },
+  'PSG': { faixaV: { cor: '#d8262c', borda: '#ffffff' } },
+  'Manchester City': { ombros: '#1a2a5a', manga: '#1a2a5a' },
+  'Bayern': { ombros: '#ffffff', faixaH: ['#ffffff'] },
+  'Liverpool': { ombros: '#ffffff', faixaH: ['#ffd23f'] },
+  'Brasil': { ombros: '#1a8a3a', manga: '#ffd400', faixaH: ['#1a8a3a'] },
+  'Espanha': { ombros: '#ffd400', faixaH: ['#ffd400'] },
+  'Argentina': { ombros: '#1a2a6a' },
+  'França': { ombros: '#c8102e', faixaH: ['#ffffff'] },
+  'Alemanha': { faixaH: ['#111111', '#d8262c', '#ffcc00'] },
+  'Portugal': { ombros: '#0a6a3a', manga: '#0a6a3a', faixaH: ['#ffd400'] },
+};
+const T = (nome, sigla, camisa, calcao, meia, detalhe, listra) => ({ nome, sigla, camisa, calcao, meia, detalhe, listra, d: DET[nome] || {} });
 const ETAPAS = [
   { nome: 'Brasileirão', ic: '🇧🇷', vel: 0.9, lances: 10, precisa: 6, ceu: '#7fc8ff', noite: false, torcida: ['#ffffff', '#111111', '#0a7a3a', '#d8262c', '#7a3cff'], classico: [0, 1],
     times: [T('Corinthians', 'COR', '#f4f4f4', '#111111', '#111111', '#111111'), T('Palmeiras', 'PAL', '#0a7a3a', '#ffffff', '#0a7a3a', '#ffffff'),
@@ -184,8 +221,8 @@ function sorteiaJogo(E) {
   const ca = cor(a.camisa), cb = cor(b.camisa);
   if (Math.hypot(ca[0] - cb[0], ca[1] - cb[1], ca[2] - cb[2]) < 140) {
     const clara = cb[0] + cb[1] + cb[2] > 450;
-    b = Object.assign({}, b, clara ? { camisa: '#1a1a2a', calcao: '#1a1a2a', meia: '#1a1a2a', detalhe: b.detalhe === '#111111' ? '#ffffff' : b.detalhe, listra: null }
-      : { camisa: '#f4f4f4', calcao: '#f4f4f4', meia: '#f4f4f4', detalhe: b.camisa, listra: null });
+    b = Object.assign({}, b, clara ? { camisa: '#1a1a2a', calcao: '#1a1a2a', meia: '#1a1a2a', detalhe: b.detalhe === '#111111' ? '#ffffff' : b.detalhe, listra: null, d: { ombros: b.detalhe === '#111111' ? '#ffffff' : b.detalhe }, reserva: true }
+      : { camisa: '#f4f4f4', calcao: '#f4f4f4', meia: '#f4f4f4', detalhe: b.camisa, listra: null, d: { ombros: b.camisa, faixaH: [b.camisa] }, reserva: true });
   }
   return [a, b];
 }
@@ -303,6 +340,29 @@ function textoNumero(n, cor) {
 // Manequim moderno: corpo de gente (1,80 m), juntas nos joelhos e cotovelos, uniforme detalhado
 const MANEQUIM = new THREE.MeshStandardMaterial({ color: '#e6e1d8', roughness: 0.45, metalness: 0.05 });
 const JUNTA = new THREE.MeshStandardMaterial({ color: '#b9b2a6', roughness: 0.35, metalness: 0.1 });
+// desenho da camisa: na textura, x=0 é a frente do jogador e o meio (x=128) é as costas
+const kits = {};
+function texCamisa(k, parte) {
+  const chave = k.nome + parte + (k.reserva ? 'R' : '');
+  if (kits[chave]) return kits[chave];
+  const W = 256, H = 128, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const g = cv.getContext('2d'), d = k.d || {};
+  const duas = f => { f(0); f(W); };   // desenha de novo do outro lado (a frente fica na emenda)
+  g.fillStyle = k.camisa; g.fillRect(0, 0, W, H);
+  if (k.listra) for (let i = 0; i < 12; i++) { g.fillStyle = i % 2 ? k.listra : k.camisa; g.fillRect(i * W / 12, 0, W / 12 + 1, H); }
+  if (d.faixaV) {
+    const w = d.faixaV.larga ? 70 : 34;
+    if (d.faixaV.borda) duas(o => { g.fillStyle = d.faixaV.borda; g.fillRect(o - w / 2 - 6, 0, w + 12, H); });
+    duas(o => { g.fillStyle = d.faixaV.cor; g.fillRect(o - w / 2, 0, w, H); });
+  }
+  if (parte === 'peito') {
+    if (d.faixaH) d.faixaH.forEach((c, i) => { g.fillStyle = c; g.fillRect(0, 44 + i * 9, W, d.faixaH.length > 1 ? 9 : 6); });
+    if (d.sash) duas(o => { g.fillStyle = d.sash; g.beginPath(); g.moveTo(o - 54, 8); g.lineTo(o - 34, 8); g.lineTo(o + 54, H); g.lineTo(o + 34, H); g.closePath(); g.fill(); });
+    if (d.ombros) { g.fillStyle = d.ombros; g.fillRect(0, 0, W, 16); }
+  } else if (d.sash) duas(o => { g.fillStyle = d.sash; g.beginPath(); g.moveTo(o + 30, 0); g.lineTo(o + 50, 0); g.lineTo(o + 80, H * 0.6); g.lineTo(o + 60, H * 0.6); g.closePath(); g.fill(); });
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4;
+  return (kits[chave] = tx);
+}
 const listras = {};
 function texListra(c1, c2) {
   const k = c1 + c2;
@@ -317,14 +377,16 @@ function texListra(c1, c2) {
 function boneco(cor, cor2, pele, num = 0, o = {}) {
   const g = new THREE.Group();
   const pano = c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85 });
-  const camisa = o.listra ? new THREE.MeshStandardMaterial({ map: texListra(cor, o.listra), roughness: 0.85 }) : pano(cor), calcao = pano(cor2), detalhe = pano(o.detalhe || '#ffffff'), meiao = pano(o.meia || cor);
+  const camisa = o.kit ? new THREE.MeshStandardMaterial({ map: texCamisa(o.kit, 'peito'), roughness: 0.85 }) : o.listra ? new THREE.MeshStandardMaterial({ map: texListra(cor, o.listra), roughness: 0.85 }) : pano(cor);
+  const barriga = o.kit ? new THREE.MeshStandardMaterial({ map: texCamisa(o.kit, 'cintura'), roughness: 0.85 }) : camisa;
+  const mangaM = o.kit && o.kit.d.manga ? pano(o.kit.d.manga) : camisa, calcao = pano(cor2), detalhe = pano(o.detalhe || '#ffffff'), meiao = pano(o.meia || cor);
   const chuteira = new THREE.MeshStandardMaterial({ color: o.chuteira || sorteia(['#111111', '#ffffff', '#ff7a00', '#2fd15a', '#ff3bb0', '#ffd23f']), roughness: 0.3, metalness: 0.2 });
   const peca = (geo, m, x, y, z, pai = g) => { const me = new THREE.Mesh(geo, m); me.position.set(x, y, z); me.castShadow = true; pai.add(me); return me; };
   const cap = (r, l) => new THREE.CapsuleGeometry(r, l, 6, 14);
   const bola = r => new THREE.SphereGeometry(r, 16, 12);
   // tronco: peito largo, cintura fina
   const peito = peca(cap(0.17, 0.2), camisa, 0, 1.31, 0); peito.scale.set(1.3, 1, 0.72);
-  const cintura = peca(cap(0.145, 0.12), camisa, 0, 1.08, 0); cintura.scale.set(1.12, 1, 0.75);
+  const cintura = peca(cap(0.145, 0.12), barriga, 0, 1.08, 0); cintura.scale.set(1.12, 1, 0.75);
   peca(new THREE.TorusGeometry(0.075, 0.018, 8, 20), detalhe, 0, 1.51, 0).rotation.x = Math.PI / 2;   // gola
   const quadril = peca(cap(0.15, 0.06), calcao, 0, 0.93, 0); quadril.scale.set(1.15, 1, 0.78);
   peca(new THREE.CylinderGeometry(0.045, 0.05, 0.12, 12), MANEQUIM, 0, 1.55, 0);   // pescoço
@@ -351,8 +413,8 @@ function boneco(cor, cor2, pele, num = 0, o = {}) {
     g.add(p); pernas.push(p); joelhos.push(j);
     // braços com cotovelo
     const b = new THREE.Group(); b.position.set(s * 0.215, 1.43, 0);
-    peca(bola(0.07), camisa, 0, 0, 0, b);
-    peca(cap(0.062, 0.1), camisa, 0, -0.08, 0, b);   // manga
+    peca(bola(0.07), mangaM, 0, 0, 0, b);
+    peca(cap(0.062, 0.1), mangaM, 0, -0.08, 0, b);   // manga
     peca(new THREE.CylinderGeometry(0.064, 0.064, 0.02, 12), detalhe, 0, -0.17, 0, b);
     peca(cap(0.042, 0.16), o.manga ? camisa : MANEQUIM, 0, -0.16, 0, b);
     const c = new THREE.Group(); c.position.y = -0.3; b.add(c);
@@ -457,7 +519,7 @@ function novoJogo() {
       const gk = i === 0, num = gk ? 1 : [0, 3, 4, 8, 10, 9][i];
       const U = times[time];
       const b = boneco(gk ? (time ? '#a0ff3a' : '#ff7ad9') : U.camisa, gk ? '#222222' : U.calcao, '#e9e4da', num,
-        { meia: gk ? '#222222' : U.meia, detalhe: gk ? '#111111' : U.detalhe, listra: gk ? null : U.listra, luva: gk ? '#ff7a00' : null, manga: gk });
+        { meia: gk ? '#222222' : U.meia, detalhe: gk ? '#111111' : U.detalhe, listra: gk ? null : U.listra, kit: gk ? null : U, luva: gk ? '#ff7a00' : null, manga: gk });
       const sx = time ? -1 : 1;
       jogadores.push({ b, time, gk: i === 0, casa: { x: x * sx, z }, x: x * sx, z, vx: 0, vz: 0, vel: (0.16 + Math.random() * 0.03) * E.vel, caido: 0, fora: false, amarelo: false, t: Math.random() * 10 });
     });
@@ -1009,7 +1071,7 @@ function loop() {
 }
 mostraCarreira(); aplicaLiga();
 loop();
-window.__juiz = { get M() { return M; }, get modo() { return modo; }, decide, novoJogo };
+window.__juiz = { get M() { return M; }, get modo() { return modo; }, decide, novoJogo, boneco, ETAPAS };
 })();
 </script>
 </body>
