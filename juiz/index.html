@@ -41,6 +41,9 @@
   #aviso { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); z-index: 12; font-family: var(--display); font-size: clamp(26px, 7vw, 48px); text-shadow: 3px 3px 0 var(--tinta); text-align: center; pointer-events: none; opacity: 0; transition: opacity .25s; white-space: nowrap; }
   #aviso.on { opacity: 1; }
   #aviso small { display: block; font-family: var(--texto); font-weight: 800; font-size: 18px; }
+  #mapa { position: fixed; top: calc(env(safe-area-inset-top) + 48px); right: 10px; z-index: 10; border: 3px solid #fff; border-radius: 8px; display: none; width: 152px; height: 100px; }
+  body.jogando #mapa { display: block; }
+  @media (max-width: 600px) { #mapa { width: 114px; height: 75px; } }
   #longe { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); z-index: 11; background: rgba(255,80,80,.85); color: #fff; font-weight: 800; padding: 3px 12px 1px; border-radius: 10px; display: none; }
 
   /* Decisão */
@@ -71,6 +74,7 @@
 <body>
 <a href="../index.html" id="back-link">← Menu</a>
 <div id="hud"><span class="placar"><span class="a">🔴 <b id="ga">0</b></span> x <span class="b"><b id="gb">0</b> 🔵</span></span><span class="pill">⏱ <b id="tempo">3:00</b></span><span class="pill">✅ <b id="acertos">0</b></span></div>
+<canvas id="mapa" width="152" height="100"></canvas>
 <div id="aviso"></div>
 <div id="longe">📏 Chegue mais perto do lance!</div>
 <div id="decisao"><h2>🧑‍⚖️ O QUE VOCÊ MARCA?</h2><div class="opcoes" id="opcoes"></div><button id="replay">🔁 Ver de novo</button></div>
@@ -99,7 +103,7 @@ const sorteia = l => l[Math.floor(Math.random() * l.length)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 if (TOUCH) document.body.classList.add('touch');
-$('dica').textContent = TOUCH ? 'Mexa o juiz com o joystick. Segure CORRER pra correr mais rápido.' : 'Mexa o juiz com as setas ou W A S D. Segure Shift pra correr.';
+$('dica').textContent = TOUCH ? '👀 Você vê pelos olhos do juiz! Joystick pra andar, arraste o dedo na tela pra olhar em volta. Segure CORRER pra correr.' : '👀 Você vê pelos olhos do juiz! W A S D ou setas pra andar, arraste o mouse pra olhar em volta. Shift corre.';
 
 // ── Carreira (guardada por perfil) ──
 const PERFIL = new URLSearchParams(location.search).get('perfil');
@@ -137,7 +141,7 @@ document.body.appendChild(renderer.domElement);
 const cena = new THREE.Scene();
 cena.background = new THREE.Color('#7fc8ff');
 cena.fog = new THREE.Fog('#7fc8ff', 120, 220);
-const camera = new THREE.PerspectiveCamera(48, 1, 0.5, 400);
+const camera = new THREE.PerspectiveCamera(48, 1, 0.08, 400);
 function ajusta() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 addEventListener('resize', ajusta); ajusta();
 cena.add(new THREE.HemisphereLight('#ffffff', '#3a6a3a', 0.9));
@@ -187,23 +191,62 @@ function arquibancada(w, d, x, z, rot) {
 }
 arquibancada(120, 8, 0, -48, 0); arquibancada(120, 8, 0, 48, Math.PI); arquibancada(80, 8, -66, 0, Math.PI / 2); arquibancada(80, 8, 66, 0, -Math.PI / 2);
 
-// ── Bonequinhos (corpo de bloquinhos) ──
-function boneco(cor, cor2, pele = '#f2c18d') {
+// ── Bonequinhos (jogadores fofinhos) ──
+function textoNumero(n, cor) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+  const g = cv.getContext('2d'); g.font = 'bold 50px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.lineWidth = 6; g.strokeStyle = 'rgba(0,0,0,.5)'; g.strokeText(n, 32, 34); g.fillStyle = cor; g.fillText(n, 32, 34);
+  return new THREE.CanvasTexture(cv);
+}
+function boneco(cor, cor2, pele = '#f2c18d', num = 0, o = {}) {
   const g = new THREE.Group();
   const mat = c => new THREE.MeshLambertMaterial({ color: c });
-  const corpo = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.1, 0.55), mat(cor)); corpo.position.y = 1.55; corpo.castShadow = true; g.add(corpo);
-  const cab = new THREE.Mesh(new THREE.SphereGeometry(0.38, 12, 10), mat(pele)); cab.position.y = 2.42; cab.castShadow = true; g.add(cab);
-  const cabelo = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 10, 0, Math.PI * 2, 0, Math.PI / 2.2), mat(sorteia(['#2a1a10', '#3b2414', '#f0c040', '#111111']))); cabelo.position.y = 2.48; g.add(cabelo);
+  const peca = (geo, c, x, y, z, pai = g) => { const m = new THREE.Mesh(geo, mat(c)); m.position.set(x, y, z); m.castShadow = true; pai.add(m); return m; };
+  const meia = o.meia || cor, chuteira = o.chuteira || sorteia(['#111111', '#ffffff', '#ff7a00', '#2fd15a', '#ff3bb0']);
+  // camisa redondinha, calção e pescoço
+  const corpo = peca(new THREE.CapsuleGeometry(0.42, 0.45, 4, 12), cor, 0, 1.58, 0); corpo.scale.z = 0.62;
+  peca(new THREE.BoxGeometry(0.2, 0.08, 0.05), o.detalhe || '#ffffff', 0, 2.08, 0.25);   // golinha
+  peca(new THREE.BoxGeometry(0.86, 0.38, 0.52), cor2, 0, 1.02, 0);
+  peca(new THREE.CylinderGeometry(0.13, 0.15, 0.2, 10), pele, 0, 2.24, 0);
+  if (num) {
+    const n = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.55), new THREE.MeshBasicMaterial({ map: textoNumero(num, o.detalhe || '#ffffff'), transparent: true }));
+    n.position.set(0, 1.68, -0.28); n.rotation.y = Math.PI; g.add(n);
+  }
+  // cabeça com olhinhos, boca e cabelo
+  const cab = peca(new THREE.SphereGeometry(0.4, 16, 14), pele, 0, 2.62, 0);
+  for (const s of [-1, 1]) {
+    peca(new THREE.SphereGeometry(0.075, 8, 8), '#ffffff', s * 0.14, 2.68, 0.33);
+    peca(new THREE.SphereGeometry(0.045, 8, 8), '#1a1a2a', s * 0.14, 2.68, 0.39);
+    peca(new THREE.SphereGeometry(0.06, 8, 8), '#ff9a9a', s * 0.24, 2.55, 0.3).scale.z = 0.4;   // bochecha
+  }
+  peca(new THREE.BoxGeometry(0.16, 0.04, 0.03), '#7a3a2a', 0, 2.5, 0.38);
+  const cc = o.cabelo || sorteia(['#2a1a10', '#3b2414', '#f0c040', '#111111', '#a0522d']);
+  const estilo = o.estilo != null ? o.estilo : Math.floor(Math.random() * 5);
+  if (estilo === 0 || estilo === 4) peca(new THREE.SphereGeometry(0.43, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2.3), cc, 0, 2.66, -0.03);
+  if (estilo === 4) peca(new THREE.BoxGeometry(0.55, 0.14, 0.2), cc, 0, 2.98, 0.24).rotation.x = -0.4;   // topete
+  if (estilo === 1) peca(new THREE.BoxGeometry(0.13, 0.3, 0.7), cc, 0, 3.0, -0.02);   // moicano
+  if (estilo === 2) peca(new THREE.SphereGeometry(0.52, 16, 12), cc, 0, 2.8, -0.1);   // black power
+  // pernas: calção, canela, meião e chuteira
   const pernas = [], bracos = [];
   for (const s of [-1, 1]) {
-    const p = new THREE.Group(); p.position.set(s * 0.22, 1.0, 0);
-    const pm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1, 0.3), mat(cor2)); pm.position.y = -0.5; pm.castShadow = true; p.add(pm);
-    const meia = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.25, 0.42), mat('#111')); meia.position.set(0, -0.95, 0.06); p.add(meia);
+    const p = new THREE.Group(); p.position.set(s * 0.2, 1.0, 0);
+    peca(new THREE.BoxGeometry(0.3, 0.3, 0.32), cor2, 0, -0.1, 0, p);
+    peca(new THREE.CylinderGeometry(0.11, 0.1, 0.36, 8), pele, 0, -0.42, 0, p);
+    peca(new THREE.CylinderGeometry(0.13, 0.12, 0.32, 8), meia, 0, -0.74, 0, p);
+    peca(new THREE.BoxGeometry(0.27, 0.15, 0.46), chuteira, 0, -0.94, 0.08, p);
     g.add(p); pernas.push(p);
-    const b = new THREE.Group(); b.position.set(s * 0.6, 2.0, 0);
-    const bm = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.9, 0.25), mat(cor)); bm.position.y = -0.45; b.add(bm);
+    const b = new THREE.Group(); b.position.set(s * 0.52, 2.02, 0);
+    peca(new THREE.SphereGeometry(0.17, 10, 8), cor, 0, -0.08, 0, b);   // manguinha
+    peca(new THREE.CylinderGeometry(0.1, 0.09, 0.6, 8), o.manga ? cor : pele, 0, -0.45, 0, b);
+    peca(new THREE.SphereGeometry(o.luva ? 0.17 : 0.12, 10, 8), o.luva || pele, 0, -0.8, 0, b);
+    b.rotation.z = s * 0.12;
     g.add(b); bracos.push(b);
   }
+  if (TOUCH) {   // sombrinha (no celular não tem sombra de verdade)
+    const sb = new THREE.Mesh(new THREE.CircleGeometry(0.6, 16), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.25 }));
+    sb.rotation.x = -Math.PI / 2; sb.position.y = 0.03; g.add(sb);
+  }
+  g.scale.setScalar(0.66);   // tamanho de gente de verdade
   g.userData = { pernas, bracos, corpo, cab };
   cena.add(g);
   return g;
@@ -218,6 +261,25 @@ function mostraCartao(alvo, cor) {
   const c = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.85, 0.05), new THREE.MeshBasicMaterial({ color: cor }));
   c.position.set(0, 3.6, 0); alvo.add(c);
   setTimeout(() => alvo.remove(c), 2500);
+}
+
+const texBola = (() => { const cv = document.createElement('canvas'); cv.width = 128; cv.height = 64; const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 64); g.fillStyle = '#111'; for (let i = 0; i < 8; i++) { g.beginPath(); g.arc((i * 37) % 128 + 8, (i * 23) % 56 + 6, 7, 0, 7); g.fill(); } return new THREE.CanvasTexture(cv); })();
+// cartão na mão do juiz (aparece na frente da câmera)
+cena.add(camera);
+const naMao = [];
+function cartaoNaMao(cor) {
+  const g = new THREE.Group();
+  const braco = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.55), new THREE.MeshLambertMaterial({ color: '#111111' })); braco.position.set(0.02, -0.08, 0.28); g.add(braco);
+  const mao = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), new THREE.MeshLambertMaterial({ color: '#f2c18d' })); g.add(mao);
+  const c = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.21, 0.01), new THREE.MeshBasicMaterial({ color: cor })); c.position.set(0, 0.13, -0.02); g.add(c);
+  g.position.set(0.25, -0.6, -0.65); g.userData.t0 = performance.now(); camera.add(g); naMao.push(g);
+}
+function animaMao() {
+  for (const g of naMao.slice()) {
+    const k = (performance.now() - g.userData.t0) / 2400;
+    g.position.y = -0.6 + 0.48 * Math.min(1, k * 5) - (k > 0.85 ? (k - 0.85) * 4 : 0);
+    if (k > 1) { camera.remove(g); naMao.splice(naMao.indexOf(g), 1); }
+  }
 }
 
 // ══════════════ JOGO ══════════════
@@ -266,17 +328,21 @@ function novoJogo() {
   const jogadores = [];
   for (let time = 0; time < 2; time++) {
     FORMACAO.forEach(([x, z], i) => {
-      const b = boneco(i === 0 ? (time ? '#ffd23f' : '#2fd15a') : (time ? '#3c8fe0' : '#e04848'), time ? '#1a3a7a' : '#ffffff', sorteia(['#f2c18d', '#d9a070', '#8a5a3a', '#e8b98a']));
+      const gk = i === 0, num = gk ? 1 : [0, 3, 4, 8, 10, 9][i];
+      const b = boneco(gk ? (time ? '#ffd23f' : '#2fd15a') : (time ? '#3c8fe0' : '#e04848'), time ? '#1a3a7a' : '#ffffff', sorteia(['#f2c18d', '#d9a070', '#8a5a3a', '#e8b98a', '#5a3a22']), num,
+        { meia: time ? '#ffffff' : '#e04848', detalhe: time ? '#ffd23f' : '#ffffff', luva: gk ? '#ff7a00' : null, manga: gk });
       const sx = time ? -1 : 1;
       jogadores.push({ b, time, gk: i === 0, casa: { x: x * sx, z }, x: x * sx, z, vx: 0, vz: 0, vel: (0.16 + Math.random() * 0.03) * E.vel, caido: 0, fora: false, amarelo: false, t: Math.random() * 10 });
     });
   }
   const juiz = boneco('#111111', '#111111');
   const apito = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.12, 0.3), new THREE.MeshLambertMaterial({ color: '#ffd23f' })); apito.position.set(0, 1.9, 0.3); juiz.add(apito);
-  const bolaM = new THREE.Mesh(new THREE.SphereGeometry(0.35, 14, 12), new THREE.MeshLambertMaterial({ color: '#ffffff' })); bolaM.castShadow = true; cena.add(bolaM);
+  const bolaM = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 12), new THREE.MeshLambertMaterial({ map: texBola })); bolaM.castShadow = true; cena.add(bolaM);
   // círculo embaixo do juiz pra achar ele fácil
   const anel = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.2, 24), new THREE.MeshBasicMaterial({ color: '#ffd23f', transparent: true, opacity: 0.8 })); anel.rotation.x = -Math.PI / 2; anel.position.y = 0.05; cena.add(anel);
-  M = { E, jogadores, juiz, anel, ref: { x: 0, z: 10 }, bola: { x: 0, z: 0, y: 0.35, vx: 0, vz: 0, vy: 0, dono: null, m: bolaM },
+  juiz.visible = false; anel.visible = false;   // você É o juiz (primeira pessoa)
+  camera.fov = 72; camera.updateProjectionMatrix();
+  M = { E, jogadores, juiz, anel, ref: { x: 0, z: 10 }, yaw: -Math.PI / 2, pitch: -0.12, olhou: 0, andando: 0, bola: { x: 0, z: 0, y: 0.22, vx: 0, vz: 0, vy: 0, dono: null, m: bolaM },
     placar: [0, 0], tempo: 180 * 60, t: 0, pausa: 90, lances: 0, proximoLance: 360 + Math.random() * 300, acertos: 0, pontos: 0, max: 0, lance: null, lento: 1, replay: null, camAlvo: new THREE.Vector3() };
   for (const p of jogadores) p.b.position.set(p.x, 0, p.z);
   saidaDeBola(0);
@@ -294,7 +360,7 @@ function limpa() {
   M = null;
 }
 function saidaDeBola(time) {
-  const b = M.bola; b.x = 0; b.z = 0; b.vx = b.vz = b.vy = 0; b.y = 0.35;
+  const b = M.bola; b.x = 0; b.z = 0; b.vx = b.vz = b.vy = 0; b.y = 0.22;
   for (const p of M.jogadores) { p.x = p.casa.x * 0.9; p.z = p.casa.z; p.caido = 0; }
   const quem = M.jogadores.find(p => p.time === time && !p.gk && !p.fora && Math.abs(p.casa.x) < 6) || M.jogadores.find(p => p.time === time && !p.fora);
   quem.x = time ? 1 : -1; quem.z = 0; b.dono = quem; M.pausa = 60;
@@ -302,7 +368,7 @@ function saidaDeBola(time) {
 const meta = time => time ? -CW / 2 : CW / 2;   // gol que o time ataca
 function chuta(p, tx, tz, forca, alto = 0) {
   const b = M.bola, dx = tx - b.x, dz = tz - b.z, d = Math.hypot(dx, dz) || 1;
-  b.vx = dx / d * forca; b.vz = dz / d * forca; b.vy = alto; b.dono = null; p.espera = 25; som('chute');
+  b.vx = dx / d * forca; b.vz = dz / d * forca; b.vy = alto; b.dono = null; p.espera = 25; p.chuteT = 14; som('chute');
 }
 
 // ── Os lances (o que o juiz precisa decidir) ──
@@ -340,10 +406,10 @@ function animaLance(L, k) {   // k = 0..1 durante o lance
   if (L.tipo === 'carrinho' && k > 0.25) { d.b.rotation.z = -Math.PI / 2.2 * lado; d.b.position.y = 0.4; }
   if (L.tipo === 'voadora' && k > 0.25) { d.b.rotation.x = -Math.PI / 2.4; d.b.position.y = 1.3 * Math.sin(Math.min(1, (k - 0.25) * 2) * Math.PI); }
   if (L.tipo === 'empurrao' && k > 0.4) d.b.userData.bracos.forEach(b => { b.rotation.x = -Math.PI / 2; });
-  if (L.tipo === 'mao' && k > 0.3) { d.b.userData.bracos[0].rotation.z = Math.PI * 0.85; const bo = M.bola; bo.x = d.x + 0.6; bo.z = d.z; bo.y = 2.4; }
+  if (L.tipo === 'mao' && k > 0.3) { d.b.userData.bracos[0].rotation.z = Math.PI * 0.85; const bo = M.bola; bo.x = d.x + 0.4; bo.z = d.z; bo.y = 1.7; }
   const cai = L.tipo !== 'limpo' && L.tipo !== 'mao' && k > (L.tipo === 'caicai' ? 0.45 : 0.55);
   if (cai) { a.b.rotation.x = -Math.PI / 2 * Math.min(1, (k - 0.5) * 3); a.b.position.y = 0.3; }
-  if (L.tipo === 'limpo' && k > 0.5) { const bo = M.bola; bo.x = d.x + 0.8; bo.z = d.z; bo.y = 0.35; }
+  if (L.tipo === 'limpo' && k > 0.5) { const bo = M.bola; bo.x = d.x + 0.8; bo.z = d.z; bo.y = 0.22; }
 }
 function terminaLance() {
   const L = M.lance;
@@ -379,9 +445,9 @@ function decide(id) {
   const a = L.atacante, d = L.defensor;
   a.b.rotation.set(0, a.b.rotation.y, 0); a.b.position.y = 0; d.b.rotation.set(0, d.b.rotation.y, 0); d.b.position.y = 0;
   d.b.userData.bracos.forEach(b => b.rotation.set(0, 0, 0));
-  if (id === 'amarelo') { mostraCartao(M.juiz, '#ffd23f'); if (d.amarelo) id = 'vermelho'; d.amarelo = true; }
-  if (id === 'vermelho') { mostraCartao(M.juiz, '#ff2a2a'); setTimeout(() => { d.fora = true; d.b.visible = false; }, 1500); }
-  const b = M.bola; b.y = 0.35; b.vx = b.vz = b.vy = 0;
+  if (id === 'amarelo') { cartaoNaMao('#ffd23f'); mostraCartao(d.b, '#ffd23f'); if (d.amarelo) id = 'vermelho'; d.amarelo = true; }
+  if (id === 'vermelho') { cartaoNaMao('#ff2a2a'); mostraCartao(d.b, '#ff2a2a'); setTimeout(() => { d.fora = true; d.b.visible = false; }, 1500); }
+  const b = M.bola; b.y = 0.22; b.vx = b.vz = b.vy = 0;
   if (id === 'siga') { b.dono = L.tipo === 'limpo' ? d : a; b.x = b.dono.x; b.z = b.dono.z; M.pausa = 40; }
   else if (id === 'penalti') { penalti(a.time); }
   else { b.x = L.x; b.z = L.z; b.dono = a; M.pausa = 80; for (const p of M.jogadores) if (p.time !== a.time && Math.hypot(p.x - b.x, p.z - b.z) < 8) { const dx = p.x - b.x, dz = p.z - b.z, l = Math.hypot(dx, dz) || 1; p.x = b.x + dx / l * 8; p.z = b.z + dz / l * 8; } }
@@ -405,17 +471,26 @@ function atualiza() {
   if (!M || modo !== 'jogando') return;
   const passo = M.lento;
   M.t += passo;
-  // juiz anda (você controla)
-  let mx = (teclas.arrowright || teclas.d ? 1 : 0) - (teclas.arrowleft || teclas.a ? 1 : 0);
-  let mz = (teclas.arrowdown || teclas.s ? 1 : 0) - (teclas.arrowup || teclas.w ? 1 : 0);
-  if (joy.x || joy.y) { mx = joy.x; mz = joy.y; }
-  const l = Math.hypot(mx, mz); if (l > 1) { mx /= l; mz /= l; }
-  const vj = (teclas.shift || correndo ? 0.32 : 0.2) * (M.lance ? 0.5 : 1);
+  // juiz anda (você controla, vendo pelos olhos dele)
+  let fr = (teclas.arrowup || teclas.w ? 1 : 0) - (teclas.arrowdown || teclas.s ? 1 : 0) - joy.y;
+  let la = (teclas.d ? 1 : 0) - (teclas.a ? 1 : 0) + joy.x;
+  const gira = (teclas.arrowright ? 1 : 0) - (teclas.arrowleft ? 1 : 0);
+  if (gira) { M.yaw += gira * 0.045; M.olhou = 60; }
+  const l = Math.hypot(fr, la); if (l > 1) { fr /= l; la /= l; }
+  const cy = Math.cos(M.yaw), sy = Math.sin(M.yaw);
+  const mx = cy * fr - sy * la, mz = sy * fr + cy * la;
+  const vj = (teclas.shift || correndo ? 0.3 : 0.18) * (M.lance ? 0.5 : 1);
   M.ref.x = clamp(M.ref.x + mx * vj, -CW / 2 - 2, CW / 2 + 2); M.ref.z = clamp(M.ref.z + mz * vj, -CH / 2 - 2, CH / 2 + 2);
-  M.juiz.position.set(M.ref.x, 0, M.ref.z);
-  if (l > 0.1) M.juiz.rotation.y = Math.atan2(mx, mz);
-  anda(M.juiz, l * vj, M.t / 60);
-  M.anel.position.set(M.ref.x, 0.05, M.ref.z);
+  M.andando = Math.min(1, l) * vj;
+  // se você não mexer na visão, ela vira sozinha pro lance
+  if (M.olhou > 0) M.olhou--;
+  else {
+    const fx = M.lance ? M.lance.x : M.bola.x, fz = M.lance ? M.lance.z : M.bola.z;
+    let dif = Math.atan2(fz - M.ref.z, fx - M.ref.x) - M.yaw;
+    while (dif > Math.PI) dif -= Math.PI * 2; while (dif < -Math.PI) dif += Math.PI * 2;
+    M.yaw += dif * (M.lance ? 0.12 : 0.045);
+    M.pitch += (-0.12 - M.pitch) * 0.05;
+  }
 
   // lance em câmera lenta
   if (M.lance) {
@@ -434,10 +509,10 @@ function atualiza() {
   const b = M.bola;
   if (b.dono) {
     const d = b.dono, a = Math.atan2(d.vz, d.vx) || (meta(d.time) > 0 ? 0 : Math.PI);
-    b.x = d.x + Math.cos(a) * 0.8; b.z = d.z + Math.sin(a) * 0.8; b.y = 0.35;
+    b.x = d.x + Math.cos(a) * 0.8; b.z = d.z + Math.sin(a) * 0.8; b.y = 0.22;
   } else {
     b.x += b.vx; b.z += b.vz; b.y += b.vy; b.vy -= 0.02;
-    if (b.y < 0.35) { b.y = 0.35; b.vy = Math.abs(b.vy) > 0.1 ? -b.vy * 0.4 : 0; }
+    if (b.y < 0.35) { b.y = 0.22; b.vy = Math.abs(b.vy) > 0.1 ? -b.vy * 0.4 : 0; }
     b.vx *= 0.975; b.vz *= 0.975;
     // gol?
     if (Math.abs(b.x) > CW / 2 && Math.abs(b.z) < 3.6 && b.y < 2.6) {
@@ -501,16 +576,44 @@ function posiciona() {
     if (!M.lance || (p !== M.lance.atacante && p !== M.lance.defensor)) {
       if (Math.hypot(p.vx, p.vz) > 0.01) p.b.rotation.y = Math.atan2(p.vx, p.vz);
       anda(p.b, Math.hypot(p.vx, p.vz), M.t / 60 + p.t);
+      if (p.chuteT > 0) { p.chuteT--; p.b.userData.pernas[1].rotation.x = -Math.sin((14 - p.chuteT) / 14 * Math.PI) * 1.4; }
     }
   }
   const b = M.bola; b.m.position.set(b.x, b.y, b.z); b.m.rotation.x += b.vz * 0.5; b.m.rotation.z -= b.vx * 0.5;
-  // câmera de TV: entre a bola e o juiz, de lado
-  const fx = M.lance ? M.lance.x : (b.x * 0.65 + M.ref.x * 0.35), fz = M.lance ? M.lance.z : (b.z * 0.5 + M.ref.z * 0.5);
-  M.camAlvo.lerp(new THREE.Vector3(fx, 0, fz), 0.08);
-  const zoom = M.lance ? 0.55 : 1;
-  camera.position.set(M.camAlvo.x, 26 * zoom + 6, M.camAlvo.z + 30 * zoom + 6);
-  camera.lookAt(M.camAlvo.x, 0, M.camAlvo.z);
+  olhos();
 }
+function olhos() {   // câmera nos olhos do juiz
+  const bob = Math.sin(M.t / 60 * 13) * 0.05 * Math.min(1, M.andando * 4);
+  camera.position.set(M.ref.x, 1.72 + bob, M.ref.z);
+  const cp = Math.cos(M.pitch);
+  camera.lookAt(M.ref.x + Math.cos(M.yaw) * cp, 1.72 + bob + Math.sin(M.pitch), M.ref.z + Math.sin(M.yaw) * cp);
+  mapa();
+}
+// mapinha no canto pra saber onde está todo mundo
+const mapaCv = $('mapa'), mg = mapaCv.getContext('2d');
+function mapa() {
+  const W = mapaCv.width, H = mapaCv.height, sx = W / (CW + 4), sz = H / (CH + 4);
+  const px = x => (x + CW / 2 + 2) * sx, pz = z => (z + CH / 2 + 2) * sz;
+  mg.fillStyle = '#2f8a3e'; mg.fillRect(0, 0, W, H);
+  mg.strokeStyle = 'rgba(255,255,255,.7)'; mg.lineWidth = 1; mg.strokeRect(px(-CW / 2), pz(-CH / 2), CW * sx, CH * sz);
+  mg.beginPath(); mg.moveTo(W / 2, pz(-CH / 2)); mg.lineTo(W / 2, pz(CH / 2)); mg.stroke();
+  for (const p of M.jogadores) { if (p.fora) continue; mg.fillStyle = p.time ? '#5cb8ff' : '#ff5d5d'; mg.beginPath(); mg.arc(px(p.x), pz(p.z), 3, 0, 7); mg.fill(); }
+  mg.fillStyle = '#fff'; mg.beginPath(); mg.arc(px(M.bola.x), pz(M.bola.z), 2.6, 0, 7); mg.fill();
+  // você (com o pedaço que está vendo)
+  const rx = px(M.ref.x), rz = pz(M.ref.z);
+  mg.fillStyle = 'rgba(255,210,63,.35)'; mg.beginPath(); mg.moveTo(rx, rz); mg.arc(rx, rz, 30, M.yaw - 0.55, M.yaw + 0.55); mg.fill();
+  mg.fillStyle = '#ffd23f'; mg.strokeStyle = '#0e0c33'; mg.lineWidth = 1.5; mg.beginPath(); mg.arc(rx, rz, 4, 0, 7); mg.fill(); mg.stroke();
+}
+// olhar em volta: arrastando o mouse ou o dedo na tela
+function olha(dx, dy) { if (!M) return; M.yaw += dx * 0.006; M.pitch = clamp(M.pitch - dy * 0.004, -0.8, 0.5); M.olhou = 100; }
+let arrasta = null;
+renderer.domElement.addEventListener('mousedown', e => { arrasta = { x: e.clientX, y: e.clientY }; });
+addEventListener('mouseup', () => { arrasta = null; });
+addEventListener('mousemove', e => { if (!arrasta) return; olha(e.clientX - arrasta.x, e.clientY - arrasta.y); arrasta = { x: e.clientX, y: e.clientY }; });
+let dedo = null;
+renderer.domElement.addEventListener('touchstart', e => { const t = e.changedTouches[0]; dedo = { id: t.identifier, x: t.clientX, y: t.clientY }; }, { passive: true });
+renderer.domElement.addEventListener('touchmove', e => { for (const t of e.changedTouches) if (dedo && t.identifier === dedo.id) { olha((t.clientX - dedo.x) * 1.3, (t.clientY - dedo.y) * 1.3); dedo.x = t.clientX; dedo.y = t.clientY; } }, { passive: true });
+renderer.domElement.addEventListener('touchend', e => { for (const t of e.changedTouches) if (dedo && t.identifier === dedo.id) dedo = null; });
 function hud() {
   $('ga').textContent = M.placar[0]; $('gb').textContent = M.placar[1];
   const s = Math.max(0, Math.ceil(M.tempo / 60));
@@ -538,12 +641,13 @@ function fimDeJogo() {
 }
 $('b-jogar').onclick = novoJogo;
 $('b-denovo').onclick = novoJogo;
-$('b-menu').onclick = () => { limpa(); modo = 'menu'; $('fim').classList.add('hidden'); $('menu').classList.remove('hidden'); mostraCarreira(); };
+$('b-menu').onclick = () => { limpa(); modo = 'menu'; camera.fov = 48; camera.updateProjectionMatrix(); $('fim').classList.add('hidden'); $('menu').classList.remove('hidden'); mostraCarreira(); };
 
 // câmera do menu: passeia pelo estádio vazio
 let ang = 0;
 function loop() {
-  if (M) atualiza();
+  animaMao();
+  if (M) { atualiza(); if (modo === 'decisao') olhos(); }
   else { ang += 0.002; camera.position.set(Math.cos(ang) * 70, 35, Math.sin(ang) * 50); camera.lookAt(0, 0, 0); }
   renderer.render(cena, camera);
   requestAnimationFrame(loop);
