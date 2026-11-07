@@ -137,6 +137,7 @@ function mostraCarreira() {
 const renderer = new THREE.WebGLRenderer({ antialias: !TOUCH });
 renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
 renderer.shadowMap.enabled = !TOUCH;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
 document.body.appendChild(renderer.domElement);
 const cena = new THREE.Scene();
 cena.background = new THREE.Color('#7fc8ff');
@@ -144,10 +145,10 @@ cena.fog = new THREE.Fog('#7fc8ff', 120, 220);
 const camera = new THREE.PerspectiveCamera(48, 1, 0.08, 400);
 function ajusta() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 addEventListener('resize', ajusta); ajusta();
-cena.add(new THREE.HemisphereLight('#ffffff', '#3a6a3a', 0.9));
-const sol = new THREE.DirectionalLight('#ffffff', 1.1);
+cena.add(new THREE.HemisphereLight('#eaf4ff', '#3a6a3a', 1.3));
+const sol = new THREE.DirectionalLight('#fff4e0', 2.2);
 sol.position.set(30, 60, 20); sol.castShadow = !TOUCH;
-sol.shadow.camera.left = -60; sol.shadow.camera.right = 60; sol.shadow.camera.top = 40; sol.shadow.camera.bottom = -40; sol.shadow.mapSize.set(1024, 1024);
+sol.shadow.camera.left = -60; sol.shadow.camera.right = 60; sol.shadow.camera.top = 40; sol.shadow.camera.bottom = -40; sol.shadow.mapSize.set(2048, 2048); sol.shadow.bias = -0.0005;
 cena.add(sol);
 
 // Campo: 100 x 64, com listras e linhas desenhadas numa textura
@@ -198,56 +199,76 @@ function textoNumero(n, cor) {
   g.lineWidth = 6; g.strokeStyle = 'rgba(0,0,0,.5)'; g.strokeText(n, 32, 34); g.fillStyle = cor; g.fillText(n, 32, 34);
   return new THREE.CanvasTexture(cv);
 }
-function boneco(cor, cor2, pele = '#f2c18d', num = 0, o = {}) {
+// Manequim moderno: corpo de gente (1,80 m), juntas nos joelhos e cotovelos, uniforme detalhado
+const MANEQUIM = new THREE.MeshStandardMaterial({ color: '#e6e1d8', roughness: 0.45, metalness: 0.05 });
+const JUNTA = new THREE.MeshStandardMaterial({ color: '#b9b2a6', roughness: 0.35, metalness: 0.1 });
+function boneco(cor, cor2, pele, num = 0, o = {}) {
   const g = new THREE.Group();
-  const mat = c => new THREE.MeshLambertMaterial({ color: c });
-  const peca = (geo, c, x, y, z, pai = g) => { const m = new THREE.Mesh(geo, mat(c)); m.position.set(x, y, z); m.castShadow = true; pai.add(m); return m; };
-  const meia = o.meia || cor, chuteira = o.chuteira || sorteia(['#111111', '#ffffff', '#ff7a00', '#2fd15a', '#ff3bb0']);
-  // camisa redondinha, calção e pescoço
-  const corpo = peca(new THREE.CapsuleGeometry(0.42, 0.45, 4, 12), cor, 0, 1.58, 0); corpo.scale.z = 0.62;
-  peca(new THREE.BoxGeometry(0.2, 0.08, 0.05), o.detalhe || '#ffffff', 0, 2.08, 0.25);   // golinha
-  peca(new THREE.BoxGeometry(0.86, 0.38, 0.52), cor2, 0, 1.02, 0);
-  peca(new THREE.CylinderGeometry(0.13, 0.15, 0.2, 10), pele, 0, 2.24, 0);
+  const pano = c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85 });
+  const camisa = pano(cor), calcao = pano(cor2), detalhe = pano(o.detalhe || '#ffffff'), meiao = pano(o.meia || cor);
+  const chuteira = new THREE.MeshStandardMaterial({ color: o.chuteira || sorteia(['#111111', '#ffffff', '#ff7a00', '#2fd15a', '#ff3bb0', '#ffd23f']), roughness: 0.3, metalness: 0.2 });
+  const peca = (geo, m, x, y, z, pai = g) => { const me = new THREE.Mesh(geo, m); me.position.set(x, y, z); me.castShadow = true; pai.add(me); return me; };
+  const cap = (r, l) => new THREE.CapsuleGeometry(r, l, 6, 14);
+  const bola = r => new THREE.SphereGeometry(r, 16, 12);
+  // tronco: peito largo, cintura fina
+  const peito = peca(cap(0.17, 0.2), camisa, 0, 1.31, 0); peito.scale.set(1.3, 1, 0.72);
+  const cintura = peca(cap(0.145, 0.12), camisa, 0, 1.08, 0); cintura.scale.set(1.12, 1, 0.75);
+  peca(new THREE.TorusGeometry(0.075, 0.018, 8, 20), detalhe, 0, 1.51, 0).rotation.x = Math.PI / 2;   // gola
+  const quadril = peca(cap(0.15, 0.06), calcao, 0, 0.93, 0); quadril.scale.set(1.15, 1, 0.78);
+  peca(new THREE.CylinderGeometry(0.045, 0.05, 0.12, 12), MANEQUIM, 0, 1.55, 0);   // pescoço
+  const cab = peca(bola(0.115), MANEQUIM, 0, 1.69, 0.01); cab.scale.set(0.88, 1.15, 0.98);
   if (num) {
-    const n = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.55), new THREE.MeshBasicMaterial({ map: textoNumero(num, o.detalhe || '#ffffff'), transparent: true }));
-    n.position.set(0, 1.68, -0.28); n.rotation.y = Math.PI; g.add(n);
+    const n = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.24), new THREE.MeshBasicMaterial({ map: textoNumero(num, o.detalhe || '#ffffff'), transparent: true }));
+    n.position.set(0, 1.3, -0.128); n.rotation.y = Math.PI; g.add(n);
+    const f = n.clone(); f.scale.setScalar(0.4); f.position.set(0.09, 1.38, 0.126); f.rotation.y = 0; g.add(f);   // numerozinho na frente
   }
-  // cabeça de manequim: lisinha, sem rosto
-  const cab = peca(new THREE.SphereGeometry(0.4, 18, 16), pele, 0, 2.66, 0); cab.scale.set(0.9, 1.12, 0.95);
-  // pernas: calção, canela, meião e chuteira
-  const pernas = [], bracos = [];
+  // pernas com joelho
+  const pernas = [], bracos = [], joelhos = [], cotovelos = [];
   for (const s of [-1, 1]) {
-    const p = new THREE.Group(); p.position.set(s * 0.2, 1.0, 0);
-    peca(new THREE.BoxGeometry(0.3, 0.3, 0.32), cor2, 0, -0.1, 0, p);
-    peca(new THREE.CylinderGeometry(0.11, 0.1, 0.36, 8), pele, 0, -0.42, 0, p);
-    peca(new THREE.CylinderGeometry(0.13, 0.12, 0.32, 8), meia, 0, -0.74, 0, p);
-    peca(new THREE.BoxGeometry(0.27, 0.15, 0.46), chuteira, 0, -0.94, 0.08, p);
-    g.add(p); pernas.push(p);
-    const b = new THREE.Group(); b.position.set(s * 0.52, 2.02, 0);
-    peca(new THREE.SphereGeometry(0.17, 10, 8), cor, 0, -0.08, 0, b);   // manguinha
-    peca(new THREE.CylinderGeometry(0.1, 0.09, 0.6, 8), o.manga ? cor : pele, 0, -0.45, 0, b);
-    peca(new THREE.SphereGeometry(o.luva ? 0.17 : 0.12, 10, 8), o.luva || pele, 0, -0.8, 0, b);
-    b.rotation.z = s * 0.12;
-    g.add(b); bracos.push(b);
+    const p = new THREE.Group(); p.position.set(s * 0.1, 0.94, 0);
+    peca(new THREE.CylinderGeometry(0.1, 0.095, 0.22, 14), calcao, 0, -0.09, 0, p);
+    peca(new THREE.CylinderGeometry(0.101, 0.101, 0.03, 14), detalhe, 0, -0.19, 0, p);   // listra do calção
+    peca(cap(0.075, 0.2), MANEQUIM, 0, -0.24, 0, p);
+    const j = new THREE.Group(); j.position.y = -0.45; p.add(j);
+    peca(bola(0.06), JUNTA, 0, 0, 0, j);
+    peca(cap(0.06, 0.12), MANEQUIM, 0, -0.08, 0, j);
+    peca(new THREE.CylinderGeometry(0.066, 0.058, 0.24, 12), meiao, 0, -0.27, 0, j);
+    peca(new THREE.CylinderGeometry(0.067, 0.067, 0.03, 12), detalhe, 0, -0.17, 0, j);   // listra do meião
+    const pe = peca(cap(0.05, 0.13), chuteira, 0, -0.43, 0.06, j); pe.rotation.x = Math.PI / 2; pe.scale.set(1.1, 1, 0.8);
+    peca(new THREE.BoxGeometry(0.1, 0.02, 0.24), pano('#222'), 0, -0.475, 0.06, j);   // sola com travinha
+    g.add(p); pernas.push(p); joelhos.push(j);
+    // braços com cotovelo
+    const b = new THREE.Group(); b.position.set(s * 0.215, 1.43, 0);
+    peca(bola(0.07), camisa, 0, 0, 0, b);
+    peca(cap(0.062, 0.1), camisa, 0, -0.08, 0, b);   // manga
+    peca(new THREE.CylinderGeometry(0.064, 0.064, 0.02, 12), detalhe, 0, -0.17, 0, b);
+    peca(cap(0.042, 0.16), o.manga ? camisa : MANEQUIM, 0, -0.16, 0, b);
+    const c = new THREE.Group(); c.position.y = -0.3; b.add(c);
+    peca(bola(0.042), JUNTA, 0, 0, 0, c);
+    peca(cap(0.036, 0.17), o.manga ? camisa : MANEQUIM, 0, -0.12, 0, c);
+    const mao = peca(bola(o.luva ? 0.06 : 0.045), o.luva ? pano(o.luva) : MANEQUIM, 0, -0.27, 0, c); mao.scale.set(0.8, 1.2, 1);
+    b.rotation.z = s * 0.1;
+    g.add(b); bracos.push(b); cotovelos.push(c);
   }
   if (TOUCH) {   // sombrinha (no celular não tem sombra de verdade)
-    const sb = new THREE.Mesh(new THREE.CircleGeometry(0.6, 16), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.25 }));
-    sb.rotation.x = -Math.PI / 2; sb.position.y = 0.03; g.add(sb);
+    const sb = new THREE.Mesh(new THREE.CircleGeometry(0.38, 16), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.25 }));
+    sb.rotation.x = -Math.PI / 2; sb.position.y = 0.02; g.add(sb);
   }
-  g.scale.setScalar(0.66);   // tamanho de gente de verdade
-  g.userData = { pernas, bracos, corpo, cab };
+  g.userData = { pernas, bracos, joelhos, cotovelos, corpo: peito, cab };
   cena.add(g);
   return g;
 }
 function anda(b, vel, t) {
-  const a = Math.sin(t * 10) * Math.min(1, vel * 3) * 0.7;
-  b.userData.pernas[0].rotation.x = a; b.userData.pernas[1].rotation.x = -a;
-  b.userData.bracos[0].rotation.x = -a; b.userData.bracos[1].rotation.x = a;
+  const f = Math.min(1, vel * 3), a = Math.sin(t * 10) * f * 0.8, u = b.userData;
+  u.pernas[0].rotation.x = a; u.pernas[1].rotation.x = -a;
+  u.bracos[0].rotation.x = -a * 0.9; u.bracos[1].rotation.x = a * 0.9;
+  // joelho dobra quando a perna vai pra trás; cotovelo dobradinho correndo
+  if (u.joelhos) { u.joelhos[0].rotation.x = Math.max(0, a) * 1.6 + f * 0.15; u.joelhos[1].rotation.x = Math.max(0, -a) * 1.6 + f * 0.15; u.cotovelos.forEach(c => { c.rotation.x = -0.25 - f * 0.9; }); }
 }
 // cartão em cima da cabeça
 function mostraCartao(alvo, cor) {
-  const c = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.85, 0.05), new THREE.MeshBasicMaterial({ color: cor }));
-  c.position.set(0, 3.6, 0); alvo.add(c);
+  const c = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.42, 0.03), new THREE.MeshBasicMaterial({ color: cor }));
+  c.position.set(0, 2.25, 0); alvo.add(c);
   setTimeout(() => alvo.remove(c), 2500);
 }
 
