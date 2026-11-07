@@ -275,9 +275,9 @@ function tocaLead(m, n, t, dur) {
     osc('sawtooth', f, t, dur * 1.8, 0.12, sat); osc('sawtooth', f * 1.5, t, dur * 1.8, 0.06, sat);
   }
 }
-function falar(palavra, atraso) {
+function falar(palavra, atraso, letra) {
   if (!window.speechSynthesis || !palavra) return;
-  setTimeout(() => { const u = new SpeechSynthesisUtterance(palavra); u.lang = 'pt-BR'; u.rate = 1.4; u.pitch = 0.85; speechSynthesis.cancel(); speechSynthesis.speak(u); }, Math.max(0, atraso));
+  setTimeout(() => { const u = new SpeechSynthesisUtterance(palavra); u.lang = 'pt-BR'; u.rate = letra ? 1.15 : 1.4; u.pitch = letra ? 1.1 : 0.85; speechSynthesis.cancel(); speechSynthesis.speak(u); }, Math.max(0, atraso));
 }
 
 // ══════════════ TOCAR ══════════════
@@ -291,7 +291,10 @@ function agenda() {
     if (m.baixo && m.baixoPassos.includes(p16)) tocaBaixo(m, notaDoGrau(m, acorde, 0), prox, m.baixo === '808' ? dur * 5 : dur * 3);
     if (m.pad && p16 === 0) tocaPad(m, [0, 2, 4].map(k => notaDoGrau(m, acorde + k, 1)), prox, dur * 16);
     if (m.melodia[p] != null) tocaLead(m, notaDoGrau(m, m.melodia[p], 2), prox, dur * 2);
-    if (m.voz && p16 === 0 && (c === 0 || c === 2)) falar(m.palavra, (prox - ac.currentTime) * 1000);
+    if (m.voz && p16 === 0) {
+      if (m.letra && m.letra.length) falar(m.letra[(Math.floor(passo / 16)) % m.letra.length], (prox - ac.currentTime) * 1000, true);   // um pedaço da letra em cada compasso
+      else if (c === 0 || c === 2) falar(m.palavra, (prox - ac.currentTime) * 1000);
+    }
     passo++; prox += dur;
   }
   if (cartaoAtual) cartaoAtual.querySelector('.barra i').style.width = ((passo % 64) / 64 * 100) + '%';
@@ -318,7 +321,7 @@ function cartao(m, naGaveta) {
   const capa = d.querySelector('.capa');
   capa.textContent = m.capa.emoji; capa.style.background = `linear-gradient(135deg, ${m.capa.c1}, ${m.capa.c2})`;
   d.querySelector('b').textContent = m.titulo;
-  d.querySelector('small').textContent = ESTILOS[m.estilo].nome + (m.humor ? ' ' + HUMOR_NOME[m.humor] : '') + ' · ' + m.bpm + ' BPM' + (m.voz ? ' · 🎤 ' + m.palavra : '');
+  d.querySelector('small').textContent = ESTILOS[m.estilo].nome + (m.humor ? ' ' + HUMOR_NOME[m.humor] : '') + ' · ' + m.bpm + ' BPM' + (m.voz ? (m.letra && m.letra.length ? ' · 🎤 com letra' : ' · 🎤 ' + m.palavra) : '');
   d.querySelector('.play').onclick = () => cartaoAtual === d ? para() : toca(m, d);
   const acoes = d.querySelector('.acoes');
   if (naGaveta) {
@@ -357,6 +360,19 @@ function msg(quem, texto, musica) {
   return c;
 }
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+// A letra que a pessoa quer na música (ex: 'coloca a letra tananã tananã, pá pá pum')
+function pegaLetra(original) {
+  let m = original.match(/(?:letra|cantando|canta|cantar)\s*(?:da musica|da música)?\s*(?:e|é|:|que|assim|tipo|falando)?\s*[:\-]?\s*["“]?([^"”]{2,160})/i);
+  if (!m) { const q = original.match(/["“]([^"”]{25,160})["”]/); if (q) m = q; }
+  if (!m) return null;
+  const texto = m[1].replace(/["“”]/g, '').trim();
+  let partes = texto.split(/[,;.!?\n]+/).map(x => x.trim()).filter(Boolean);
+  if (partes.length < 2) {   // uma frase só: corta em pedacinhos de 3 palavras
+    const ws = texto.split(/\s+/); partes = [];
+    for (let i = 0; i < ws.length; i += 3) partes.push(ws.slice(i, i + 3).join(' '));
+  }
+  return partes.slice(0, 8);
+}
 function pegaPalavra(original) {
   const q = original.match(/["“'”]([^"“'”]{1,24})["“'”]/); if (q) return q[1].trim();
   const m = original.match(/(?:falando|fala|falar|grita|gritando|dizendo|diz|canta|cantando)\s+([\p{L}\p{N}!?\s]{1,24})/iu);
@@ -374,7 +390,7 @@ function entende(original) {
   else if (tem('feliz', 'alegre', 'animad')) humor = 'alegre';
   else if (tem('terror', 'medo', 'assust', 'sinistr', 'misterio', 'suspense', 'fantasma', 'zumbi')) humor = 'terror';
   else if (tem('epic', 'batalha', 'guerra', 'heroi', 'chefao')) humor = 'epico';
-  const ajuste = tem('coloca', 'bota', 'poe', 'troca', 'tira', 'muda', 'mais', 'menos', 'sem', 'aumenta', 'diminui', 'deixa');
+  const ajuste = tem('coloca', 'bota', 'poe', 'troca', 'tira', 'muda', 'mais', 'menos', 'sem', 'aumenta', 'diminui', 'deixa', 'letra', 'canta');
   const pedeNova = tem('faz', 'cria', 'crie', 'nova', 'outra', 'surpreend', 'quero', 'manda', 'gera');
   // ajustes na última música (cada ajuste vira uma versão nova, igual chat de IA)
   if (ultima && ajuste && !(pedeNova && (E || humor))) {
@@ -394,8 +410,10 @@ function entende(original) {
     if (tem('synth', 'sintetiz')) { m.lead = 'synth'; feito.push('troquei pro synth 🎛️'); }
     if (tem('sino', 'sininho')) { m.lead = 'sino'; feito.push('troquei pro sininho 🔔'); }
     if (tem('acorde', 'fundo')) { m.pad = !tem('sem', 'tira'); feito.push(m.pad ? 'coloquei acordes de fundo' : 'tirei os acordes de fundo'); }
-    const palavra = pegaPalavra(original);
-    if (palavra) { m.voz = true; m.palavra = palavra; feito.push('a voz agora fala "' + palavra + '" 🎤'); }
+    const letra = pegaLetra(original);
+    if (letra) { m.voz = true; m.letra = letra; feito.push('coloquei a sua letra: "' + letra.join(', ') + '" 🎤'); }
+    const palavra = letra ? '' : pegaPalavra(original);
+    if (palavra) { m.voz = true; m.letra = null; m.palavra = palavra; feito.push('a voz agora fala "' + palavra + '" 🎤'); }
     const nome = (original.match(/(?:nome|titulo|chama)\s+(?:para|pra|de)?\s*["“']?([^"”']{2,30})/i) || [])[1];
     if (nome && tem('nome', 'titulo', 'chama')) { m.titulo = nome.trim(); feito.push('mudei o nome pra "' + m.titulo + '"'); }
     for (const k in CAPAS) if (tem('capa') && tem(k)) { m.capa.emoji = CAPAS[k]; feito.push('troquei a capa ' + CAPAS[k]); break; }
@@ -406,11 +424,13 @@ function entende(original) {
   m.id = Date.now() + Math.random();
   if (tem('pesad', 'grave', 'estoura')) { m.pesado = 2; m.baixo = '808'; }
   if (tem('sem voz')) m.voz = false;
-  const palavra = pegaPalavra(original); if (palavra) { m.voz = true; m.palavra = palavra; }
+  const letra = pegaLetra(original);
+  if (letra) { m.voz = true; m.letra = letra; }
+  else { const palavra = pegaPalavra(original); if (palavra) { m.voz = true; m.palavra = palavra; } }
   for (const k in CAPAS) if (tem(k)) { m.capa.emoji = CAPAS[k]; break; }
   const entendeu = palavraInteira(...E.palavras) || humor;
   const intro = entendeu ? sorteia(['Saindo do forno! 🔥', 'Fiz essa pra você:', 'Olha só o que eu criei:', 'Prontinho! Escuta essa:']) : sorteia(['Não entendi direitinho, então criei essa pra você:', 'Fiz uma surpresa pra você:', 'Que tal essa?']);
-  return [intro + ' "' + m.titulo + '", ' + (E.nome === 'Bossa Nova' ? 'uma ' : 'um ') + E.nome + (humor ? ' ' + HUMOR_NOME[humor] : '') + '. ' + sorteia(['Quer mais pesado, mais rápido ou com a voz falando alguma coisa?', 'Se quiser, posso mudar a melodia, o instrumento ou o nome.', 'Gostou? Aperta 💾 Salvar!']), m];
+  return [intro + ' "' + m.titulo + '", ' + (E.nome === 'Bossa Nova' ? 'uma ' : 'um ') + E.nome + (humor ? ' ' + HUMOR_NOME[humor] : '') + '. ' + (m.letra ? 'Coloquei a sua letra 🎤 ' : '') + sorteia(['Quer mais pesado, mais rápido ou com a voz falando alguma coisa?', 'Se quiser, posso mudar a melodia, o instrumento ou o nome.', 'Gostou? Aperta 💾 Salvar!']), m];
 }
 let ocupado = false;
 function pedir(texto) {
@@ -451,6 +471,7 @@ $('mic').onclick = () => {
   };
   r.onerror = e => { if (e.error === 'not-allowed') msg('ia', 'Preciso que você deixe eu usar o microfone 🎤 Toca em "Permitir" quando o navegador perguntar!'); };
   r.onend = () => {
+    if (ac && ac.state !== 'running') ac.resume();   // o celular pausa o som enquanto escuta: volta a tocar
     ouvindo = null; $('mic').classList.remove('ouvindo'); $('texto').placeholder = 'Fale que música você quer...';
     if (final.trim()) pedir(final);   // falou: já manda
   };
@@ -459,7 +480,7 @@ $('mic').onclick = () => {
 for (const s of ['🔥 Um funk da hora', '🥁 Um samba', '🌴 Bossa nova', '🪗 Forró', '😢 Música triste', '👾 De videogame', '🌙 Lo-fi pra relaxar', '💎 Trap pesado', '🎲 Me surpreenda']) {
   const b = document.createElement('button'); b.type = 'button'; b.textContent = s; b.onclick = () => pedir(s.replace(/^\S+\s/, '')); $('sugestoes').appendChild(b);
 }
-msg('ia', 'E aí! Eu sou o DJ IA 🎧\nMe fala que música você quer, do seu jeito. Tipo "um funk da hora", "música triste" ou "trap com a voz falando bora". Eu crio e você ouve na hora!');
+msg('ia', 'E aí! Eu sou o DJ IA 🎧\nMe fala que música você quer, do seu jeito. Tipo "um funk da hora", "música triste" ou "trap com a voz falando bora". Pode até mandar a letra: "coloca a letra tananã tananã, pá pá pum". Eu crio e você ouve na hora!');
 })();
 </script>
 </body>
