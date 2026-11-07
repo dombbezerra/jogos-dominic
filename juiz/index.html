@@ -44,6 +44,10 @@
   #mapa { position: fixed; top: calc(env(safe-area-inset-top) + 48px); right: 10px; z-index: 10; border: 3px solid #fff; border-radius: 8px; display: none; width: 152px; height: 100px; }
   body.jogando #mapa { display: block; }
   @media (max-width: 600px) { #mapa { width: 114px; height: 75px; } }
+  #b-pausa { position: fixed; top: calc(env(safe-area-inset-top) + 8px); left: 10px; z-index: 14; display: none; width: 48px; height: 44px; font-size: 22px; cursor: pointer; border: 3px solid var(--tinta); border-radius: 12px; background: var(--sol); color: var(--tinta); box-shadow: 0 4px 0 var(--tinta); }
+  #b-pausa:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
+  body.jogando #b-pausa { display: block; }
+  #pausa { background: rgba(5,5,20,.8); z-index: 25; }
   #b-start { position: fixed; left: 50%; bottom: 24%; transform: translateX(-50%); z-index: 16; display: none; font-size: clamp(28px, 7vw, 44px); padding: 12px 50px 8px; }
   body.espera #b-start { display: block; }
   #jogada { position: fixed; z-index: 11; pointer-events: none; font-family: var(--display); font-size: clamp(16px, 4vw, 24px); color: var(--sol); text-shadow: 2px 2px 0 var(--tinta); transform: translate(-50%, -100%); white-space: nowrap; opacity: 0; transition: opacity .2s; }
@@ -82,6 +86,11 @@
 <div id="aviso"></div>
 <div id="jogada"></div>
 <button class="btn grande" id="b-start">▶ START</button>
+<button id="b-pausa" aria-label="Pausar">⏸</button>
+<div class="tela hidden" id="pausa">
+  <h1>PAUSADO<span>⏸ o jogo está parado</span></h1>
+  <div class="botoes"><button class="btn" id="b-sair">SAIR</button><button class="btn grande" id="b-continuar" style="margin-top:0">▶ CONTINUAR</button></div>
+</div>
 <div id="longe">📏 Chegue mais perto do lance!</div>
 <div id="decisao"><h2>🧑‍⚖️ O QUE VOCÊ MARCA?</h2><div class="opcoes" id="opcoes"></div><button id="replay">🔁 Ver de novo</button></div>
 <div id="toque"><div id="stick"><div id="knob"></div></div><button id="correr">CORRER</button></div>
@@ -376,6 +385,23 @@ function comeca() {
   som('apito');
 }
 $('b-start').onclick = comeca;
+// ── Pausar ──
+let antesDaPausa = null;
+function pausa() {
+  if (!M || !['jogando', 'espera', 'decisao'].includes(modo)) return;
+  antesDaPausa = modo; modo = 'pausa';
+  teclas.shift = false; joy.x = joy.y = 0; correndo = false;
+  $('pausa').classList.remove('hidden');
+}
+function continua() {
+  if (modo !== 'pausa') return;
+  modo = antesDaPausa; $('pausa').classList.add('hidden');
+}
+$('b-pausa').onclick = pausa;
+$('b-continuar').onclick = continua;
+$('b-sair').onclick = () => { $('pausa').classList.add('hidden'); $('decisao').classList.remove('on'); document.body.classList.remove('jogando', 'espera'); $('b-menu').onclick(); };
+addEventListener('keydown', e => { const k = e.key.toLowerCase(); if (k === 'p' || k === 'escape') { if (modo === 'pausa') continua(); else pausa(); } });
+addEventListener('visibilitychange', () => { if (document.hidden && modo === 'jogando') pausa(); });   // saiu do app: pausa sozinho
 addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') comeca(); });
 function limpa() {
   if (!M) return;
