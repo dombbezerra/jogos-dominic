@@ -35,6 +35,13 @@
   #b-play { background: var(--verde); color: #fff; font-family: var(--display); font-weight: 400; font-size: 20px; padding: 6px 22px 2px; min-width: 150px; }
   #b-play.tocando { background: var(--rosa); }
   .btn.sol { background: var(--sol); } .btn.agua { background: var(--agua); } .btn.roxo { background: var(--roxo); color: #fff; }
+  .aviso { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(10, 8, 32, .85); }
+  .aviso.fechado { display: none; }
+  .aviso-caixa { width: min(380px, 100%); text-align: center; background: var(--noite); border: 4px solid var(--tinta); border-radius: 22px; box-shadow: 0 0 0 4px #ff5d3a, 0 8px 0 var(--tinta); padding: 18px 16px 20px; }
+  .aviso-ic { font-size: 54px; line-height: 1; }
+  .aviso-caixa h2 { font-family: var(--display); font-weight: 400; font-size: 40px; color: #ff5d3a; text-shadow: 3px 3px 0 var(--tinta); margin: 6px 0 4px; }
+  .aviso-caixa p { font-weight: 800; font-size: 18px; margin-bottom: 14px; }
+  #b-entendi { background: var(--verde); color: #fff; font-family: var(--display); font-weight: 400; font-size: 20px; padding: 8px 28px 4px; }
   .modos { display: flex; justify-content: center; gap: 8px; margin-top: 10px; }
   .modo { font-family: var(--display); font-weight: 400; font-size: 15px; cursor: pointer; border: 3px solid rgba(255,255,255,.2); border-radius: 14px; padding: 5px 14px 2px; background: rgba(255,255,255,.07); color: var(--creme); }
   .modo.on { background: var(--sol); color: var(--tinta); border-color: var(--tinta); box-shadow: 0 4px 0 var(--tinta); }
@@ -85,8 +92,16 @@
 <a href="../index.html" id="back-link">← Menu</a>
 <div class="wrap">
   <h1>🎵 ESTÚDIO DE <span>MÚSICA</span></h1>
-  <p class="sub">😊 FÁCIL tem ritmos prontos. 🔥 DIFÍCIL é só você: capricha!</p>
-  <div class="modos"><button class="modo" id="m-facil">😊 FÁCIL</button><button class="modo" id="m-dificil">🔥 DIFÍCIL</button></div>
+  <p class="sub">🔥 Aqui é você que faz tudo. Capricha!</p>
+  <div class="modos" style="display:none"><button class="modo" id="m-facil">😊 FÁCIL</button><button class="modo" id="m-dificil">🔥 DIFÍCIL</button></div>
+  <div class="aviso" id="aviso">
+    <div class="aviso-caixa">
+      <div class="aviso-ic">⚠️</div>
+      <h2>DIFÍCIL</h2>
+      <p>Recomendado jogar com os pais 👨‍👦</p>
+      <button class="btn" id="b-entendi">ENTENDI</button>
+    </div>
+  </div>
   <div id="vis"></div>
 
   <div class="controles">
@@ -457,7 +472,9 @@ function trocaModo(novo) {
 }
 $('m-facil').onclick = () => { trocaModo('facil'); mensagem('😊 Modo FÁCIL: ritmos prontos e as notas sempre combinam.'); };
 $('m-dificil').onclick = () => { trocaModo('dificil'); mensagem('🔥 Modo DIFÍCIL: 32 quadradinhos, 13 notas, e você faz tudo sozinho!'); };
+modo = 'dificil';   // agora o estúdio é só no difícil
 carregaModo();
+$('b-entendi').onclick = () => $('aviso').classList.add('fechado');
 monta();
 montaInstrumentos();
 lista();
