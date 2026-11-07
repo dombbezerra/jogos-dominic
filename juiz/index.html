@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0e0c33">
+<title>Juiz 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --tinta: #0e0c33; --creme: #fff6dc; --sol: #ffd23f; --rosa: #ff5d8f; --verde: #2fd15a; --agua: #3fe0d0;
+    --display: 'Bungee', 'Arial Black', Impact, sans-serif; --texto: 'Baloo 2', 'Segoe UI', Arial, sans-serif; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; background: #0e0c33; color: var(--creme); font-family: var(--texto); -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; touch-action: none; }
+  canvas { display: block; }
+  #back-link { position: fixed; top: calc(env(safe-area-inset-top) + 10px); left: 10px; z-index: 30; text-decoration: none; font-weight: 800; background: var(--sol); color: var(--tinta); border: 3px solid var(--tinta); border-radius: 12px; padding: 4px 12px 2px; box-shadow: 0 4px 0 var(--tinta); }
+  body.jogando #back-link { display: none; }
+  .tela { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 16px 20px; text-align: center; overflow-y: auto; }
+  .tela.hidden { display: none; }
+  #menu { background: radial-gradient(circle at 50% 30%, #1f7a3a 0%, #0e3a1e 60%, #06180c 100%); }
+  h1 { font-family: var(--display); font-weight: 400; font-size: clamp(34px, 9vw, 70px); line-height: .95; text-shadow: 4px 4px 0 var(--tinta); transform: rotate(-3deg); }
+  h1 span { color: var(--sol); display: block; font-size: .6em; }
+  .sub { font-weight: 700; margin-top: 10px; opacity: .9; max-width: 520px; }
+  .btn { font-family: var(--texto); font-weight: 800; font-size: 18px; cursor: pointer; border: 3px solid var(--tinta); border-radius: 16px; padding: 10px 24px 7px; color: var(--tinta); background: var(--creme); box-shadow: 0 5px 0 var(--tinta); }
+  .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--tinta); }
+  .btn.grande { font-family: var(--display); font-weight: 400; font-size: clamp(22px, 5vw, 30px); background: var(--verde); color: #fff; padding: 10px 40px 6px; margin-top: 16px; }
+  .carreira { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: 16px; }
+  .etapa { background: rgba(0,0,0,.3); border: 3px solid rgba(255,255,255,.2); border-radius: 14px; padding: 6px 10px 4px; font-weight: 800; font-size: 13px; min-width: 90px; }
+  .etapa.on { background: var(--sol); color: var(--tinta); border-color: var(--tinta); }
+  .etapa.trava { opacity: .45; }
+  .etapa b { display: block; font-size: 22px; }
+  .dica { font-size: 13px; opacity: .8; margin-top: 12px; max-width: 520px; }
+
+  /* Placar e avisos */
+  #hud { position: fixed; top: calc(env(safe-area-inset-top) + 8px); left: 50%; transform: translateX(-50%); z-index: 10; display: none; gap: 8px; align-items: center; }
+  body.jogando #hud { display: flex; }
+  .placar { background: var(--tinta); border: 3px solid #fff; border-radius: 12px; padding: 3px 12px 1px; font-family: var(--display); font-size: 18px; white-space: nowrap; }
+  .placar .a { color: #ff5d5d; } .placar .b { color: #5cb8ff; }
+  .pill { background: rgba(14,12,51,.85); border: 2px solid rgba(255,255,255,.3); border-radius: 10px; padding: 2px 10px 0; font-weight: 800; white-space: nowrap; }
+  #aviso { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); z-index: 12; font-family: var(--display); font-size: clamp(26px, 7vw, 48px); text-shadow: 3px 3px 0 var(--tinta); text-align: center; pointer-events: none; opacity: 0; transition: opacity .25s; white-space: nowrap; }
+  #aviso.on { opacity: 1; }
+  #aviso small { display: block; font-family: var(--texto); font-weight: 800; font-size: 18px; }
+  #longe { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); z-index: 11; background: rgba(255,80,80,.85); color: #fff; font-weight: 800; padding: 3px 12px 1px; border-radius: 10px; display: none; }
+
+  /* Decisão */
+  #decisao { position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; padding: 12px 10px calc(env(safe-area-inset-bottom) + 14px); background: linear-gradient(transparent, rgba(5,5,20,.9) 30%); display: none; text-align: center; }
+  #decisao.on { display: block; }
+  #decisao h2 { font-family: var(--display); font-weight: 400; font-size: clamp(20px, 5vw, 30px); color: var(--sol); text-shadow: 3px 3px 0 var(--tinta); margin-bottom: 8px; }
+  .opcoes { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .op { font-family: var(--texto); font-weight: 800; font-size: 17px; cursor: pointer; border: 3px solid var(--tinta); border-radius: 14px; padding: 9px 14px 6px; box-shadow: 0 5px 0 var(--tinta); min-width: 104px; }
+  .op:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--tinta); }
+  .op.siga { background: #e6edf5; color: var(--tinta); } .op.falta { background: #5cb8ff; color: var(--tinta); }
+  .op.amarelo { background: #ffd23f; color: var(--tinta); } .op.vermelho { background: #ff3b3b; color: #fff; } .op.penalti { background: #2fd15a; color: #fff; }
+  #replay { margin-top: 8px; font-weight: 800; font-size: 14px; background: none; border: 2px solid rgba(255,255,255,.5); color: #fff; border-radius: 10px; padding: 3px 12px 1px; cursor: pointer; font-family: inherit; }
+
+  /* Celular */
+  #toque { position: fixed; inset: 0; z-index: 9; pointer-events: none; display: none; }
+  body.touch.jogando #toque { display: block; }
+  #stick { position: absolute; left: calc(env(safe-area-inset-left) + 22px); bottom: calc(env(safe-area-inset-bottom) + 26px); width: 130px; height: 130px; border-radius: 50%; background: rgba(255,255,255,.12); border: 3px solid rgba(255,255,255,.4); pointer-events: auto; }
+  #knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: rgba(255,255,255,.55); }
+  #correr { position: absolute; right: calc(env(safe-area-inset-right) + 24px); bottom: calc(env(safe-area-inset-bottom) + 40px); width: 96px; height: 96px; border-radius: 50%; border: 4px solid var(--tinta); background: var(--sol); color: var(--tinta); font-family: var(--display); font-size: 15px; pointer-events: auto; box-shadow: 0 5px 0 var(--tinta); }
+  #correr.on { transform: translateY(4px); box-shadow: 0 1px 0 var(--tinta); }
+  #fim { background: rgba(5,5,20,.88); }
+  #fim h2 { font-family: var(--display); font-weight: 400; font-size: clamp(28px, 7vw, 50px); color: var(--sol); text-shadow: 3px 3px 0 var(--tinta); }
+  .nota { font-family: var(--display); font-size: 70px; line-height: 1; margin: 6px 0; }
+  #fim p { font-weight: 800; font-size: 17px; margin: 3px 0; }
+  .botoes { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 14px; }
+</style>
+</head>
+<body>
+<a href="../index.html" id="back-link">← Menu</a>
+<div id="hud"><span class="placar"><span class="a">🔴 <b id="ga">0</b></span> x <span class="b"><b id="gb">0</b> 🔵</span></span><span class="pill">⏱ <b id="tempo">3:00</b></span><span class="pill">✅ <b id="acertos">0</b></span></div>
+<div id="aviso"></div>
+<div id="longe">📏 Chegue mais perto do lance!</div>
+<div id="decisao"><h2>🧑‍⚖️ O QUE VOCÊ MARCA?</h2><div class="opcoes" id="opcoes"></div><button id="replay">🔁 Ver de novo</button></div>
+<div id="toque"><div id="stick"><div id="knob"></div></div><button id="correr">CORRER</button></div>
+
+<div class="tela" id="menu">
+  <h1>JUIZ<span>DE FUTEBOL 3D</span></h1>
+  <p class="sub">Você é o juiz! Corra atrás do lance e decida: falta, cartão, pênalti... ou foi cai-cai? 🎭</p>
+  <div class="carreira" id="carreira"></div>
+  <button class="btn grande" id="b-jogar">APITAR! 📣</button>
+  <p class="dica" id="dica"></p>
+</div>
+<div class="tela hidden" id="fim">
+  <h2 id="fim-titulo">FIM DE JOGO</h2>
+  <div class="nota" id="fim-nota">10</div>
+  <p id="fim-info"></p>
+  <p id="fim-msg"></p>
+  <div class="botoes"><button class="btn" id="b-menu">MENU</button><button class="btn grande" id="b-denovo" style="margin-top:0">DE NOVO</button></div>
+</div>
+
+<script src="../mundo-blocos/three.min.js"></script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const sorteia = l => l[Math.floor(Math.random() * l.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+if (TOUCH) document.body.classList.add('touch');
+$('dica').textContent = TOUCH ? 'Mexa o juiz com o joystick. Segure CORRER pra correr mais rápido.' : 'Mexa o juiz com as setas ou W A S D. Segure Shift pra correr.';
+
+// ── Carreira (guardada por perfil) ──
+const PERFIL = new URLSearchParams(location.search).get('perfil');
+const KEY = 'juiz3d' + (PERFIL ? ':' + PERFIL : '');
+let save; try { save = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { save = {}; }
+save = Object.assign({ liberado: 0, escolhido: 0, melhores: {} }, save);
+const isAdm = (() => { try { const m = JSON.parse(localStorage.getItem('aventuraConta' + (PERFIL ? ':' + PERFIL : ''))); return ['endrick', 'dominic'].includes(String(m && m.user && m.user.nome || '').trim().toLowerCase()); } catch (e) { return false; } })();
+if (isAdm) save.liberado = 4;   // ADM: carreira toda liberada
+const grava = () => { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { /* ok */ } };
+const ETAPAS = [
+  { nome: 'Várzea', ic: '🌳', torcida: 0.25, vel: 0.85, lances: 6, precisa: 6 },
+  { nome: 'Estadual', ic: '🏟️', torcida: 0.5, vel: 0.95, lances: 7, precisa: 6.5 },
+  { nome: 'Brasileirão', ic: '🇧🇷', torcida: 0.75, vel: 1.05, lances: 8, precisa: 7 },
+  { nome: 'Libertadores', ic: '🏆', torcida: 0.9, vel: 1.12, lances: 9, precisa: 7.5 },
+  { nome: 'Copa do Mundo', ic: '🌍', torcida: 1, vel: 1.2, lances: 10, precisa: 8 },
+];
+function mostraCarreira() {
+  const c = $('carreira'); c.innerHTML = '';
+  ETAPAS.forEach((e, i) => {
+    const d = document.createElement('button');
+    d.className = 'etapa' + (i === save.escolhido ? ' on' : '') + (i > save.liberado ? ' trava' : '');
+    d.innerHTML = '<b></b><span></span>';
+    d.querySelector('b').textContent = i > save.liberado ? '🔒' : e.ic;
+    d.querySelector('span').textContent = e.nome + (save.melhores[i] != null ? ' · ' + save.melhores[i] : '');
+    d.onclick = () => { if (i > save.liberado) { $('dica').textContent = 'Tire nota ' + ETAPAS[i - 1].precisa + ' ou mais na ' + ETAPAS[i - 1].nome + ' pra liberar!'; return; } save.escolhido = i; grava(); mostraCarreira(); };
+    c.appendChild(d);
+  });
+}
+
+// ══════════════ 3D ══════════════
+const renderer = new THREE.WebGLRenderer({ antialias: !TOUCH });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+renderer.shadowMap.enabled = !TOUCH;
+document.body.appendChild(renderer.domElement);
+const cena = new THREE.Scene();
+cena.background = new THREE.Color('#7fc8ff');
+cena.fog = new THREE.Fog('#7fc8ff', 120, 220);
+const camera = new THREE.PerspectiveCamera(48, 1, 0.5, 400);
+function ajusta() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+addEventListener('resize', ajusta); ajusta();
+cena.add(new THREE.HemisphereLight('#ffffff', '#3a6a3a', 0.9));
+const sol = new THREE.DirectionalLight('#ffffff', 1.1);
+sol.position.set(30, 60, 20); sol.castShadow = !TOUCH;
+sol.shadow.camera.left = -60; sol.shadow.camera.right = 60; sol.shadow.camera.top = 40; sol.shadow.camera.bottom = -40; sol.shadow.mapSize.set(1024, 1024);
+cena.add(sol);
+
+// Campo: 100 x 64, com listras e linhas desenhadas numa textura
+const CW = 100, CH = 64;
+(() => {
+  const cv = document.createElement('canvas'); cv.width = 1000; cv.height = 640;
+  const g = cv.getContext('2d');
+  for (let i = 0; i < 10; i++) { g.fillStyle = i % 2 ? '#3a9a48' : '#33893f'; g.fillRect(i * 100, 0, 100, 640); }
+  g.strokeStyle = '#fff'; g.lineWidth = 5;
+  g.strokeRect(20, 20, 960, 600); g.beginPath(); g.moveTo(500, 20); g.lineTo(500, 620); g.stroke();
+  g.beginPath(); g.arc(500, 320, 90, 0, 7); g.stroke();
+  for (const x of [20, 980]) { const d = x === 20 ? 1 : -1; g.strokeRect(Math.min(x, x + d * 165), 320 - 200, 165, 400); g.strokeRect(Math.min(x, x + d * 55), 320 - 90, 55, 180); g.beginPath(); g.arc(x + d * 110, 320, 6, 0, 7); g.fillStyle = '#fff'; g.fill(); }
+  const tx = new THREE.CanvasTexture(cv); tx.anisotropy = 4;
+  const campo = new THREE.Mesh(new THREE.PlaneGeometry(CW + 4, CH + 4), new THREE.MeshLambertMaterial({ map: tx }));
+  campo.rotation.x = -Math.PI / 2; campo.receiveShadow = true; cena.add(campo);
+  const fora = new THREE.Mesh(new THREE.PlaneGeometry(180, 140), new THREE.MeshLambertMaterial({ color: '#2a6a32' }));
+  fora.rotation.x = -Math.PI / 2; fora.position.y = -0.05; cena.add(fora);
+})();
+// Gols
+function gol(x) {
+  const g = new THREE.Group(), m = new THREE.MeshLambertMaterial({ color: '#ffffff' });
+  for (const z of [-3.7, 3.7]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.3, 2.6, 0.3), m); p.position.set(0, 1.3, z); g.add(p); }
+  const t = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 7.7), m); t.position.y = 2.6; g.add(t);
+  const rede = new THREE.Mesh(new THREE.BoxGeometry(2, 2.6, 7.4), new THREE.MeshLambertMaterial({ color: '#ffffff', transparent: true, opacity: 0.25 }));
+  rede.position.set(Math.sign(x) * 1, 1.3, 0); g.add(rede);
+  g.position.set(x, 0, 0); cena.add(g);
+}
+gol(-CW / 2 - 0.2); gol(CW / 2 + 0.2);
+// Arquibancadas com torcida (pontinhos coloridos)
+const arquib = [];
+function arquibancada(w, d, x, z, rot) {
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128;
+  const g = cv.getContext('2d'); g.fillStyle = '#4a4a5a'; g.fillRect(0, 0, 512, 128);
+  for (let i = 0; i < 900; i++) { g.fillStyle = sorteia(['#ff5d5d', '#ff5d5d', '#5cb8ff', '#5cb8ff', '#ffd23f', '#ffffff', '#2fd15a']); g.fillRect(Math.random() * 512, Math.random() * 128, 4, 5); }
+  const tx = new THREE.CanvasTexture(cv);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, 10, d), [new THREE.MeshLambertMaterial({ color: '#3a3a4a' }), new THREE.MeshLambertMaterial({ color: '#3a3a4a' }), new THREE.MeshLambertMaterial({ color: '#3a3a4a' }), new THREE.MeshLambertMaterial({ color: '#3a3a4a' }), new THREE.MeshLambertMaterial({ map: tx }), new THREE.MeshLambertMaterial({ color: '#3a3a4a' })]);
+  m.position.set(x, 5, z); m.rotation.y = rot; m.rotation.x = 0;
+  const grupo = new THREE.Group(); grupo.add(m); grupo.position.set(0, 0, 0);
+  m.geometry.translate(0, 0, 0);
+  cena.add(m); arquib.push(m);
+}
+arquibancada(120, 8, 0, -48, 0); arquibancada(120, 8, 0, 48, Math.PI); arquibancada(80, 8, -66, 0, Math.PI / 2); arquibancada(80, 8, 66, 0, -Math.PI / 2);
+
+// ── Bonequinhos (corpo de bloquinhos) ──
+function boneco(cor, cor2, pele = '#f2c18d') {
+  const g = new THREE.Group();
+  const mat = c => new THREE.MeshLambertMaterial({ color: c });
+  const corpo = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.1, 0.55), mat(cor)); corpo.position.y = 1.55; corpo.castShadow = true; g.add(corpo);
+  const cab = new THREE.Mesh(new THREE.SphereGeometry(0.38, 12, 10), mat(pele)); cab.position.y = 2.42; cab.castShadow = true; g.add(cab);
+  const cabelo = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 10, 0, Math.PI * 2, 0, Math.PI / 2.2), mat(sorteia(['#2a1a10', '#3b2414', '#f0c040', '#111111']))); cabelo.position.y = 2.48; g.add(cabelo);
+  const pernas = [], bracos = [];
+  for (const s of [-1, 1]) {
+    const p = new THREE.Group(); p.position.set(s * 0.22, 1.0, 0);
+    const pm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1, 0.3), mat(cor2)); pm.position.y = -0.5; pm.castShadow = true; p.add(pm);
+    const meia = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.25, 0.42), mat('#111')); meia.position.set(0, -0.95, 0.06); p.add(meia);
+    g.add(p); pernas.push(p);
+    const b = new THREE.Group(); b.position.set(s * 0.6, 2.0, 0);
+    const bm = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.9, 0.25), mat(cor)); bm.position.y = -0.45; b.add(bm);
+    g.add(b); bracos.push(b);
+  }
+  g.userData = { pernas, bracos, corpo, cab };
+  cena.add(g);
+  return g;
+}
+function anda(b, vel, t) {
+  const a = Math.sin(t * 10) * Math.min(1, vel * 3) * 0.7;
+  b.userData.pernas[0].rotation.x = a; b.userData.pernas[1].rotation.x = -a;
+  b.userData.bracos[0].rotation.x = -a; b.userData.bracos[1].rotation.x = a;
+}
+// cartão em cima da cabeça
+function mostraCartao(alvo, cor) {
+  const c = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.85, 0.05), new THREE.MeshBasicMaterial({ color: cor }));
+  c.position.set(0, 3.6, 0); alvo.add(c);
+  setTimeout(() => alvo.remove(c), 2500);
+}
+
+// ══════════════ JOGO ══════════════
+let M = null, modo = 'menu';
+const teclas = {};
+addEventListener('keydown', e => { teclas[e.key.toLowerCase()] = true; if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(e.key.toLowerCase())) e.preventDefault(); });
+addEventListener('keyup', e => { teclas[e.key.toLowerCase()] = false; });
+const joy = { x: 0, y: 0, id: null };
+const stick = $('stick'), knob = $('knob');
+function joyMove(t) { const r = stick.getBoundingClientRect(); let dx = t.clientX - (r.left + r.width / 2), dy = t.clientY - (r.top + r.height / 2); const l = Math.hypot(dx, dy), max = 50; if (l > max) { dx = dx / l * max; dy = dy / l * max; } joy.x = dx / max; joy.y = dy / max; knob.style.transform = `translate(${dx}px, ${dy}px)`; }
+stick.addEventListener('touchstart', e => { e.preventDefault(); joy.id = e.changedTouches[0].identifier; joyMove(e.changedTouches[0]); }, { passive: false });
+stick.addEventListener('touchmove', e => { e.preventDefault(); for (const t of e.changedTouches) if (t.identifier === joy.id) joyMove(t); }, { passive: false });
+const joyFim = e => { for (const t of e.changedTouches) if (t.identifier === joy.id) { joy.id = null; joy.x = joy.y = 0; knob.style.transform = ''; } };
+stick.addEventListener('touchend', joyFim); stick.addEventListener('touchcancel', joyFim);
+let correndo = false;
+$('correr').addEventListener('touchstart', e => { e.preventDefault(); correndo = true; $('correr').classList.add('on'); }, { passive: false });
+$('correr').addEventListener('touchend', e => { e.preventDefault(); correndo = false; $('correr').classList.remove('on'); }, { passive: false });
+
+// ── Sons ──
+let ac = null;
+function som(tipo) {
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    const t = ac.currentTime;
+    const nota = (f, d, tp = 'sine', v = 0.08, at = 0) => { const o = ac.createOscillator(), g = ac.createGain(); o.type = tp; o.frequency.value = f; g.gain.setValueAtTime(v, t + at); g.gain.exponentialRampToValueAtTime(0.0008, t + at + d); o.connect(g); g.connect(ac.destination); o.start(t + at); o.stop(t + at + d + 0.02); };
+    const ruido = (d, v, f = 800) => { const n = ac.createBufferSource(), b = ac.createBuffer(1, ac.sampleRate * d, ac.sampleRate), c = b.getChannelData(0); for (let i = 0; i < c.length; i++) c[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / c.length); const fl = ac.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = f; const g = ac.createGain(); g.gain.value = v; n.buffer = b; n.connect(fl); fl.connect(g); g.connect(ac.destination); n.start(); };
+    if (tipo === 'apito') { nota(2800, 0.35, 'sine', 0.09); nota(2850, 0.35, 'sine', 0.05); }
+    if (tipo === 'apito3') { for (let i = 0; i < 3; i++) nota(2800, i === 2 ? 0.8 : 0.25, 'sine', 0.09, i * 0.35); }
+    if (tipo === 'aplauso') ruido(1.6, 0.35, 1800);
+    if (tipo === 'vaia') { ruido(1.4, 0.3, 300); nota(140, 1.2, 'sawtooth', 0.03); }
+    if (tipo === 'gol') { ruido(2.2, 0.45, 1200); [523, 659, 784].forEach((f, i) => nota(f, 0.3, 'triangle', 0.06, i * 0.12)); }
+    if (tipo === 'chute') nota(160, 0.08, 'square', 0.06);
+  } catch (e) { /* sem som */ }
+}
+function aviso(txt, sub, ms = 1800) {
+  const a = $('aviso'); a.innerHTML = ''; a.appendChild(document.createTextNode(txt));
+  if (sub) { const s = document.createElement('small'); s.textContent = sub; a.appendChild(s); }
+  a.classList.add('on'); clearTimeout(aviso.t); aviso.t = setTimeout(() => a.classList.remove('on'), ms);
+}
+
+// Times: 🔴 ataca pra direita (+x), 🔵 pra esquerda
+const FORMACAO = [[-46, 0], [-30, -14], [-30, 14], [-14, -8], [-14, 8], [-4, 0]];
+function novoJogo() {
+  limpa();
+  const E = ETAPAS[save.escolhido];
+  const jogadores = [];
+  for (let time = 0; time < 2; time++) {
+    FORMACAO.forEach(([x, z], i) => {
+      const b = boneco(i === 0 ? (time ? '#ffd23f' : '#2fd15a') : (time ? '#3c8fe0' : '#e04848'), time ? '#1a3a7a' : '#ffffff', sorteia(['#f2c18d', '#d9a070', '#8a5a3a', '#e8b98a']));
+      const sx = time ? -1 : 1;
+      jogadores.push({ b, time, gk: i === 0, casa: { x: x * sx, z }, x: x * sx, z, vx: 0, vz: 0, vel: (0.16 + Math.random() * 0.03) * E.vel, caido: 0, fora: false, amarelo: false, t: Math.random() * 10 });
+    });
+  }
+  const juiz = boneco('#111111', '#111111');
+  const apito = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.12, 0.3), new THREE.MeshLambertMaterial({ color: '#ffd23f' })); apito.position.set(0, 1.9, 0.3); juiz.add(apito);
+  const bolaM = new THREE.Mesh(new THREE.SphereGeometry(0.35, 14, 12), new THREE.MeshLambertMaterial({ color: '#ffffff' })); bolaM.castShadow = true; cena.add(bolaM);
+  // círculo embaixo do juiz pra achar ele fácil
+  const anel = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.2, 24), new THREE.MeshBasicMaterial({ color: '#ffd23f', transparent: true, opacity: 0.8 })); anel.rotation.x = -Math.PI / 2; anel.position.y = 0.05; cena.add(anel);
+  M = { E, jogadores, juiz, anel, ref: { x: 0, z: 10 }, bola: { x: 0, z: 0, y: 0.35, vx: 0, vz: 0, vy: 0, dono: null, m: bolaM },
+    placar: [0, 0], tempo: 180 * 60, t: 0, pausa: 90, lances: 0, proximoLance: 360 + Math.random() * 300, acertos: 0, pontos: 0, max: 0, lance: null, lento: 1, replay: null, camAlvo: new THREE.Vector3() };
+  for (const p of jogadores) p.b.position.set(p.x, 0, p.z);
+  saidaDeBola(0);
+  modo = 'jogando';
+  document.body.classList.add('jogando');
+  $('menu').classList.add('hidden'); $('fim').classList.add('hidden');
+  hud();
+  aviso('APITA O JUIZ!', ETAPAS[save.escolhido].ic + ' ' + ETAPAS[save.escolhido].nome, 2000);
+  som('apito');
+}
+function limpa() {
+  if (!M) return;
+  for (const p of M.jogadores) cena.remove(p.b);
+  cena.remove(M.juiz); cena.remove(M.bola.m); cena.remove(M.anel);
+  M = null;
+}
+function saidaDeBola(time) {
+  const b = M.bola; b.x = 0; b.z = 0; b.vx = b.vz = b.vy = 0; b.y = 0.35;
+  for (const p of M.jogadores) { p.x = p.casa.x * 0.9; p.z = p.casa.z; p.caido = 0; }
+  const quem = M.jogadores.find(p => p.time === time && !p.gk && !p.fora && Math.abs(p.casa.x) < 6) || M.jogadores.find(p => p.time === time && !p.fora);
+  quem.x = time ? 1 : -1; quem.z = 0; b.dono = quem; M.pausa = 60;
+}
+const meta = time => time ? -CW / 2 : CW / 2;   // gol que o time ataca
+function chuta(p, tx, tz, forca, alto = 0) {
+  const b = M.bola, dx = tx - b.x, dz = tz - b.z, d = Math.hypot(dx, dz) || 1;
+  b.vx = dx / d * forca; b.vz = dz / d * forca; b.vy = alto; b.dono = null; p.espera = 25; som('chute');
+}
+
+// ── Os lances (o que o juiz precisa decidir) ──
+// certo: siga | falta | amarelo | vermelho | penalti
+const TIPOS = [
+  { id: 'limpo', certo: 'siga', peso: 2 },
+  { id: 'caicai', certo: 'siga', peso: 2 },
+  { id: 'empurrao', certo: 'falta', peso: 3 },
+  { id: 'carrinho', certo: 'amarelo', peso: 2.5 },
+  { id: 'voadora', certo: 'vermelho', peso: 1 },
+  { id: 'mao', certo: 'falta', peso: 1.5 },
+];
+function naArea(x, z) { return Math.abs(x) > CW / 2 - 16.5 && Math.abs(z) < 20; }
+function comecaLance(atacante, defensor) {
+  let tipo = TIPOS[0], r = Math.random() * TIPOS.reduce((a, t) => a + t.peso, 0);
+  for (const t of TIPOS) { if ((r -= t.peso) <= 0) { tipo = t; break; } }
+  const area = naArea(atacante.x, atacante.z) && Math.sign(atacante.x) === Math.sign(meta(atacante.time));
+  let certo = tipo.certo;
+  if (area && ['falta', 'amarelo', 'mao'].includes(certo === 'falta' && tipo.id === 'mao' ? 'mao' : certo)) certo = 'penalti';
+  if (area && tipo.id === 'empurrao') certo = 'penalti';
+  M.lance = { tipo: tipo.id, certo, area, atacante, defensor, t: 0, x: atacante.x, z: atacante.z, inicio: { ax: atacante.x, az: atacante.z, dx: defensor.x, dz: defensor.z } };
+  M.lento = 0.25;   // câmera lenta
+  M.bola.dono = null; M.bola.vx *= 0.3; M.bola.vz *= 0.3;
+  M.lances++;
+}
+function animaLance(L, k) {   // k = 0..1 durante o lance
+  const a = L.atacante, d = L.defensor, ini = L.inicio;
+  const ax = ini.ax + (meta(a.time) > 0 ? 1 : -1) * k * 3;
+  a.x = ax; a.z = ini.az;
+  const lado = Math.sign(ini.dz - ini.az) || 1;
+  if (L.tipo === 'caicai') { d.x = ini.dx; d.z = ini.az + lado * 3.2; }   // ninguém encostou!
+  else { d.x = ini.dx + (ax - ini.dx) * Math.min(1, k * 1.6); d.z = ini.dz + (ini.az + lado * 0.9 - ini.dz) * Math.min(1, k * 1.6); }
+  // poses
+  a.b.rotation.z = 0; d.b.rotation.z = 0; d.b.position.y = 0;
+  if (L.tipo === 'carrinho' && k > 0.25) { d.b.rotation.z = -Math.PI / 2.2 * lado; d.b.position.y = 0.4; }
+  if (L.tipo === 'voadora' && k > 0.25) { d.b.rotation.x = -Math.PI / 2.4; d.b.position.y = 1.3 * Math.sin(Math.min(1, (k - 0.25) * 2) * Math.PI); }
+  if (L.tipo === 'empurrao' && k > 0.4) d.b.userData.bracos.forEach(b => { b.rotation.x = -Math.PI / 2; });
+  if (L.tipo === 'mao' && k > 0.3) { d.b.userData.bracos[0].rotation.z = Math.PI * 0.85; const bo = M.bola; bo.x = d.x + 0.6; bo.z = d.z; bo.y = 2.4; }
+  const cai = L.tipo !== 'limpo' && L.tipo !== 'mao' && k > (L.tipo === 'caicai' ? 0.45 : 0.55);
+  if (cai) { a.b.rotation.x = -Math.PI / 2 * Math.min(1, (k - 0.5) * 3); a.b.position.y = 0.3; }
+  if (L.tipo === 'limpo' && k > 0.5) { const bo = M.bola; bo.x = d.x + 0.8; bo.z = d.z; bo.y = 0.35; }
+}
+function terminaLance() {
+  const L = M.lance;
+  M.lento = 0; modo = 'decisao';
+  const dist = Math.hypot(M.ref.x - L.x, M.ref.z - L.z);
+  L.dist = dist;
+  $('longe').style.display = dist > 22 ? 'block' : 'none';
+  $('longe').textContent = dist > 30 ? '📏 Você estava MUITO longe do lance!' : '📏 Você estava meio longe...';
+  const ops = $('opcoes'); ops.innerHTML = '';
+  for (const [id, txt] of [['siga', '✋ SIGA'], ['falta', '📣 FALTA'], ['amarelo', '🟨 AMARELO'], ['vermelho', '🟥 VERMELHO'], ['penalti', '⚽ PÊNALTI']]) {
+    const b = document.createElement('button'); b.className = 'op ' + id; b.textContent = txt; b.onclick = () => decide(id); ops.appendChild(b);
+  }
+  $('decisao').classList.add('on');
+}
+$('replay').onclick = () => { if (modo !== 'decisao') return; $('decisao').classList.remove('on'); const L = M.lance; L.t = 0; L.replay = true; M.lento = 0.25; modo = 'jogando'; };
+function decide(id) {
+  const L = M.lance;
+  $('decisao').classList.remove('on'); $('longe').style.display = 'none';
+  const vale = L.dist > 30 ? 0.5 : L.dist > 22 ? 0.75 : 1;   // longe do lance vale menos
+  M.max += 1;
+  const nomes = { siga: 'SIGA O JOGO', falta: 'FALTA', amarelo: 'CARTÃO AMARELO', vermelho: 'CARTÃO VERMELHO', penalti: 'PÊNALTI' };
+  const quase = (id === 'falta' && L.certo === 'amarelo') || (id === 'amarelo' && L.certo === 'falta') || (id === 'amarelo' && L.certo === 'vermelho');
+  const explica = { limpo: 'Ele tirou a bola certinho, sem falta!', caicai: 'Foi cai-cai! Ninguém encostou nele 🎭', empurrao: 'Foi empurrão!', carrinho: 'Carrinho perigoso: amarelo!', voadora: 'Voadora no adversário: expulsão!', mao: 'Ele pôs a mão na bola!' }[L.tipo] + (L.certo === 'penalti' ? ' E foi dentro da área: pênalti!' : '');
+  som(id === 'siga' ? 'apito' : 'apito');
+  if (id === L.certo) {
+    M.acertos++; M.pontos += vale;
+    setTimeout(() => { aviso('✅ ACERTOU! ' + nomes[id], explica + (vale < 1 ? ' (mas estava longe)' : ''), 2600); som('aplauso'); }, 200);
+  } else {
+    if (quase) M.pontos += 0.4 * vale;
+    setTimeout(() => { aviso((quase ? '🟠 QUASE! ' : '❌ ERROU! ') + 'Era ' + nomes[L.certo], explica, 3000); som('vaia'); }, 200);
+  }
+  // o jogo segue de acordo com o que VOCÊ marcou
+  const a = L.atacante, d = L.defensor;
+  a.b.rotation.set(0, a.b.rotation.y, 0); a.b.position.y = 0; d.b.rotation.set(0, d.b.rotation.y, 0); d.b.position.y = 0;
+  d.b.userData.bracos.forEach(b => b.rotation.set(0, 0, 0));
+  if (id === 'amarelo') { mostraCartao(M.juiz, '#ffd23f'); if (d.amarelo) id = 'vermelho'; d.amarelo = true; }
+  if (id === 'vermelho') { mostraCartao(M.juiz, '#ff2a2a'); setTimeout(() => { d.fora = true; d.b.visible = false; }, 1500); }
+  const b = M.bola; b.y = 0.35; b.vx = b.vz = b.vy = 0;
+  if (id === 'siga') { b.dono = L.tipo === 'limpo' ? d : a; b.x = b.dono.x; b.z = b.dono.z; M.pausa = 40; }
+  else if (id === 'penalti') { penalti(a.time); }
+  else { b.x = L.x; b.z = L.z; b.dono = a; M.pausa = 80; for (const p of M.jogadores) if (p.time !== a.time && Math.hypot(p.x - b.x, p.z - b.z) < 8) { const dx = p.x - b.x, dz = p.z - b.z, l = Math.hypot(dx, dz) || 1; p.x = b.x + dx / l * 8; p.z = b.z + dz / l * 8; } }
+  M.lance = null; modo = 'jogando'; M.lento = 1;
+  M.proximoLance = (M.tempo / Math.max(1, M.E.lances - M.lances)) * (0.6 + Math.random() * 0.6);
+  hud();
+}
+function penalti(time) {
+  const b = M.bola, gx = meta(time), sx = Math.sign(gx);
+  b.x = gx - sx * 11; b.z = 0; b.dono = null;
+  const cobrador = M.jogadores.filter(p => p.time === time && !p.fora && !p.gk)[0];
+  cobrador.x = b.x - sx * 2; cobrador.z = 0;
+  for (const p of M.jogadores) if (p !== cobrador && !p.gk) { p.x = b.x - sx * 6 + (Math.random() - 0.5) * 6; p.z = (Math.random() - 0.5) * 24; }
+  M.pausa = 100;
+  aviso('⚽ PÊNALTI!', 'Silêncio no estádio...', 1800);
+  setTimeout(() => { if (!M) return; const alvo = (Math.random() < 0.5 ? -1 : 1) * (1.5 + Math.random() * 2); chuta(cobrador, gx + sx * 2, alvo, 1.05); }, 1700);
+}
+
+// ── Atualizar o jogo ──
+function atualiza() {
+  if (!M || modo !== 'jogando') return;
+  const passo = M.lento;
+  M.t += passo;
+  // juiz anda (você controla)
+  let mx = (teclas.arrowright || teclas.d ? 1 : 0) - (teclas.arrowleft || teclas.a ? 1 : 0);
+  let mz = (teclas.arrowdown || teclas.s ? 1 : 0) - (teclas.arrowup || teclas.w ? 1 : 0);
+  if (joy.x || joy.y) { mx = joy.x; mz = joy.y; }
+  const l = Math.hypot(mx, mz); if (l > 1) { mx /= l; mz /= l; }
+  const vj = (teclas.shift || correndo ? 0.32 : 0.2) * (M.lance ? 0.5 : 1);
+  M.ref.x = clamp(M.ref.x + mx * vj, -CW / 2 - 2, CW / 2 + 2); M.ref.z = clamp(M.ref.z + mz * vj, -CH / 2 - 2, CH / 2 + 2);
+  M.juiz.position.set(M.ref.x, 0, M.ref.z);
+  if (l > 0.1) M.juiz.rotation.y = Math.atan2(mx, mz);
+  anda(M.juiz, l * vj, M.t / 60);
+  M.anel.position.set(M.ref.x, 0.05, M.ref.z);
+
+  // lance em câmera lenta
+  if (M.lance) {
+    const L = M.lance;
+    L.t += 1 / 90;
+    animaLance(L, Math.min(1, L.t));
+    if (L.t >= 1.15) terminaLance();
+    posiciona(); return;
+  }
+  if (M.pausa > 0) { M.pausa--; posiciona(); return; }
+  M.tempo--;
+  if (M.tempo <= 0) return fimDeJogo();
+  M.proximoLance--;
+
+  // bola
+  const b = M.bola;
+  if (b.dono) {
+    const d = b.dono, a = Math.atan2(d.vz, d.vx) || (meta(d.time) > 0 ? 0 : Math.PI);
+    b.x = d.x + Math.cos(a) * 0.8; b.z = d.z + Math.sin(a) * 0.8; b.y = 0.35;
+  } else {
+    b.x += b.vx; b.z += b.vz; b.y += b.vy; b.vy -= 0.02;
+    if (b.y < 0.35) { b.y = 0.35; b.vy = Math.abs(b.vy) > 0.1 ? -b.vy * 0.4 : 0; }
+    b.vx *= 0.975; b.vz *= 0.975;
+    // gol?
+    if (Math.abs(b.x) > CW / 2 && Math.abs(b.z) < 3.6 && b.y < 2.6) {
+      const time = b.x > 0 ? 0 : 1;
+      M.placar[time]++; hud(); som('gol'); aviso('⚽ GOOOOL!', time ? 'do time azul 🔵' : 'do time vermelho 🔴', 2200);
+      M.pausa = 140; setTimeout(() => M && saidaDeBola(1 - time), 1600); posiciona(); return;
+    }
+    // saiu: o jogo volta sozinho (lateral, escanteio ou tiro de meta)
+    if (Math.abs(b.x) > CW / 2 + 1 || Math.abs(b.z) > CH / 2 + 1) {
+      som('apito');
+      const perto = M.jogadores.filter(p => !p.fora && !p.gk).sort((p, q) => Math.hypot(p.x - b.x, p.z - b.z) - Math.hypot(q.x - b.x, q.z - b.z))[0];
+      b.x = clamp(b.x, -CW / 2 + 1, CW / 2 - 1); b.z = clamp(b.z, -CH / 2 + 1, CH / 2 - 1); b.vx = b.vz = 0;
+      perto.x = b.x; perto.z = b.z; b.dono = perto; M.pausa = 50;
+    }
+    // alguém pega a bola solta
+    for (const p of M.jogadores) {
+      if (p.fora || p.caido > 0 || (p.espera || 0) > 0) continue;
+      if (Math.hypot(p.x - b.x, p.z - b.z) < (p.gk ? 2 : 1.1) && b.y < 2) { b.dono = p; b.vx = b.vz = 0; break; }
+    }
+  }
+  // jogadores
+  const dono = b.dono;
+  for (const p of M.jogadores) {
+    if (p.fora) continue;
+    p.t += 1 / 60; if (p.espera > 0) p.espera--;
+    let tx = p.casa.x, tz = p.casa.z, vel = p.vel;
+    const bx = b.x, bz = b.z;
+    // o time anda junto com a bola
+    tx = p.casa.x + bx * 0.45; tz = p.casa.z + (bz - p.casa.z) * 0.25;
+    if (p.gk) { tx = Math.sign(p.casa.x) * (CW / 2 - 2); tz = clamp(bz * 0.15, -3, 3); }
+    if (p === dono) {
+      // com a bola: corre pro gol, passa ou chuta
+      tx = meta(p.time); tz = clamp(p.z + Math.sin(p.t * 2) * 4, -20, 20); vel *= 0.9;
+      const dg = Math.abs(meta(p.time) - p.x);
+      if (dg < 18 && Math.random() < 0.035) chuta(p, meta(p.time) + Math.sign(meta(p.time)) * 2, (Math.random() - 0.5) * 7, 0.9, 0.1);
+      else if (Math.random() < 0.012) {
+        const amigos = M.jogadores.filter(q => q.time === p.time && q !== p && !q.fora && !q.gk && Math.sign(q.x - p.x) === Math.sign(meta(p.time)));
+        if (amigos.length) { const q = sorteia(amigos); chuta(p, q.x, q.z, 0.7); }
+      }
+      if (p.gk && Math.random() < 0.05) chuta(p, 0, (Math.random() - 0.5) * 30, 1.0, 0.15);
+    } else if (!p.gk) {
+      // o mais perto de cada time vai na bola
+      const perto = M.jogadores.filter(q => q.time === p.time && !q.fora && !q.gk).sort((q, s) => Math.hypot(q.x - bx, q.z - bz) - Math.hypot(s.x - bx, s.z - bz))[0];
+      if (perto === p && (!dono || dono.time !== p.time)) { tx = bx; tz = bz; vel *= 1.08; }
+    }
+    const dx = tx - p.x, dz = tz - p.z, d = Math.hypot(dx, dz);
+    if (d > 0.3) { p.vx = dx / d * Math.min(vel, d); p.vz = dz / d * Math.min(vel, d); } else { p.vx *= 0.5; p.vz *= 0.5; }
+    p.x = clamp(p.x + p.vx, -CW / 2 - 1, CW / 2 + 1); p.z = clamp(p.z + p.vz, -CH / 2 - 1, CH / 2 + 1);
+    // dividida: quem marca tenta tomar a bola (às vezes vira lance pro juiz!)
+    if (dono && p.time !== dono.time && !p.gk && !dono.gk && Math.hypot(p.x - dono.x, p.z - dono.z) < 1.4 && (p.espera || 0) <= 0) {
+      if (M.proximoLance <= 0 && M.lances < M.E.lances) { comecaLance(dono, p); break; }
+      if (Math.random() < 0.08) { b.dono = p; dono.espera = 40; }
+    }
+  }
+  posiciona();
+}
+function posiciona() {
+  for (const p of M.jogadores) {
+    if (p.fora) continue;
+    p.b.position.x = p.x; p.b.position.z = p.z;
+    if (!M.lance || (p !== M.lance.atacante && p !== M.lance.defensor)) {
+      if (Math.hypot(p.vx, p.vz) > 0.01) p.b.rotation.y = Math.atan2(p.vx, p.vz);
+      anda(p.b, Math.hypot(p.vx, p.vz), M.t / 60 + p.t);
+    }
+  }
+  const b = M.bola; b.m.position.set(b.x, b.y, b.z); b.m.rotation.x += b.vz * 0.5; b.m.rotation.z -= b.vx * 0.5;
+  // câmera de TV: entre a bola e o juiz, de lado
+  const fx = M.lance ? M.lance.x : (b.x * 0.65 + M.ref.x * 0.35), fz = M.lance ? M.lance.z : (b.z * 0.5 + M.ref.z * 0.5);
+  M.camAlvo.lerp(new THREE.Vector3(fx, 0, fz), 0.08);
+  const zoom = M.lance ? 0.55 : 1;
+  camera.position.set(M.camAlvo.x, 26 * zoom + 6, M.camAlvo.z + 30 * zoom + 6);
+  camera.lookAt(M.camAlvo.x, 0, M.camAlvo.z);
+}
+function hud() {
+  $('ga').textContent = M.placar[0]; $('gb').textContent = M.placar[1];
+  const s = Math.max(0, Math.ceil(M.tempo / 60));
+  $('tempo').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  $('acertos').textContent = M.acertos + '/' + M.max;
+}
+setInterval(() => { if (M && modo === 'jogando') hud(); }, 500);
+function fimDeJogo() {
+  modo = 'fim'; som('apito3');
+  const nota = M.max ? Math.round(M.pontos / M.max * 100) / 10 : 10;
+  const e = save.escolhido, E = ETAPAS[e];
+  save.melhores[e] = Math.max(save.melhores[e] || 0, nota);
+  let msg = '';
+  if (nota >= E.precisa && e === save.liberado && e < ETAPAS.length - 1) { save.liberado = e + 1; msg = '🎉 Você foi promovido! Liberou: ' + ETAPAS[e + 1].ic + ' ' + ETAPAS[e + 1].nome; }
+  else if (nota >= E.precisa) msg = '👏 Grande arbitragem!';
+  else msg = 'Precisa de nota ' + E.precisa + ' pra subir. Tente chegar mais perto dos lances!';
+  grava();
+  $('fim-titulo').textContent = nota >= 9 ? '🏆 JUIZ LENDÁRIO!' : nota >= 7 ? '👏 MUITO BEM, JUIZ!' : nota >= 5 ? 'FIM DE JOGO' : '😅 A TORCIDA VAIOU...';
+  $('fim-nota').textContent = nota.toFixed(1);
+  $('fim-nota').style.color = nota >= 7 ? '#2fd15a' : nota >= 5 ? '#ffd23f' : '#ff5d5d';
+  $('fim-info').textContent = 'Placar 🔴 ' + M.placar[0] + ' x ' + M.placar[1] + ' 🔵 · Acertou ' + M.acertos + ' de ' + M.max + ' lances';
+  $('fim-msg').textContent = msg;
+  document.body.classList.remove('jogando');
+  $('fim').classList.remove('hidden');
+}
+$('b-jogar').onclick = novoJogo;
+$('b-denovo').onclick = novoJogo;
+$('b-menu').onclick = () => { limpa(); modo = 'menu'; $('fim').classList.add('hidden'); $('menu').classList.remove('hidden'); mostraCarreira(); };
+
+// câmera do menu: passeia pelo estádio vazio
+let ang = 0;
+function loop() {
+  if (M) atualiza();
+  else { ang += 0.002; camera.position.set(Math.cos(ang) * 70, 35, Math.sin(ang) * 50); camera.lookAt(0, 0, 0); }
+  renderer.render(cena, camera);
+  requestAnimationFrame(loop);
+}
+mostraCarreira();
+loop();
+window.__juiz = { get M() { return M; }, get modo() { return modo; }, decide, novoJogo };
+})();
+</script>
+</body>
+</html>
