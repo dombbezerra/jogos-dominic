@@ -285,8 +285,11 @@ let vozHomem = null, vozMulher = null;
 function achaVoz() {
   const vs = (window.speechSynthesis && speechSynthesis.getVoices()) || [];
   const pt = vs.filter(v => /^pt(-|_)?br/i.test(v.lang) || /portugu/i.test(v.name));
-  const mulher = v => /female|feminin|luciana|francisca|maria|vit[oó]ria|helena|joana|fernanda|leticia|let[ií]cia|camila|flo|sandy|shelley|grandma|mulher/i.test(v.name);
-  vozHomem = pt.find(v => /male|masculin|daniel|felipe|ricardo|antonio|ant[oô]nio|fabio|f[aá]bio|thiago|eddy|reed|rocko|grandpa|homem/i.test(v.name) && !mulher(v)) || pt.find(v => !mulher(v)) || pt[0] || null;
+  const mulher = v => /female|feminin|luciana|francisca|thalita|brenda|giovanna|leila|manuela|yara|maria|vit[oó]ria|helena|joana|fernanda|leticia|let[ií]cia|camila|flo|sandy|shelley|grandma|mulher/i.test(v.name);
+  // As vozes mais naturais primeiro (Edge "Natural"/"Online", Google, "Premium"/"Enhanced" do Mac)
+  const nota = v => (/natural/i.test(v.name) ? 40 : 0) + (/online/i.test(v.name) ? 20 : 0) + (/google/i.test(v.name) ? 15 : 0) + (/premium|enhanced|aprimorad/i.test(v.name) ? 25 : 0) + (v.localService === false ? 5 : 0) - (/grandma|grandpa|rocko|eddy|flo|reed|sandy|shelley/i.test(v.name) ? 10 : 0);
+  pt.sort((a, b) => nota(b) - nota(a));
+  vozHomem = pt.find(v => /male|masculin|daniel|felipe|ricardo|donato|fabio|humberto|julio|nicolau|valerio|antonio|ant[oô]nio|fabio|f[aá]bio|thiago|eddy|reed|rocko|grandpa|homem/i.test(v.name) && !mulher(v)) || pt.find(v => !mulher(v)) || pt[0] || null;
   vozMulher = pt.find(mulher) || pt.find(v => v !== vozHomem) || pt[0] || null;
 }
 if (window.speechSynthesis) { achaVoz(); speechSynthesis.onvoiceschanged = achaVoz; }
