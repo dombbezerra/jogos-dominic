@@ -3,665 +3,435 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#15134a">
-<title>Estúdio de Música</title>
+<meta name="theme-color" content="#0f0d24">
+<title>DJ IA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --tinta: #0e0c33; --noite: #15134a; --noite-2: #2a2380; --creme: #fff6dc; --sol: #ffd23f; --rosa: #ff5d8f; --agua: #3fe0d0; --roxo: #b06cff; --verde: #2fd15a;
-    --display: 'Bungee', 'Arial Black', Impact, sans-serif; --texto: 'Baloo 2', 'Segoe UI', Arial, sans-serif;
+    --fundo: #0f0d24; --painel: #1a1738; --borda: #2c2860; --texto: #f2efff; --apagado: #a39fc9;
+    --roxo: #9b6cff; --rosa: #ff5d8f; --verde: #2fd15a; --sol: #ffd23f;
+    --display: 'Bungee', 'Arial Black', Impact, sans-serif; --fonte: 'Baloo 2', 'Segoe UI', Arial, sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { min-height: 100vh; font-family: var(--texto); color: var(--creme); -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
-    background: radial-gradient(circle at 50% -10%, var(--noite-2) 0%, transparent 60%), var(--noite); }
-  #back-link { position: fixed; top: 10px; left: 10px; z-index: 10; text-decoration: none; font-weight: 800; background: var(--sol); color: var(--tinta);
-    border: 3px solid var(--tinta); border-radius: 12px; padding: 4px 12px 2px; box-shadow: 0 4px 0 var(--tinta); }
-  .wrap { max-width: 1000px; margin: 0 auto; padding: 56px 10px 40px; }
-  h1 { font-family: var(--display); font-weight: 400; text-align: center; font-size: clamp(26px, 6vw, 46px); line-height: 1; transform: rotate(-2deg);
-    text-shadow: 3px 3px 0 var(--tinta); }
-  h1 span { color: var(--rosa); }
-  .sub { text-align: center; font-weight: 700; opacity: .85; margin-top: 6px; }
+  html, body { height: 100%; }
+  body { background: var(--fundo); color: var(--texto); font-family: var(--fonte); display: flex; flex-direction: column; -webkit-tap-highlight-color: transparent; }
+  header { display: flex; align-items: center; gap: 10px; padding: calc(env(safe-area-inset-top) + 10px) 14px 10px; border-bottom: 1px solid var(--borda); background: rgba(15,13,36,.92); position: sticky; top: 0; z-index: 5; }
+  header a { text-decoration: none; color: var(--texto); font-weight: 800; background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; padding: 4px 12px 2px; }
+  header h1 { flex: 1; font-family: var(--display); font-weight: 400; font-size: 20px; text-align: center; }
+  header h1 span { color: var(--roxo); }
+  #b-minhas { background: var(--painel); color: var(--texto); border: 1px solid var(--borda); border-radius: 12px; padding: 4px 12px 2px; font-family: inherit; font-weight: 800; font-size: 14px; cursor: pointer; }
 
-  /* Visualizador: barrinhas pulando no ritmo */
-  #vis { display: flex; align-items: flex-end; justify-content: center; gap: 4px; height: 46px; margin: 10px auto 4px; }
-  #vis i { width: 10px; height: 6px; border-radius: 4px; background: var(--agua); transition: height .12s ease-out; }
+  main { flex: 1; overflow-y: auto; padding: 18px 14px 10px; }
+  .conversa { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+  .msg { display: flex; gap: 10px; align-items: flex-start; }
+  .msg .av { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 18px; background: linear-gradient(135deg, var(--roxo), var(--rosa)); }
+  .msg .txt { font-size: 16px; line-height: 1.45; font-weight: 600; padding-top: 4px; white-space: pre-wrap; }
+  .msg.eu { justify-content: flex-end; }
+  .msg.eu .txt { background: var(--painel); border: 1px solid var(--borda); border-radius: 18px; padding: 8px 14px 6px; max-width: 80%; }
+  .digitando span { display: inline-block; width: 7px; height: 7px; margin: 0 2px; border-radius: 50%; background: var(--apagado); animation: pontinho 1s infinite; }
+  .digitando span:nth-child(2) { animation-delay: .15s; } .digitando span:nth-child(3) { animation-delay: .3s; }
+  @keyframes pontinho { 50% { transform: translateY(-5px); opacity: .5; } }
 
-  .controles { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; margin: 10px 0; }
-  .btn { font-family: var(--texto); font-weight: 800; font-size: 16px; cursor: pointer; border: 3px solid var(--tinta); border-radius: 14px; padding: 6px 14px 3px;
-    color: var(--tinta); background: var(--creme); box-shadow: 0 4px 0 var(--tinta); }
-  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
-  #b-play { background: var(--verde); color: #fff; font-family: var(--display); font-weight: 400; font-size: 20px; padding: 6px 22px 2px; min-width: 150px; }
-  #b-play.tocando { background: var(--rosa); }
-  .btn.sol { background: var(--sol); } .btn.agua { background: var(--agua); } .btn.roxo { background: var(--roxo); color: #fff; }
-  .aviso { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(10, 8, 32, .85); }
-  .aviso.fechado { display: none; }
-  .aviso-caixa { width: min(380px, 100%); text-align: center; background: var(--noite); border: 4px solid var(--tinta); border-radius: 22px; box-shadow: 0 0 0 4px #ff5d3a, 0 8px 0 var(--tinta); padding: 18px 16px 20px; }
-  .aviso-ic { font-size: 54px; line-height: 1; }
-  .aviso-caixa h2 { font-family: var(--display); font-weight: 400; font-size: 40px; color: #ff5d3a; text-shadow: 3px 3px 0 var(--tinta); margin: 6px 0 4px; }
-  .aviso-caixa p { font-weight: 800; font-size: 18px; margin-bottom: 14px; }
-  #b-entendi { background: var(--verde); color: #fff; font-family: var(--display); font-weight: 400; font-size: 20px; padding: 8px 28px 4px; }
-  /* Chat do DJ Robô */
-  .ia { margin: 14px auto 6px; max-width: 720px; background: rgba(0,0,0,.28); border: 3px solid var(--tinta); border-radius: 20px; padding: 10px; box-shadow: 0 0 0 3px var(--roxo); }
-  .ia-topo { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .ia-rosto { font-size: 34px; line-height: 1; animation: ia-pula 1.6s ease-in-out infinite; }
-  .ia.pensando .ia-rosto { animation: ia-pensa .5s linear infinite; }
-  @keyframes ia-pula { 50% { transform: translateY(-4px); } }
-  @keyframes ia-pensa { 50% { transform: rotate(12deg); } }
-  .ia-topo b { font-family: var(--display); font-weight: 400; font-size: 20px; color: var(--roxo); display: block; line-height: 1; }
-  .ia-topo small { font-weight: 700; opacity: .85; font-size: 13px; }
-  .ia-msgs { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 2px; }
-  .ia-msg { max-width: 88%; padding: 6px 12px 4px; border-radius: 14px; font-weight: 700; font-size: 15px; line-height: 1.3; }
-  .ia-msg.robo { align-self: flex-start; background: #2e2366; border: 2px solid #4a3a8a; border-bottom-left-radius: 4px; }
-  .ia-msg.eu { align-self: flex-end; background: #1f6a4a; border: 2px solid #2fa070; border-bottom-right-radius: 4px; }
-  .ia-sug { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
-  .ia-sug button { font-family: var(--texto); font-weight: 800; font-size: 13px; cursor: pointer; border: 2px solid var(--roxo); background: rgba(176,108,255,.15); color: var(--creme); border-radius: 12px; padding: 3px 10px 1px; }
-  .ia-form { display: flex; gap: 6px; }
-  #ia-input { flex: 1; min-width: 0; padding: 9px 12px; font-size: 16px; border-radius: 14px; border: 3px solid var(--tinta); background: var(--creme); color: var(--tinta); font-family: inherit; font-weight: 700; }
-  #ia-manda { background: var(--roxo); color: #fff; font-size: 20px; padding: 2px 16px 0; }
-  .modos { display: flex; justify-content: center; gap: 8px; margin-top: 10px; }
-  .modo { font-family: var(--display); font-weight: 400; font-size: 15px; cursor: pointer; border: 3px solid rgba(255,255,255,.2); border-radius: 14px; padding: 5px 14px 2px; background: rgba(255,255,255,.07); color: var(--creme); }
-  .modo.on { background: var(--sol); color: var(--tinta); border-color: var(--tinta); box-shadow: 0 4px 0 var(--tinta); }
-  #m-dificil.on { background: #ff5d3a; color: #fff; }
-  .cel.sust { background: rgba(0,0,0,.35); }   /* notas pretas do piano */
-  .rotulo.sust .nm { opacity: .75; }
-  .velo { display: flex; align-items: center; gap: 6px; font-weight: 800; background: rgba(255,255,255,.08); border-radius: 14px; padding: 4px 12px; }
-  .velo input { width: 110px; accent-color: var(--sol); }
+  /* Cartão da música */
+  .cartao { margin-top: 10px; display: flex; gap: 12px; align-items: center; background: var(--painel); border: 1px solid var(--borda); border-radius: 18px; padding: 10px; max-width: 460px; }
+  .capa { flex: none; width: 84px; height: 84px; border-radius: 14px; display: grid; place-items: center; font-size: 42px; box-shadow: 0 6px 18px rgba(0,0,0,.4); position: relative; overflow: hidden; }
+  .capa::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 20%, rgba(255,255,255,.35), transparent 55%); }
+  .cartao.tocando .capa { animation: gira-capa 1.6s ease-in-out infinite; }
+  @keyframes gira-capa { 50% { transform: scale(1.06) rotate(-3deg); } }
+  .info { flex: 1; min-width: 0; }
+  .info b { display: block; font-size: 18px; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .info small { color: var(--apagado); font-weight: 700; font-size: 13px; }
+  .barra { height: 4px; border-radius: 3px; background: var(--borda); margin: 8px 0 8px; overflow: hidden; }
+  .barra i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--roxo), var(--rosa)); }
+  .acoes { display: flex; gap: 8px; }
+  .acoes button { font-family: inherit; font-weight: 800; font-size: 14px; cursor: pointer; border: none; border-radius: 999px; padding: 6px 14px 4px; }
+  .play { background: var(--texto); color: var(--fundo); min-width: 82px; }
+  .salvar { background: var(--roxo); color: #fff; }
+  .salvar:disabled { background: var(--borda); color: var(--apagado); cursor: default; }
 
-  .instrumentos { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 4px 0 10px; }
-  .inst { font-family: var(--texto); font-weight: 800; font-size: 14px; cursor: pointer; border: 3px solid rgba(255,255,255,.2); border-radius: 12px; padding: 4px 10px 2px;
-    background: rgba(255,255,255,.07); color: var(--creme); }
-  .inst.on { background: var(--sol); color: var(--tinta); border-color: var(--tinta); box-shadow: 0 3px 0 var(--tinta); }
+  /* Escrever */
+  footer { padding: 10px 14px calc(env(safe-area-inset-bottom) + 12px); }
+  .sugestoes { max-width: 760px; margin: 0 auto 8px; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+  .sugestoes button { flex: none; font-family: inherit; font-weight: 700; font-size: 14px; color: var(--texto); background: var(--painel); border: 1px solid var(--borda); border-radius: 999px; padding: 5px 12px 3px; cursor: pointer; white-space: nowrap; }
+  form { max-width: 760px; margin: 0 auto; display: flex; gap: 8px; background: var(--painel); border: 1px solid var(--borda); border-radius: 24px; padding: 6px 6px 6px 16px; }
+  #texto { flex: 1; min-width: 0; background: none; border: none; outline: none; color: var(--texto); font-family: inherit; font-size: 16px; font-weight: 600; }
+  #texto::placeholder { color: var(--apagado); }
+  #enviar { flex: none; width: 42px; height: 42px; border-radius: 50%; border: none; background: var(--texto); color: var(--fundo); font-size: 20px; font-weight: 800; cursor: pointer; }
+  #enviar:disabled { opacity: .35; }
 
-  /* A grade da música */
-  .grade-box { overflow-x: auto; padding: 8px; background: rgba(0,0,0,.25); border: 3px solid var(--tinta); border-radius: 18px; }
-  .grade { display: grid; grid-template-columns: 92px repeat(16, minmax(22px, 1fr)); gap: 4px; min-width: 540px; }
-  .rotulo { display: flex; align-items: center; gap: 4px; font-weight: 800; font-size: 12px; white-space: nowrap; cursor: pointer; border-radius: 8px; padding: 0 4px; }
-  .rotulo .em { font-size: 18px; }
-  .rotulo:active { background: rgba(255,255,255,.12); }
-  .cel { aspect-ratio: 1; border-radius: 7px; border: 2px solid rgba(255,255,255,.08); background: rgba(255,255,255,.07); cursor: pointer; padding: 0; transition: transform .08s; }
-  .cel.batida { background: rgba(255,255,255,.12); }   /* começo de cada grupo de 4 */
-  .cel.on { border-color: var(--tinta); box-shadow: inset 0 -3px 0 rgba(0,0,0,.25); }
-  .cel.agora { outline: 3px solid #fff; outline-offset: -1px; }
-  .cel.toca { transform: scale(1.18); filter: brightness(1.4); }
-  .sep { grid-column: 1 / -1; height: 4px; }
-  .marca { height: 6px; border-radius: 3px; background: transparent; }
-  .marca.agora { background: #fff; }
-
-  .salvas { margin-top: 16px; }
-  .salvas h2 { font-family: var(--display); font-weight: 400; font-size: 18px; text-align: center; margin-bottom: 8px; }
-  .lista { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-  .lista:empty::after { content: 'Aperte 💾 SALVAR pra salvar sua música aqui.'; opacity: .7; }
-  .musica { display: flex; align-items: center; gap: 6px; background: var(--creme); color: var(--tinta); border: 3px solid var(--tinta); border-radius: 14px; padding: 4px 6px 2px 12px; font-weight: 800; box-shadow: 0 4px 0 var(--tinta); cursor: pointer; }
-  .musica button { border: 2px solid var(--tinta); border-radius: 50%; width: 26px; height: 26px; background: var(--rosa); color: #fff; font-weight: 800; cursor: pointer; }
-  .dica { text-align: center; font-size: 13px; opacity: .75; margin-top: 10px; }
-  #msg { text-align: center; min-height: 22px; font-weight: 800; color: var(--sol); }
-  @media (max-width: 560px) {
-    .grade { grid-template-columns: 44px repeat(16, minmax(17px, 1fr)); gap: 3px; min-width: 0; }
-    .rotulo .nm { display: none; }
-    .cel { border-radius: 5px; }
-    .btn { font-size: 14px; padding: 5px 10px 2px; }
-    #b-play { min-width: 120px; font-size: 17px; }
-  }
+  /* Minhas músicas */
+  #gaveta { position: fixed; inset: 0; z-index: 20; background: rgba(5,4,15,.7); display: none; justify-content: flex-end; }
+  #gaveta.on { display: flex; }
+  .gav { width: min(380px, 100%); height: 100%; background: var(--fundo); border-left: 1px solid var(--borda); padding: calc(env(safe-area-inset-top) + 14px) 14px 14px; overflow-y: auto; }
+  .gav h2 { font-family: var(--display); font-weight: 400; font-size: 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .gav h2 button { background: var(--painel); color: var(--texto); border: 1px solid var(--borda); border-radius: 10px; font-size: 16px; padding: 2px 10px; cursor: pointer; }
+  .gav .cartao { max-width: none; margin: 0 0 10px; }
+  .gav .capa { width: 60px; height: 60px; font-size: 30px; }
+  .vazio { color: var(--apagado); font-weight: 700; text-align: center; margin-top: 30px; }
+  .apagar { background: none !important; color: var(--apagado); padding: 6px 8px 4px !important; }
 </style>
 </head>
 <body>
-<a href="../index.html" id="back-link">← Menu</a>
-<div class="wrap">
-  <h1>🎵 ESTÚDIO DE <span>MÚSICA</span></h1>
-  <p class="sub">🔥 Aqui é você que faz tudo. Capricha!</p>
-  <div class="modos" style="display:none"><button class="modo" id="m-facil">😊 FÁCIL</button><button class="modo" id="m-dificil">🔥 DIFÍCIL</button></div>
-  <div class="aviso" id="aviso">
-    <div class="aviso-caixa">
-      <div class="aviso-ic">⚠️</div>
-      <h2>DIFÍCIL</h2>
-      <p>Recomendado jogar com os pais 👨‍👦</p>
-      <button class="btn" id="b-entendi">ENTENDI</button>
-    </div>
-  </div>
-  <div class="ia">
-    <div class="ia-topo"><span class="ia-rosto">🤖</span><div><b>DJ ROBÔ</b><small>Fala o que você quer, do seu jeito. Eu faço a música!</small></div></div>
-    <div class="ia-msgs" id="ia-msgs"></div>
-    <div class="ia-sug" id="ia-sug"></div>
-    <form class="ia-form" id="ia-form" autocomplete="off">
-      <input id="ia-input" maxlength="160" placeholder="Ex: faz um funk pesado com a voz falando bora">
-      <button class="btn" id="ia-manda" aria-label="Mandar">➤</button>
-    </form>
-  </div>
-  <div id="vis"></div>
-
-  <div class="controles">
-    <button class="btn" id="b-play">▶ TOCAR</button>
-    <label class="velo">🐢 <input type="range" id="tempo" min="70" max="170" value="110"> 🐇</label>
-  </div>
-  <div class="controles">
-    <button class="btn sol" id="b-sorteia">🎲 SURPRESA</button>
-    <button class="btn agua" id="b-ritmo">🥁 RITMOS</button>
-    <button class="btn roxo" id="b-guarda">💾 SALVAR</button>
-    <button class="btn" id="b-limpa">🧽 LIMPAR</button>
-  </div>
-  <div class="instrumentos" id="insts"></div>
-  <div id="msg"></div>
-
-  <div class="grade-box"><div class="grade" id="grade"></div></div>
-  <p class="dica">Dica: toque no nome da linha pra ouvir o som dela. No 🎤, toque pra trocar o que a voz fala!</p>
-
-  <div class="salvas">
-    <h2>⭐ MINHAS MÚSICAS</h2>
-    <div class="lista" id="lista"></div>
-  </div>
-</div>
+<header>
+  <a href="../index.html">←</a>
+  <h1>🎧 DJ <span>IA</span></h1>
+  <button id="b-minhas">📁 Minhas</button>
+</header>
+<main id="main"><div class="conversa" id="conversa"></div></main>
+<footer>
+  <div class="sugestoes" id="sugestoes"></div>
+  <form id="form" autocomplete="off">
+    <input id="texto" maxlength="200" placeholder="Fale que música você quer...">
+    <button id="enviar" aria-label="Enviar">↑</button>
+  </form>
+</footer>
+<div id="gaveta"><div class="gav"><h2>📁 MINHAS MÚSICAS <button id="b-fecha">✕</button></h2><div id="lista"></div></div></div>
 
 <script>
 (() => {
 const $ = id => document.getElementById(id);
-let PASSOS = 16;   // 16 no fácil, 32 no difícil
-
-// ── As linhas: 4 de bateria e 8 notas (escala pentatônica: sempre fica bonito junto) ──
-const BATERIA = [
-  { id: 'bumbo',   nome: 'Bumbo',   em: '🥁', cor: '#ff5d5d' },
-  { id: 'caixa',   nome: 'Caixa',   em: '💥', cor: '#ff9a3d' },
-  { id: 'palma',   nome: 'Palmas',  em: '👏', cor: '#ffd23f' },
-  { id: 'chimbal', nome: 'Chimbal', em: '🔔', cor: '#9be36a' },
-  { id: 'tambor',  nome: 'Tamborzão', em: '🪘', cor: '#e0a35a' },
-  { id: 'grave',   nome: 'Grave 808', em: '🔊', cor: '#ff3b8a' },
-  { id: 'voz',     nome: 'Voz',     em: '🎤', cor: '#5cb8ff' },
-];
-// O que a voz fala (toque no 🎤 pra trocar)
-const FALAS = ['Vai!', 'Ahn!', 'Uh!', 'Ê!', 'Tá tá!', 'Joga!', 'Dominic!'];
-let fala = 0;
-const NOTAS = [   // de cima (mais aguda) pra baixo
-  { nome: 'Lá',  f: 880.00 }, { nome: 'Sol', f: 783.99 }, { nome: 'Mi', f: 659.25 }, { nome: 'Ré', f: 587.33 },
-  { nome: 'Dó',  f: 523.25 }, { nome: 'Lá',  f: 440.00 }, { nome: 'Sol', f: 392.00 }, { nome: 'Mi', f: 329.63 },
-];
-const CORES_NOTAS = ['#ff5dc8', '#c46bff', '#8a7bff', '#5cb8ff', '#3fe0d0', '#4fe08a', '#a6e84a', '#ffd23f'];
-// Difícil: as 13 notas do piano, com as pretas (pode ficar feio se errar!)
-const NOMES_CROMA = ['Dó', 'Si', 'Lá#', 'Lá', 'Sol#', 'Sol', 'Fá#', 'Fá', 'Mi', 'Ré#', 'Ré', 'Dó#', 'Dó'];
-const NOTAS_DIFICIL = NOMES_CROMA.map((nome, i) => ({ nome, f: 1046.5 / Math.pow(2, i / 12), sust: nome.includes('#') }));
-const corDificil = i => `hsl(${(i * 26) % 360} 80% 62%)`;
-const LINHAS_DE = {
-  facil: [...BATERIA.map(b => ({ ...b, tipo: 'bateria' })), ...NOTAS.map((n, i) => ({ id: 'n' + i, nome: n.nome, em: '🎵', cor: CORES_NOTAS[i], tipo: 'nota', f: n.f }))],
-  dificil: [...BATERIA.map(b => ({ ...b, tipo: 'bateria' })), ...NOTAS_DIFICIL.map((n, i) => ({ id: 'd' + i, nome: n.nome, em: '🎵', cor: corDificil(i), tipo: 'nota', f: n.f, sust: n.sust }))],
-};
-const PASSOS_DE = { facil: 16, dificil: 32 };
-let modo = 'dificil';
-let LINHAS = LINHAS_DE.facil;
-
-const INSTRUMENTOS = [
-  { id: 'piano',  nome: '🎹 Piano',   onda: 'triangle', ataque: 0.005, dura: 0.6 },
-  { id: 'gamer',  nome: '👾 8-bit',   onda: 'square',   ataque: 0.002, dura: 0.25 },
-  { id: 'flauta', nome: '🪈 Flauta',  onda: 'sine',     ataque: 0.04,  dura: 0.45 },
-  { id: 'synth',  nome: '🎛️ Synth',   onda: 'sawtooth', ataque: 0.01,  dura: 0.35 },
-  { id: 'sino',   nome: '🔔 Sininho', onda: 'sine',     ataque: 0.001, dura: 1.0, sino: true },
-];
+const sorteia = l => l[Math.floor(Math.random() * l.length)];
+const semAcento = t => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 // ── Guardado neste aparelho (cada perfil tem o seu) ──
 const PERFIL = new URLSearchParams(location.search).get('perfil');
-const KEY = 'estudioMusica' + (PERFIL ? ':' + PERFIL : '');
-const ler = (d) => { try { return JSON.parse(localStorage.getItem(KEY)) || d; } catch (e) { return d; } };
-const grava = v => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) { /* ok */ } };
-const dados = ler({ salvas: [], atual: null });
-const ajeita = g => { if (g && g.length === 12) g.splice(4, 0, ...[0, 1, 2].map(() => Array(PASSOS).fill(false))); return g; };
-if (dados.atual) ajeita(dados.atual.grade);
-dados.salvas.forEach(m => ajeita(m.grade));
-fala = dados.fala || 0;
-let falaCustom = dados.falaCustom || '';   // o que o DJ Robô mandou a voz falar
+const KEY = 'djMusicas' + (PERFIL ? ':' + PERFIL : '');
+let salvas = []; try { salvas = JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { salvas = []; }
+const grava = () => { try { localStorage.setItem(KEY, JSON.stringify(salvas)); } catch (e) { /* cheio */ } };
 
-// dados.atual = a música do fácil; dados.dificil = a do difícil
-modo = dados.modo || 'dificil';
-let grade = [], inst = 'piano';
-function carregaModo() {
-  LINHAS = LINHAS_DE[modo]; PASSOS = PASSOS_DE[modo];
-  const a = modo === 'facil' ? dados.atual : dados.dificil;
-  grade = a && a.grade && a.grade.length === LINHAS.length && a.grade[0].length === PASSOS ? a.grade : LINHAS.map(() => Array(PASSOS).fill(false));
-  inst = a && a.inst || 'piano';
-  $('tempo').value = a && a.bpm || 110;
-  document.body.classList.toggle('dificil', modo === 'dificil');
-  $('m-facil').classList.toggle('on', modo === 'facil'); $('m-dificil').classList.toggle('on', modo === 'dificil');
-  $('b-sorteia').style.display = $('b-ritmo').style.display = modo === 'dificil' ? 'none' : '';   // no difícil você faz tudo sozinho
-}
-const guardaAtual = () => {
-  const v = { grade, inst, bpm: +$('tempo').value };
-  if (modo === 'facil') dados.atual = v; else dados.dificil = v;
-  dados.modo = modo; dados.fala = fala; dados.falaCustom = falaCustom; grava(dados);
+// ══════════════ TEORIA MUSICAL ══════════════
+const ESCALAS = { maior: [0, 2, 4, 5, 7, 9, 11], menor: [0, 2, 3, 5, 7, 8, 10], dorico: [0, 2, 3, 5, 7, 9, 10] };
+const PROGRESSOES = {
+  maior: [[0, 4, 5, 3], [0, 5, 3, 4], [5, 3, 0, 4], [0, 3, 4, 3]],
+  menor: [[0, 5, 2, 6], [0, 3, 4, 0], [0, 6, 5, 4], [5, 6, 0, 0]],
+  dorico: [[0, 3, 0, 3], [0, 6, 3, 0]],
 };
+const hz = n => 130.81 * Math.pow(2, n / 12);   // n = semitons acima do Dó grave
+function notaDoGrau(m, grau, oitava) {   // grau da escala (pode passar de 7) -> semitom
+  const esc = ESCALAS[m.escala], o = Math.floor(grau / esc.length), g = ((grau % esc.length) + esc.length) % esc.length;
+  return m.raiz + esc[g] + 12 * (o + oitava);
+}
 
-// ══════════════ SONS (feitos na hora) ══════════════
-let ac = null, mestre = null, ruido = null;
+// ══════════════ ESTILOS ══════════════
+// bateria em 16 passos (1 compasso); o baixo segue os passos de "baixoPassos"
+const ESTILOS = {
+  funk: { nome: 'Funk', palavras: ['funk', 'tamborzao', 'baile', 'favela', 'mc'], bpm: 128, escala: 'menor', lead: 'pluck', pad: true, baixo: '808', voz: true, capa: ['🔥', '#ff5d3a', '#7a1a5a'],
+    b: { bumbo: [0, 6, 10], palma: [4, 12], chimbal: [2, 6, 10, 14], tambor: [0, 3, 6, 8, 10, 13] }, baixoPassos: [0, 6, 10] },
+  mandelao: { nome: 'Mandelão', palavras: ['mandelao', 'mandela', 'pancadao', 'automotivo'], bpm: 130, escala: 'menor', lead: 'synth', pad: false, baixo: '808', voz: true, capa: ['💣', '#2a2a2a', '#ff2a6a'],
+    b: { bumbo: [0, 3, 8, 11], palma: [4, 12], chimbal: [0, 2, 4, 6, 8, 10, 12, 14] }, baixoPassos: [0, 3, 8, 11] },
+  rave: { nome: 'Funk Rave', palavras: ['rave', 'balada', 'festa', 'danca', 'dancar', 'dançante', 'dancante'], bpm: 135, escala: 'menor', lead: 'synth', pad: true, baixo: 'synth', voz: true, capa: ['🪩', '#5b2aff', '#ff4fd8'],
+    b: { bumbo: [0, 4, 8, 12], palma: [4, 12], chimbal: [2, 6, 10, 14], tambor: [3, 7, 11, 15] }, baixoPassos: [2, 6, 10, 14] },
+  trap: { nome: 'Trap', palavras: ['trap', 'rap', 'hip hop', 'hiphop', 'drill'], bpm: 140, escala: 'menor', lead: 'sino', pad: true, baixo: '808', voz: true, capa: ['💎', '#101030', '#3fe0d0'],
+    b: { bumbo: [0, 7, 10], caixa: [8], chimbal: [0, 2, 4, 5, 6, 8, 10, 12, 13, 14, 15] }, baixoPassos: [0, 7, 10] },
+  eletronica: { nome: 'Eletrônica', palavras: ['eletronica', 'eletro', 'dj', 'edm', 'techno', 'house'], bpm: 126, escala: 'menor', lead: 'synth', pad: true, baixo: 'synth', voz: false, capa: ['⚡', '#0a3aff', '#00e0ff'],
+    b: { bumbo: [0, 4, 8, 12], palma: [4, 12], chimbal: [2, 6, 10, 14] }, baixoPassos: [2, 6, 10, 14] },
+  rock: { nome: 'Rock', palavras: ['rock', 'guitarra', 'banda', 'metal'], bpm: 122, escala: 'menor', lead: 'guitarra', pad: false, baixo: 'synth', voz: false, capa: ['🎸', '#3a0a0a', '#ff4a2a'],
+    b: { bumbo: [0, 8, 10], caixa: [4, 12], chimbal: [0, 2, 4, 6, 8, 10, 12, 14] }, baixoPassos: [0, 2, 8, 10] },
+  game: { nome: 'Videogame', palavras: ['game', 'videogame', 'jogo', '8 bit', '8bit', 'pixel', 'fase', 'chefao', 'boss'], bpm: 150, escala: 'maior', lead: 'gamer', pad: false, baixo: 'gamer', voz: false, capa: ['👾', '#1a1a5a', '#5df07a'],
+    b: { bumbo: [0, 8], caixa: [4, 12], chimbal: [0, 2, 4, 6, 8, 10, 12, 14] }, baixoPassos: [0, 4, 8, 12] },
+  lofi: { nome: 'Lo-fi', palavras: ['lofi', 'lo-fi', 'calma', 'calmo', 'dormir', 'relax', 'relaxar', 'estudar', 'chill', 'tranquilo', 'tranquila'], bpm: 82, escala: 'dorico', lead: 'piano', pad: true, baixo: 'suave', voz: false, capa: ['🌙', '#2a1a4a', '#ff9ab0'],
+    b: { bumbo: [0, 7, 10], caixa: [8], chimbal: [0, 4, 8, 12] }, baixoPassos: [0, 10] },
+  samba: { nome: 'Samba', palavras: ['samba', 'pagode', 'carnaval', 'cartola', 'pixinguinha', 'choro'], bpm: 100, escala: 'maior', lead: 'cavaco', pad: false, baixo: 'violao7', voz: false, capa: ['🥁', '#0a7a3a', '#ffd23f'],
+    b: { bumbo: [4, 12], tambor: [0, 8], palma: [0, 3, 6, 8, 11, 14], chimbal: [0, 2, 4, 6, 8, 10, 12, 14], caixa: [3, 6, 10, 13] }, baixoPassos: [0, 6, 8, 14] },
+  bossa: { nome: 'Bossa Nova', palavras: ['bossa', 'jobim', 'ipanema', 'joao gilberto', 'elis', 'aguas de marco'], bpm: 92, escala: 'maior', lead: 'piano', pad: true, baixo: 'suave', voz: false, capa: ['🌴', '#0a5a7a', '#ffb07a'],
+    b: { bumbo: [0, 6, 8, 14], caixa: [0, 3, 6, 10, 13], chimbal: [0, 2, 4, 6, 8, 10, 12, 14] }, baixoPassos: [0, 6, 8, 14] },
+  forro: { nome: 'Forró', palavras: ['forro', 'baiao', 'xote', 'nordeste', 'sanfona', 'gonzaga', 'asa branca', 'sertao', 'sao joao'], bpm: 118, escala: 'maior', lead: 'sanfona', pad: false, baixo: 'synth', voz: false, capa: ['🪗', '#a85a1a', '#ffd23f'],
+    b: { bumbo: [0, 6, 8], tambor: [3, 11], chimbal: [0, 2, 3, 4, 6, 8, 10, 11, 12, 14] }, baixoPassos: [0, 6, 8] },
+  mpb: { nome: 'MPB', palavras: ['mpb', 'chico', 'buarque', 'caetano', 'gil', 'brasileira', 'milton'], bpm: 96, escala: 'dorico', lead: 'piano', pad: true, baixo: 'suave', voz: false, capa: ['🇧🇷', '#1a6a3a', '#3a5aaa'],
+    b: { bumbo: [0, 7, 10], caixa: [4, 12], chimbal: [0, 2, 4, 6, 8, 10, 12, 14] }, baixoPassos: [0, 7, 10] },
+  pop: { nome: 'Pop', palavras: ['pop', 'radio', 'feliz', 'alegre', 'divertido', 'divertida'], bpm: 116, escala: 'maior', lead: 'piano', pad: true, baixo: 'synth', voz: false, capa: ['🌈', '#ff8a3d', '#ff4fd8'],
+    b: { bumbo: [0, 8, 11], palma: [4, 12], chimbal: [0, 2, 4, 6, 8, 10, 12, 14] }, baixoPassos: [0, 8, 11] },
+};
+const TITULOS_A = ['Batida', 'Noite', 'Onda', 'Baile', 'Trovão', 'Vibe', 'Céu', 'Fogo', 'Estrela', 'Rolê', 'Sonho', 'Coração'];
+const TITULOS_B = ['do Futuro', 'de Ouro', 'Neon', 'da Madrugada', 'do Dominic', 'da Quebrada', 'do Verão', 'das Estrelas', 'sem Fim', 'do Trovão', 'na Lua', 'de Fogo'];   // servem pra qualquer palavra (sem erro de masculino/feminino)
+const CAPAS = { fogo: '🔥', estrela: '⭐', carro: '🏎️', futebol: '⚽', bola: '⚽', coroa: '👑', caveira: '💀', coracao: '❤️', dragao: '🐉', lua: '🌙', sol: '☀️', raio: '⚡', foguete: '🚀', diamante: '💎', robo: '🤖', gato: '🐱', cachorro: '🐶', leao: '🦁', tubarao: '🦈', alien: '👽', ninja: '🥷', dinheiro: '💸', planeta: '🪐', oculos: '😎' };
+const HUMOR_NOME = { triste: 'triste', alegre: 'alegre', terror: 'de terror', epico: 'épico' };
+
+// ── Criar uma música ──
+function novaMusica(E, humor) {
+  const escala = humor === 'triste' ? (E.escala === 'maior' ? 'menor' : E.escala) : humor === 'alegre' ? 'maior' : E.escala;
+  const m = {
+    estilo: Object.keys(ESTILOS).find(k => ESTILOS[k] === E), humor: humor || '',
+    bpm: Math.max(70, Math.min(170, E.bpm + (humor === 'triste' ? -26 : humor === 'terror' ? -14 : humor === 'epico' ? 8 : 0))),
+    raiz: Math.floor(Math.random() * 7) - 2, escala, prog: sorteia(PROGRESSOES[escala]),
+    lead: E.lead, pad: E.pad || humor === 'triste' || humor === 'epico', baixo: E.baixo,
+    bateria: JSON.parse(JSON.stringify(E.b)), baixoPassos: E.baixoPassos.slice(),
+    voz: E.voz, palavra: sorteia(['Vai!', 'Ahn!', 'Bora!', 'Uh!', 'Ê!']),
+    titulo: sorteia(TITULOS_A) + ' ' + sorteia(TITULOS_B),
+    capa: { emoji: E.capa[0], c1: E.capa[1], c2: E.capa[2] },
+    pesado: 0,
+  };
+  if (humor === 'terror') { m.capa = { emoji: '👻', c1: '#0a0a14', c2: '#5a1a7a' }; m.escala = 'menor'; m.prog = [0, 1, 0, 5]; }
+  if (humor === 'triste') m.capa = { emoji: '🌧️', c1: '#1a2a4a', c2: '#5a7aaa' };
+  fazMelodia(m);
+  return m;
+}
+// Melodia: 4 compassos; um pedacinho que repete com variação, usando as notas do acorde
+function fazMelodia(m) {
+  const mel = Array(64).fill(null);
+  const ritmo = [];   // ritmo do pedacinho (16 passos)
+  const dens = m.humor === 'triste' ? 0.32 : m.estilo === 'lofi' ? 0.3 : m.estilo === 'game' ? 0.6 : 0.45;
+  for (let p = 0; p < 16; p++) ritmo.push(p === 0 || Math.random() < (p % 4 === 0 ? dens * 1.4 : p % 2 === 0 ? dens : dens * 0.35));
+  const motivo = [];
+  let g = 2;
+  for (let p = 0; p < 16; p++) { motivo.push(g); g = Math.max(-1, Math.min(6, g + sorteia([-1, -1, 1, 1, 0, 2, -2]))); }
+  for (let c = 0; c < 4; c++) {
+    const acorde = m.prog[c];
+    for (let p = 0; p < 16; p++) {
+      if (!ritmo[p] || (c === 3 && p > 11 && Math.random() < 0.5)) continue;
+      let grau = acorde + motivo[p];
+      if (p % 4 === 0) grau = acorde + sorteia([0, 2, 4, 7]);   // no tempo forte: nota do acorde (soa certo)
+      if (c % 2 === 1 && p >= 8) grau += sorteia([0, 1, -1]);
+      mel[c * 16 + p] = grau;
+    }
+  }
+  m.melodia = mel;
+}
+
+// ══════════════ SOM (feito na hora, com eco de estúdio) ══════════════
+let ac = null, mestre, eco, ruido;
 function audio() {
   if (!ac) {
     ac = new (window.AudioContext || window.webkitAudioContext)();
-    mestre = ac.createGain(); mestre.gain.value = 0.7;
-    const comp = ac.createDynamicsCompressor();
-    mestre.connect(comp); comp.connect(ac.destination);
-    ruido = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
-    const c = ruido.getChannelData(0); for (let i = 0; i < c.length; i++) c[i] = Math.random() * 2 - 1;
+    const comp = ac.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
+    mestre = ac.createGain(); mestre.gain.value = 0.8; mestre.connect(comp); comp.connect(ac.destination);
+    // reverb: um "eco de sala" feito de barulhinho que vai sumindo
+    const conv = ac.createConvolver(), len = ac.sampleRate * 2.2, ir = ac.createBuffer(2, len, ac.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
+    conv.buffer = ir; eco = ac.createGain(); eco.gain.value = 0.28; eco.connect(conv); conv.connect(mestre);
+    ruido = ac.createBuffer(1, ac.sampleRate, ac.sampleRate); const c = ruido.getChannelData(0); for (let i = 0; i < c.length; i++) c[i] = Math.random() * 2 - 1;
   }
   if (ac.state === 'suspended') ac.resume();
   return ac;
 }
-function falar(atraso) {
-  if (!window.speechSynthesis) return;
-  const dizer = () => {
-    const u = new SpeechSynthesisUtterance(falaCustom || FALAS[fala]);
-    u.lang = 'pt-BR'; u.rate = 1.5; u.pitch = 0.9; u.volume = 1;
-    speechSynthesis.cancel(); speechSynthesis.speak(u);
-  };
-  atraso > 10 ? setTimeout(dizer, atraso) : dizer();
-}
-function tocaBateria(id, t, passoN) {
-  const a = audio(); t = t || a.currentTime;
-  if (id === 'voz') { falar((t - a.currentTime) * 1000); return; }
-  if (id === 'tambor') {   // tamborzão: dois tambores, um grave e um agudo
-    const agudo = (passoN || 0) % 2 === 1;
-    const o = a.createOscillator(), g = a.createGain();
-    o.type = 'sine';
-    o.frequency.setValueAtTime(agudo ? 260 : 170, t); o.frequency.exponentialRampToValueAtTime(agudo ? 180 : 95, t + 0.18);
-    g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-    o.connect(g); g.connect(mestre); o.start(t); o.stop(t + 0.25);
-    const n = a.createBufferSource(), f = a.createBiquadFilter(), g2 = a.createGain();
-    n.buffer = ruido; f.type = 'bandpass'; f.frequency.value = 900; g2.gain.setValueAtTime(0.25, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
-    n.connect(f); f.connect(g2); g2.connect(mestre); n.start(t); n.stop(t + 0.04);
-    return;
-  }
-  if (id === 'grave') {   // 808: grave comprido que treme
-    const o = a.createOscillator(), g = a.createGain(), sat = a.createWaveShaper();
-    const curva = new Float32Array(256); for (let i = 0; i < 256; i++) { const x = i / 128 - 1; curva[i] = Math.tanh(x * 2.5); }
-    sat.curve = curva;
-    o.type = 'sine';
-    o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.12);
-    g.gain.setValueAtTime(0.9, t); g.gain.setValueAtTime(0.85, t + 0.25); g.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
-    o.connect(sat); sat.connect(g); g.connect(mestre); o.start(t); o.stop(t + 0.75);
-    return;
-  }
+function env(g, t, a, v, dur) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); }
+function saida(no, ecoQtd = 0) { no.connect(mestre); if (ecoQtd) { const g = ac.createGain(); g.gain.value = ecoQtd; no.connect(g); g.connect(eco); } }
+function osc(tipo, f, t, dur, vol, destino, detune = 0) { const o = ac.createOscillator(); o.type = tipo; o.frequency.value = f; o.detune.value = detune; const g = ac.createGain(); env(g, t, 0.005, vol, dur); o.connect(g); g.connect(destino); o.start(t); o.stop(t + dur + 0.05); return o; }
+function tocaBateria(id, t, pesado) {
   if (id === 'bumbo') {
-    const o = a.createOscillator(), g = a.createGain();
-    o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.25);
-    g.gain.setValueAtTime(1, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-    o.connect(g); g.connect(mestre); o.start(t); o.stop(t + 0.4);
-  } else {
-    const n = a.createBufferSource(); n.buffer = ruido;
-    const f = a.createBiquadFilter(), g = a.createGain();
-    const dur = { caixa: 0.18, palma: 0.22, chimbal: 0.05 }[id];
-    f.type = id === 'chimbal' ? 'highpass' : 'bandpass';
-    f.frequency.value = { caixa: 1800, palma: 1200, chimbal: 7000 }[id];
-    g.gain.setValueAtTime(id === 'chimbal' ? 0.35 : 0.8, t);
-    if (id === 'palma') { g.gain.setValueAtTime(0.8, t); g.gain.setValueAtTime(0.2, t + 0.01); g.gain.setValueAtTime(0.8, t + 0.02); g.gain.setValueAtTime(0.2, t + 0.03); g.gain.setValueAtTime(0.7, t + 0.04); }
-    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    n.connect(f); f.connect(g); g.connect(mestre); n.start(t); n.stop(t + dur + 0.02);
-    if (id === 'caixa') { const o = a.createOscillator(), g2 = a.createGain(); o.frequency.value = 190; g2.gain.setValueAtTime(0.5, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.1); o.connect(g2); g2.connect(mestre); o.start(t); o.stop(t + 0.12); }
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.22);
+    g.gain.setValueAtTime(1.1 + pesado * 0.2, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+    o.connect(g); saida(g); o.start(t); o.stop(t + 0.45);
+    return;
+  }
+  if (id === 'tambor') {
+    for (const [f0, f1, v] of [[200, 120, 0.7], [320, 220, 0.25]]) { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + 0.16); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.2); o.connect(g); saida(g, 0.15); o.start(t); o.stop(t + 0.22); }
+    return;
+  }
+  const n = ac.createBufferSource(); n.buffer = ruido;
+  const f = ac.createBiquadFilter(), g = ac.createGain();
+  const dur = { caixa: 0.2, palma: 0.25, chimbal: 0.045 }[id];
+  f.type = id === 'chimbal' ? 'highpass' : 'bandpass'; f.frequency.value = { caixa: 2000, palma: 1300, chimbal: 8000 }[id];
+  g.gain.setValueAtTime(id === 'chimbal' ? 0.22 : 0.75, t);
+  if (id === 'palma') for (let k = 0; k < 3; k++) { g.gain.setValueAtTime(0.75, t + k * 0.012); g.gain.setValueAtTime(0.15, t + k * 0.012 + 0.006); }
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  n.connect(f); f.connect(g); saida(g, id === 'chimbal' ? 0 : 0.35); n.start(t); n.stop(t + dur + 0.02);
+  if (id === 'caixa') osc('triangle', 185, t, 0.1, 0.4, mestre);
+}
+function tocaBaixo(m, n, t, dur) {
+  const f = hz(n);
+  if (m.baixo === '808') {
+    const o = ac.createOscillator(), g = ac.createGain(), sat = ac.createWaveShaper();
+    const curva = new Float32Array(256); for (let i = 0; i < 256; i++) { const x = i / 128 - 1; curva[i] = Math.tanh(x * (2 + m.pesado)); } sat.curve = curva;
+    o.frequency.setValueAtTime(f * 1.5, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.06);
+    g.gain.setValueAtTime(0.75, t); g.gain.setValueAtTime(0.7, t + dur * 0.6); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(sat); sat.connect(g); saida(g); o.start(t); o.stop(t + dur + 0.05);
+  } else if (m.baixo === 'gamer') osc('square', f, t, dur * 0.8, 0.12, mestre);
+  else if (m.baixo === 'violao7') { osc('triangle', f, t, 0.5, 0.35, mestre); osc('sine', f * 2, t, 0.3, 0.08, mestre); }
+  else {
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = m.baixo === 'suave' ? 420 : 700; saida(lp);
+    osc('sawtooth', f, t, dur, m.baixo === 'suave' ? 0.18 : 0.25, lp); osc('sine', f / 2, t, dur, 0.25, mestre);
   }
 }
-function tocaNota(f, t) {
-  const a = audio(); t = t || a.currentTime;
-  const I = INSTRUMENTOS.find(x => x.id === inst) || INSTRUMENTOS[0];
-  const o = a.createOscillator(), g = a.createGain(), filtro = a.createBiquadFilter();
-  o.type = I.onda; o.frequency.value = f;
-  filtro.type = 'lowpass'; filtro.frequency.value = I.onda === 'sawtooth' ? 2400 : 6000;
-  const vol = I.onda === 'square' || I.onda === 'sawtooth' ? 0.12 : 0.28;
-  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + I.ataque); g.gain.exponentialRampToValueAtTime(0.0008, t + I.dura);
-  o.connect(filtro); filtro.connect(g); g.connect(mestre); o.start(t); o.stop(t + I.dura + 0.05);
-  if (I.sino) { const o2 = a.createOscillator(), g2 = a.createGain(); o2.type = 'sine'; o2.frequency.value = f * 2.76; g2.gain.setValueAtTime(0.06, t); g2.gain.exponentialRampToValueAtTime(0.0008, t + 0.5); o2.connect(g2); g2.connect(mestre); o2.start(t); o2.stop(t + 0.55); }
+function tocaPad(m, notas, t, dur) {
+  const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = m.estilo === 'lofi' ? 900 : 1500; saida(lp, 0.6);
+  for (const n of notas) for (const d of [-8, 8]) {
+    const o = ac.createOscillator(), g = ac.createGain(); o.type = 'sawtooth'; o.frequency.value = hz(n); o.detune.value = d;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.035, t + 0.25); g.gain.setValueAtTime(0.035, t + dur - 0.2); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(lp); o.start(t); o.stop(t + dur + 0.05);
+  }
 }
-const tocaLinha = (L, t, passoN) => L.tipo === 'bateria' ? tocaBateria(L.id, t, passoN) : tocaNota(L.f, t);
+function tocaLead(m, n, t, dur) {
+  const f = hz(n);
+  const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200; saida(lp, 0.45);
+  if (m.lead === 'piano') { osc('triangle', f, t, 0.9, 0.22, lp); osc('sine', f * 2, t, 0.5, 0.06, lp); }
+  else if (m.lead === 'pluck') { osc('triangle', f, t, 0.35, 0.22, lp); osc('square', f, t, 0.12, 0.05, lp); }
+  else if (m.lead === 'synth') { osc('sawtooth', f, t, dur * 1.6, 0.09, lp, -7); osc('sawtooth', f, t, dur * 1.6, 0.09, lp, 7); }
+  else if (m.lead === 'gamer') osc('square', f, t, dur * 0.9, 0.09, lp);
+  else if (m.lead === 'cavaco') { osc('triangle', f, t, 0.22, 0.2, lp); osc('sawtooth', f * 2, t, 0.08, 0.04, lp); }
+  else if (m.lead === 'sanfona') {   // sanfona: duas palhetas um pouquinho desafinadas + tremido
+    for (const d of [-12, 12]) { const o = osc('sawtooth', f, t, dur * 2, 0.07, lp, d); const lfo = ac.createOscillator(), lg = ac.createGain(); lfo.frequency.value = 6; lg.gain.value = 6; lfo.connect(lg); lg.connect(o.detune); lfo.start(t); lfo.stop(t + dur * 2 + 0.05); }
+  }
+  else if (m.lead === 'sino') { osc('sine', f, t, 1.2, 0.2, lp); osc('sine', f * 2.76, t, 0.4, 0.05, lp); }
+  else if (m.lead === 'guitarra') {
+    const sat = ac.createWaveShaper(), c = new Float32Array(256); for (let i = 0; i < 256; i++) { const x = i / 128 - 1; c[i] = Math.tanh(x * 6); } sat.curve = c; sat.connect(lp);
+    osc('sawtooth', f, t, dur * 1.8, 0.12, sat); osc('sawtooth', f * 1.5, t, dur * 1.8, 0.06, sat);
+  }
+}
+function falar(palavra, atraso) {
+  if (!window.speechSynthesis || !palavra) return;
+  setTimeout(() => { const u = new SpeechSynthesisUtterance(palavra); u.lang = 'pt-BR'; u.rate = 1.4; u.pitch = 0.85; speechSynthesis.cancel(); speechSynthesis.speak(u); }, Math.max(0, atraso));
+}
 
-// ══════════════ GRADE ══════════════
-const cels = [];   // cels[linha][passo]
-const marcas = [];
-function monta() {
-  const g = $('grade');
-  g.innerHTML = '';
-  cels.length = 0; marcas.length = 0;
-  const pequeno = innerWidth <= 560;
-  g.style.gridTemplateColumns = (pequeno ? '44px' : '92px') + ` repeat(${PASSOS}, minmax(${pequeno && PASSOS === 16 ? 17 : 22}px, 1fr))`;
-  g.style.minWidth = PASSOS === 32 ? (pequeno ? '820px' : '900px') : '';
-  // linha de cima: marca onde a música está
-  g.appendChild(document.createElement('div'));
-  for (let p = 0; p < PASSOS; p++) { const m = document.createElement('div'); m.className = 'marca'; g.appendChild(m); marcas.push(m); }
-  LINHAS.forEach((L, li) => {
-    if (li === BATERIA.length) { const s = document.createElement('div'); s.className = 'sep'; g.appendChild(s); }
-    const r = document.createElement('div');
-    r.className = 'rotulo' + (L.sust ? ' sust' : '');
-    r.innerHTML = '<span class="em"></span><span class="nm"></span>';
-    r.querySelector('.em').textContent = L.tipo === 'nota' ? '●' : L.em;
-    if (L.tipo === 'nota') r.querySelector('.em').style.color = L.cor;
-    r.querySelector('.nm').textContent = L.id === 'voz' ? (falaCustom || FALAS[fala]) : L.nome;
-    r.onclick = () => {
-      if (L.id === 'voz') { falaCustom = ''; fala = (fala + 1) % FALAS.length; r.querySelector('.nm').textContent = FALAS[fala]; guardaAtual(); mensagem('🎤 A voz agora fala: ' + FALAS[fala]); }
-      tocaLinha(L);
-    };
-    g.appendChild(r);
-    cels[li] = [];
-    for (let p = 0; p < PASSOS; p++) {
-      const c = document.createElement('button');
-      c.className = 'cel' + (p % 4 === 0 ? ' batida' : '') + (L.sust ? ' sust' : '');
-      c.setAttribute('aria-label', L.nome + ' ' + (p + 1));
-      c.onclick = () => {
-        grade[li][p] = !grade[li][p];
-        pinta(li, p);
-        if (grade[li][p]) tocaLinha(L);
-        guardaAtual();
-      };
-      g.appendChild(c);
-      cels[li][p] = c;
-      pinta(li, p);
-    }
-  });
-}
-function pinta(li, p) {
-  const c = cels[li][p], on = grade[li][p];
-  c.classList.toggle('on', on);
-  c.style.background = on ? LINHAS[li].cor : '';
-}
-const pintaTudo = () => LINHAS.forEach((_, li) => { for (let p = 0; p < PASSOS; p++) pinta(li, p); });
-
-// ══════════════ TOCAR (com o relógio do som, pra não atrasar) ══════════════
-let tocando = false, passo = 0, proxTempo = 0, timer = null;
-const filaVisual = [];
+// ══════════════ TOCAR ══════════════
+let atual = null, cartaoAtual = null, passo = 0, prox = 0, timer = null;
 function agenda() {
-  const a = audio();
-  const dur = 60 / +$('tempo').value / 4;   // cada quadradinho = 1/4 de batida
-  while (proxTempo < a.currentTime + 0.12) {
-    LINHAS.forEach((L, li) => { if (grade[li][passo]) tocaLinha(L, proxTempo, passo); });
-    filaVisual.push({ passo, t: proxTempo });
-    passo = (passo + 1) % PASSOS;
-    proxTempo += dur;
+  const m = atual, dur = 60 / m.bpm / 4;
+  while (prox < ac.currentTime + 0.15) {
+    const p = passo % 64, c = Math.floor(p / 16), p16 = p % 16, acorde = m.prog[c];
+    for (const id in m.bateria) if (m.bateria[id].includes(p16)) tocaBateria(id, prox, m.pesado);
+    if (c === 3 && p16 >= 14 && m.estilo !== 'lofi') tocaBateria('caixa', prox, 0);   // viradinha no final
+    if (m.baixo && m.baixoPassos.includes(p16)) tocaBaixo(m, notaDoGrau(m, acorde, 0), prox, m.baixo === '808' ? dur * 5 : dur * 3);
+    if (m.pad && p16 === 0) tocaPad(m, [0, 2, 4].map(k => notaDoGrau(m, acorde + k, 1)), prox, dur * 16);
+    if (m.melodia[p] != null) tocaLead(m, notaDoGrau(m, m.melodia[p], 2), prox, dur * 2);
+    if (m.voz && p16 === 0 && (c === 0 || c === 2)) falar(m.palavra, (prox - ac.currentTime) * 1000);
+    passo++; prox += dur;
   }
+  if (cartaoAtual) cartaoAtual.querySelector('.barra i').style.width = ((passo % 64) / 64 * 100) + '%';
 }
-function play() {
-  const a = audio();
-  tocando = true; passo = 0; proxTempo = a.currentTime + 0.05;
-  $('b-play').textContent = '⏹ PARAR'; $('b-play').classList.add('tocando');
-  timer = setInterval(agenda, 25);
-  agenda();
+function toca(m, cartao) {
+  audio();
+  para();
+  atual = m; cartaoAtual = cartao; passo = 0; prox = ac.currentTime + 0.06;
+  timer = setInterval(agenda, 25); agenda();
+  if (cartao) { cartao.classList.add('tocando'); cartao.querySelector('.play').textContent = '⏸ Pausar'; }
 }
-function stop() {
-  tocando = false; clearInterval(timer);
-  $('b-play').textContent = '▶ TOCAR'; $('b-play').classList.remove('tocando');
-  filaVisual.length = 0; ultimoPasso = -1;
-  marcas.forEach(m => m.classList.remove('agora'));
-  cels.forEach(l => l.forEach(c => c.classList.remove('agora', 'toca')));
-}
-$('b-play').onclick = () => tocando ? stop() : play();
-$('tempo').oninput = guardaAtual;
-addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); tocando ? stop() : play(); } });
-
-// Visualizador e coluna acesa
-const vis = $('vis'), barras = [];
-for (let i = 0; i < 24; i++) { const b = document.createElement('i'); vis.appendChild(b); barras.push(b); }
-let ultimoPasso = -1;
-function desenha() {
-  if (tocando && ac) {
-    while (filaVisual.length && filaVisual[0].t <= ac.currentTime) {
-      const { passo: p } = filaVisual.shift();
-      if (ultimoPasso >= 0) { marcas[ultimoPasso].classList.remove('agora'); cels.forEach(l => l[ultimoPasso].classList.remove('agora', 'toca')); }
-      marcas[p].classList.add('agora');
-      let qtd = 0;
-      cels.forEach((l, li) => { l[p].classList.add('agora'); if (grade[li][p]) { l[p].classList.add('toca'); qtd++; } });
-      ultimoPasso = p;
-      barras.forEach((b, i) => { const h = qtd ? 8 + Math.random() * (14 + qtd * 6) * (1 - Math.abs(i - 11.5) / 14) : 6; b.style.height = h + 'px'; b.style.background = LINHAS[(i + p) % LINHAS.length].cor; });
-    }
-  } else barras.forEach(b => { b.style.height = '6px'; });
-  requestAnimationFrame(desenha);
-}
-requestAnimationFrame(desenha);
-
-// ══════════════ BOTÕES ══════════════
-function mensagem(t) { $('msg').textContent = t; clearTimeout(mensagem.t); mensagem.t = setTimeout(() => $('msg').textContent = '', 2600); }
-function montaInstrumentos() {
-  const box = $('insts'); box.innerHTML = '';
-  for (const I of INSTRUMENTOS) {
-    const b = document.createElement('button');
-    b.className = 'inst' + (I.id === inst ? ' on' : '');
-    b.textContent = I.nome;
-    b.onclick = () => { inst = I.id; montaInstrumentos(); guardaAtual(); tocaNota(523.25); };
-    box.appendChild(b);
-  }
-}
-// Ritmos prontos (só a bateria; as notas ficam)
-const RITMOS = [
-  { nome: 'Tamborzão 🔥', bpm: 128, b: { bumbo: [0, 6, 10], caixa: [], palma: [4, 12], chimbal: [2, 6, 10, 14], tambor: [0, 3, 6, 8, 10, 13], grave: [0, 10], voz: [0] } },
-  { nome: 'Mandelão 🔥', bpm: 130, b: { bumbo: [0, 3, 8, 11], caixa: [], palma: [4, 12], chimbal: [0, 2, 4, 6, 8, 10, 12, 14], tambor: [], grave: [0, 3, 8, 11], voz: [8] } },
-  { nome: 'Funk Rave 🔥', bpm: 135, b: { bumbo: [0, 4, 8, 12], caixa: [], palma: [4, 12], chimbal: [2, 6, 10, 14], tambor: [3, 7, 11, 15], grave: [0, 6, 10], voz: [0, 12] } },
-  { nome: 'Funk Melody', bpm: 120, b: { bumbo: [0, 6, 10], caixa: [4, 12], palma: [], chimbal: [0, 2, 4, 6, 8, 10, 12, 14], tambor: [0, 3, 6], grave: [0, 8], voz: [] } },
-  { nome: 'Trap', bpm: 140, b: { bumbo: [0, 7, 10], caixa: [8], palma: [8], chimbal: [0, 1, 2, 4, 5, 6, 8, 9, 10, 11, 12, 14, 15], tambor: [], grave: [0, 7, 10], voz: [] } },
-  { nome: 'Rock', bpm: 115, b: { bumbo: [0, 8, 10], caixa: [4, 12], palma: [], chimbal: [0, 2, 4, 6, 8, 10, 12, 14], tambor: [], grave: [], voz: [] } },
-];
-// Coloca a bateria de um ritmo (as notas ficam como estão)
-function aplicaRitmo(R) {
-  LINHAS.forEach((L, li) => { if (L.tipo !== 'bateria') return; grade[li] = Array(PASSOS).fill(false); for (const p of R.b[L.id] || []) grade[li][p] = true; });
-  if (R.bpm) $('tempo').value = R.bpm;
-}
-let ritmoIdx = 0;
-$('b-ritmo').onclick = () => {
-  const R = RITMOS[ritmoIdx++ % RITMOS.length];
-  aplicaRitmo(R);
-  pintaTudo(); guardaAtual();
-  mensagem('🥁 Ritmo: ' + R.nome + ' (toque de novo pra trocar)');
-  if (!tocando) play();
-};
-$('b-sorteia').onclick = () => {
-  const R = RITMOS[Math.random() < 0.8 ? Math.floor(Math.random() * 3) : Math.floor(Math.random() * RITMOS.length)];   // quase sempre funk
-  aplicaRitmo(R);
-  // melodia: anda pelas notas aos pulinhos (fica com cara de música)
-  for (let li = BATERIA.length; li < LINHAS.length; li++) grade[li] = Array(PASSOS).fill(false);
-  let n = 3 + Math.floor(Math.random() * 3);
-  for (let p = 0; p < PASSOS; p++) {
-    if (Math.random() < (p % 2 === 0 ? 0.65 : 0.2)) { grade[BATERIA.length + n][p] = true; n = Math.max(0, Math.min(NOTAS.length - 1, n + [-2, -1, -1, 0, 1, 1, 2][Math.floor(Math.random() * 7)])); }
-  }
-  inst = INSTRUMENTOS[Math.floor(Math.random() * INSTRUMENTOS.length)].id;
-  fala = Math.floor(Math.random() * FALAS.length);
-  monta();
-  montaInstrumentos(); pintaTudo(); guardaAtual();
-  mensagem('🎲 Surpresa: ' + R.nome + '! Mexa nela do seu jeito.');
-  if (!tocando) play();
-};
-$('b-limpa').onclick = () => {
-  const b = $('b-limpa');
-  if (b.dataset.armado !== '1') { b.dataset.armado = '1'; b.textContent = '🧽 Limpar tudo?'; setTimeout(() => { b.dataset.armado = ''; b.textContent = '🧽 LIMPAR'; }, 2500); return; }
-  b.dataset.armado = ''; b.textContent = '🧽 LIMPAR';
-  grade = LINHAS.map(() => Array(PASSOS).fill(false));
-  pintaTudo(); guardaAtual();
-};
-$('b-guarda').onclick = () => {
-  if (!grade.some(l => l.some(Boolean))) { mensagem('Coloque alguns sons antes de salvar!'); return; }
-  const nome = tituloIA || 'Música ' + (dados.salvas.length + 1);
-  dados.salvas.unshift({ nome: nome + (modo === 'dificil' ? ' 🔥' : ''), modo, grade: JSON.parse(JSON.stringify(grade)), inst, bpm: +$('tempo').value });
-  if (dados.salvas.length > 30) dados.salvas.length = 30;
-  grava(dados); lista();
-  mensagem('💾 Salva como "' + nome + '"!');
-};
-function lista() {
-  const box = $('lista'); box.innerHTML = '';
-  dados.salvas.forEach((m, i) => {
-    const d = document.createElement('div');
-    d.className = 'musica';
-    d.textContent = '🎵 ' + m.nome;
-    d.onclick = () => { trocaModo(m.modo || 'facil'); grade = JSON.parse(JSON.stringify(m.grade)); inst = m.inst; monta(); $('tempo').value = m.bpm; montaInstrumentos(); pintaTudo(); guardaAtual(); mensagem('▶ ' + m.nome); if (!tocando) play(); };
-    const x = document.createElement('button');
-    x.textContent = '✕';
-    x.onclick = e => {
-      e.stopPropagation();
-      if (x.dataset.armado !== '1') { x.dataset.armado = '1'; x.textContent = '?'; setTimeout(() => { x.dataset.armado = ''; x.textContent = '✕'; }, 2500); return; }
-      dados.salvas.splice(i, 1); grava(dados); lista();
-    };
-    d.appendChild(x);
-    box.appendChild(d);
-  });
+function para() {
+  clearInterval(timer); timer = null;
+  if (cartaoAtual) { cartaoAtual.classList.remove('tocando'); cartaoAtual.querySelector('.play').textContent = '▶ Tocar'; cartaoAtual.querySelector('.barra i').style.width = '0'; }
+  atual = null; cartaoAtual = null;
+  if (window.speechSynthesis) speechSynthesis.cancel();
 }
 
-function trocaModo(novo) {
-  if (novo === modo && cels.length) return;
-  if (tocando) stop();
-  if (cels.length) guardaAtual();
-  modo = novo;
-  carregaModo(); monta(); montaInstrumentos(); guardaAtual();
-}
-$('m-facil').onclick = () => { trocaModo('facil'); mensagem('😊 Modo FÁCIL: ritmos prontos e as notas sempre combinam.'); };
-$('m-dificil').onclick = () => { trocaModo('dificil'); mensagem('🔥 Modo DIFÍCIL: 32 quadradinhos, 13 notas, e você faz tudo sozinho!'); };
-// ══════════════ DJ ROBÔ: entende o pedido e monta a música sozinho ══════════════
-let tituloIA = '';
-const semAcento = t => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-const sorteia = l => l[Math.floor(Math.random() * l.length)];
-// Estilos: bateria (16 passos, repete), velocidade, instrumento, escala e se tem voz
-const ESTILOS = {
-  funk:      { nome: 'funk tamborzão', palavras: ['funk', 'tamborzao', 'baile', 'favela', 'mc '], bpm: 128, inst: 'synth', escala: 'menor', voz: true,
-    b: { bumbo: [0, 6, 10], palma: [4, 12], chimbal: [2, 6, 10, 14], tambor: [0, 3, 6, 8, 10, 13], grave: [0, 10] } },
-  mandelao:  { nome: 'mandelão', palavras: ['mandelao', 'mandela', 'pesado', 'pancadao', 'grave', 'bass'], bpm: 130, inst: 'synth', escala: 'menor', voz: true,
-    b: { bumbo: [0, 3, 8, 11], palma: [4, 12], chimbal: [0, 2, 4, 6, 8, 10, 12, 14], grave: [0, 3, 8, 11] } },
-  rave:      { nome: 'funk rave', palavras: ['rave', 'balada', 'festa', 'danca', 'dancar'], bpm: 135, inst: 'gamer', escala: 'menor', voz: true,
-    b: { bumbo: [0, 4, 8, 12], palma: [4, 12], chimbal: [2, 6, 10, 14], tambor: [3, 7, 11, 15], grave: [0, 6, 10] } },
-  trap:      { nome: 'trap', palavras: ['trap', 'rap', 'hip hop', 'hiphop', 'drill'], bpm: 140, inst: 'sino', escala: 'menor', voz: true,
-    b: { bumbo: [0, 7, 10], caixa: [8], palma: [8], chimbal: [0, 1, 2, 4, 5, 6, 8, 9, 10, 11, 12, 14, 15], grave: [0, 7, 10] } },
-  eletronica:{ nome: 'eletrônica', palavras: ['eletronica', 'eletro', 'dj', 'edm', 'techno', 'house'], bpm: 128, inst: 'synth', escala: 'maior', voz: false,
-    b: { bumbo: [0, 4, 8, 12], palma: [4, 12], chimbal: [2, 6, 10, 14], grave: [2, 6, 10, 14] } },
-  rock:      { nome: 'rock', palavras: ['rock', 'guitarra', 'banda', 'metal'], bpm: 120, inst: 'synth', escala: 'menor', voz: false,
-    b: { bumbo: [0, 8, 10], caixa: [4, 12], chimbal: [0, 2, 4, 6, 8, 10, 12, 14] } },
-  game:      { nome: 'música de videogame', palavras: ['game', 'videogame', 'jogo', '8 bit', '8bit', 'mario', 'minecraft', 'pixel', 'fase', 'chefao', 'boss'], bpm: 145, inst: 'gamer', escala: 'maior', voz: false,
-    b: { bumbo: [0, 8], caixa: [4, 12], chimbal: [0, 2, 4, 6, 8, 10, 12, 14] } },
-  lofi:      { nome: 'lo-fi calminha', palavras: ['lofi', 'lo-fi', 'calma', 'calmo', 'dormir', 'relax', 'estudar', 'chill', 'tranquil'], bpm: 80, inst: 'piano', escala: 'penta', voz: false,
-    b: { bumbo: [0, 10], caixa: [8], chimbal: [0, 4, 8, 12] } },
-  pop:       { nome: 'pop', palavras: ['pop', 'radio', 'feliz', 'alegre', 'divertid'], bpm: 116, inst: 'piano', escala: 'maior', voz: false,
-    b: { bumbo: [0, 8, 11], palma: [4, 12], chimbal: [0, 2, 4, 6, 8, 10, 12, 14] } },
-};
-const ESCALAS = { maior: [0, 2, 4, 5, 7, 9, 11, 12], menor: [0, 2, 3, 5, 7, 8, 10, 12], penta: [0, 2, 4, 7, 9, 12], terror: [0, 1, 3, 6, 7, 8, 11, 12] };
-let estiloIA = null;
-const linha = id => LINHAS.findIndex(L => L.id === id);
-const notaLinha = semitom => LINHAS.findIndex(L => L.tipo === 'nota' && Math.abs(Math.log2(L.f / 523.25) * 12 - semitom) < 0.01);
-function pBateria(E) {
-  for (const L of LINHAS) if (L.tipo === 'bateria' && L.id !== 'voz') grade[linha(L.id)] = Array(PASSOS).fill(false);
-  for (const id in E.b) {
-    const li = linha(id); if (li < 0) continue;
-    for (let rep = 0; rep < PASSOS / 16; rep++) for (const p of E.b[id]) grade[li][rep * 16 + p] = true;
+// ══════════════ CARTÃO DA MÚSICA ══════════════
+function cartao(m, naGaveta) {
+  const d = document.createElement('div');
+  d.className = 'cartao';
+  d.innerHTML = '<div class="capa"></div><div class="info"><b></b><small></small><div class="barra"><i></i></div><div class="acoes"><button class="play">▶ Tocar</button></div></div>';
+  const capa = d.querySelector('.capa');
+  capa.textContent = m.capa.emoji; capa.style.background = `linear-gradient(135deg, ${m.capa.c1}, ${m.capa.c2})`;
+  d.querySelector('b').textContent = m.titulo;
+  d.querySelector('small').textContent = ESTILOS[m.estilo].nome + (m.humor ? ' ' + HUMOR_NOME[m.humor] : '') + ' · ' + m.bpm + ' BPM' + (m.voz ? ' · 🎤 ' + m.palavra : '');
+  d.querySelector('.play').onclick = () => cartaoAtual === d ? para() : toca(m, d);
+  const acoes = d.querySelector('.acoes');
+  if (naGaveta) {
+    const x = document.createElement('button'); x.className = 'apagar'; x.textContent = '🗑️';
+    x.onclick = () => { if (x.dataset.armado !== '1') { x.dataset.armado = '1'; x.textContent = 'Apagar?'; setTimeout(() => { x.dataset.armado = ''; x.textContent = '🗑️'; }, 2500); return; } if (cartaoAtual === d) para(); salvas = salvas.filter(s => s.id !== m.id); grava(); gaveta(); };
+    acoes.appendChild(x);
+  } else {
+    const s = document.createElement('button'); s.className = 'salvar';
+    const ja = () => salvas.some(x => x.id === m.id);
+    s.textContent = ja() ? '✓ Salva' : '💾 Salvar'; s.disabled = ja();
+    s.onclick = () => { salvas.unshift(JSON.parse(JSON.stringify(m))); if (salvas.length > 50) salvas.length = 50; grava(); s.textContent = '✓ Salva'; s.disabled = true; };
+    acoes.appendChild(s);
   }
-  // virada no finalzinho: caixa rapidinha
-  const cx = linha('caixa'); if (cx >= 0 && PASSOS === 32 && Math.random() < 0.7) for (const p of [28, 29, 30, 31]) grade[cx][p] = Math.random() < 0.75;
+  return d;
 }
-function pVoz(E, ligada) {
-  const vz = linha('voz'); grade[vz] = Array(PASSOS).fill(false);
-  if (!ligada) return;
-  for (const p of (PASSOS === 32 ? [0, 16] : [0])) grade[vz][p] = true;
-  if (Math.random() < 0.5 && PASSOS === 32) grade[vz][24] = true;
+function gaveta() {
+  const l = $('lista'); l.innerHTML = '';
+  if (!salvas.length) { l.innerHTML = '<p class="vazio">Nenhuma música salva ainda.<br>Peça uma música no chat e aperte 💾 Salvar!</p>'; return; }
+  for (const m of salvas) l.appendChild(cartao(m, true));
 }
-function pMelodia(escala, densidade) {
-  for (const L of LINHAS) if (L.tipo === 'nota') grade[LINHAS.indexOf(L)] = Array(PASSOS).fill(false);
-  const graus = ESCALAS[escala];
-  // um pedacinho de 8 passos que se repete com variação (fica com cara de música)
-  let g = Math.floor(graus.length / 2);
-  const motivo = [];
-  for (let p = 0; p < 8; p++) {
-    if (Math.random() < (p % 2 === 0 ? densidade : densidade * 0.4)) { motivo.push(g); g = Math.max(0, Math.min(graus.length - 1, g + sorteia([-2, -1, -1, 1, 1, 2, 0]))); }
-    else motivo.push(null);
-  }
-  if (motivo.every(x => x == null)) motivo[0] = 0;
-  for (let p = 0; p < PASSOS; p++) {
-    let grau = motivo[p % 8];
-    if (grau == null) continue;
-    if (p >= 8 && p % 16 >= 8) grau = Math.max(0, Math.min(graus.length - 1, grau + sorteia([0, 0, 1, -1, 2])));   // variação na segunda parte
-    const li = notaLinha(graus[grau]); if (li >= 0) grade[li][p] = true;
-  }
+$('b-minhas').onclick = () => { gaveta(); $('gaveta').classList.add('on'); };
+$('b-fecha').onclick = () => $('gaveta').classList.remove('on');
+$('gaveta').onclick = e => { if (e.target.id === 'gaveta') $('gaveta').classList.remove('on'); };
+
+// ══════════════ CONVERSA ══════════════
+function msg(quem, texto, musica) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + quem;
+  if (quem === 'ia') d.innerHTML = '<div class="av">🎧</div><div><div class="txt"></div></div>';
+  else d.innerHTML = '<div class="txt"></div>';
+  d.querySelector('.txt').textContent = texto;
+  let c = null;
+  if (musica) { c = cartao(musica); d.querySelector('.txt').parentNode.appendChild(c); }
+  $('conversa').appendChild(d);
+  $('main').scrollTop = $('main').scrollHeight;
+  return c;
 }
-const TITULOS_A = ['Batida', 'Pancada', 'Vibe', 'Noite', 'Onda', 'Baile', 'Trovão', 'Ritmo', 'Som'];
-const TITULOS_B = ['do Dominic', 'Elétrica', 'da Quebrada', 'Galáctica', 'do Futuro', 'Explosiva', 'do Trovão', 'de Ouro', 'Sinistra'];
-function falaRobo(t) {
-  const box = $('ia-msgs');
-  const m = document.createElement('div'); m.className = 'ia-msg robo'; m.textContent = t; box.appendChild(m);
-  box.scrollTop = box.scrollHeight;
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+function pegaPalavra(original) {
+  const q = original.match(/["“'”]([^"“'”]{1,24})["“'”]/); if (q) return q[1].trim();
+  const m = original.match(/(?:falando|fala|falar|grita|gritando|dizendo|diz|canta|cantando)\s+([\p{L}\p{N}!?\s]{1,24})/iu);
+  return m ? m[1].trim().split(/\s+/).slice(0, 3).join(' ') : '';
 }
-function falaEu(t) {
-  const box = $('ia-msgs');
-  const m = document.createElement('div'); m.className = 'ia-msg eu'; m.textContent = t; box.appendChild(m);
-  box.scrollTop = box.scrollHeight;
-}
-function cerebro(original) {
+let ultima = null;   // a última música que eu fiz (é nela que os pedidos mexem)
+function entende(original) {
   const t = semAcento(original);
-  const tem = (...ps) => ps.some(p => new RegExp('(^|[^a-z0-9])' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(t));
-  const feito = [];
-  let mexeu = false, nova = false;
-  // a palavra que a voz vai falar (entre aspas, ou depois de "falando"/"fala"/"gritando")
-  let palavra = (original.match(/["“'”]([^"“'”]{1,20})["“'”]/) || [])[1];
-  if (!palavra) { const m = original.match(/(?:falando|fala|falar|grita|gritando|dizendo|diz)\s+([\p{L}\p{N}!?\s]{1,20})/iu); if (m) palavra = m[1].trim().split(/\s+/).slice(0, 3).join(' '); }
-  // estilo novo?
+  const tem = (...ps) => ps.some(p => new RegExp('(^|[^a-z0-9])' + p).test(t));
+  const palavraInteira = (...ps) => ps.some(p => new RegExp('(^|[^a-z0-9])' + p + '([^a-z0-9]|$)').test(t));
   let E = null;
-  for (const k in ESTILOS) if (tem(...ESTILOS[k].palavras)) { E = ESTILOS[k]; break; }
-  // "coloca/troca/tira/mais..." com uma música já feita = só mexer nela (não fazer outra)
-  const ajuste = tem('coloca', 'bota', 'poe', 'troca', 'tira', 'muda', 'mais', 'menos', 'adiciona', 'aumenta', 'diminui', 'sem ');
-  const pedeNova = tem('faz', 'cria', 'crie', 'musica nova', 'outra musica', 'nova musica', 'me surpreend', 'surpreend', 'quero uma', 'quero um');
-  if (ajuste && !pedeNova && grade.some(l => l.some(Boolean))) E = null;
-  // humor
-  let escala = null, bpmDelta = 0, humor = '';
-  if (tem('trist', 'chorar', 'saudade', 'sad', 'deprê', 'depre')) { escala = 'menor'; bpmDelta -= 30; humor = 'triste'; }
-  if (tem('feliz', 'alegre', 'animad')) { escala = 'maior'; humor = 'alegre'; }
-  if (tem('terror', 'medo', 'assust', 'sinistr', 'misterio', 'suspense', 'fantasma', 'zumbi')) { escala = 'terror'; bpmDelta -= 15; humor = 'de terror'; }
-  if (tem('epic', 'batalha', 'guerra', 'heroi')) { escala = 'menor'; bpmDelta += 10; humor = 'épico'; }
-  const querNova = E || (humor && !ajuste) || pedeNova || tem('quero', 'manda', 'bota uma', 'qualquer');
-  if (querNova && !(ajuste && !pedeNova && grade.some(l => l.some(Boolean)))) {
-    if (!E) E = humor === 'triste' ? ESTILOS.lofi : humor === 'de terror' ? ESTILOS.trap : humor === 'épico' ? ESTILOS.rock : humor === 'alegre' ? ESTILOS.pop : sorteia(Object.values(ESTILOS));
-    estiloIA = E; nova = true; mexeu = true;
-    inst = E.inst;
-    $('tempo').value = Math.max(70, Math.min(170, E.bpm + bpmDelta));
-    pBateria(E);
-    pMelodia(escala || E.escala, humor === 'triste' ? 0.45 : 0.62);
-    pVoz(E, E.voz && !tem('sem voz') || !!palavra || tem('com voz', 'voz'));
-    tituloIA = sorteia(TITULOS_A) + ' ' + sorteia(TITULOS_B);
-    feito.push('Fiz ' + (E.nome.startsWith('música') ? 'uma ' : 'um ') + E.nome + (humor ? ' ' + humor : '') + ' a ' + $('tempo').value + ' BPM');
-    if (tem('pesad', 'grave', 'estoura', 'treme')) { const gv = linha('grave'), bb = linha('bumbo'); for (let p = 0; p < PASSOS; p++) if (grade[bb][p]) grade[gv][p] = true; feito.push('bem pesado com grave 808 🔊'); }
+  for (const k in ESTILOS) if (palavraInteira(...ESTILOS[k].palavras)) { E = ESTILOS[k]; break; }
+  let humor = '';
+  if (tem('trist', 'chorar', 'saudade', 'sad', 'depre', 'sofr')) humor = 'triste';
+  else if (tem('feliz', 'alegre', 'animad')) humor = 'alegre';
+  else if (tem('terror', 'medo', 'assust', 'sinistr', 'misterio', 'suspense', 'fantasma', 'zumbi')) humor = 'terror';
+  else if (tem('epic', 'batalha', 'guerra', 'heroi', 'chefao')) humor = 'epico';
+  const ajuste = tem('coloca', 'bota', 'poe', 'troca', 'tira', 'muda', 'mais', 'menos', 'sem', 'aumenta', 'diminui', 'deixa');
+  const pedeNova = tem('faz', 'cria', 'crie', 'nova', 'outra', 'surpreend', 'quero', 'manda', 'gera');
+  // ajustes na última música (cada ajuste vira uma versão nova, igual chat de IA)
+  if (ultima && ajuste && !(pedeNova && (E || humor))) {
+    const m = JSON.parse(JSON.stringify(ultima)); m.id = Date.now() + Math.random();
+    const feito = [];
+    if (tem('mais rapid', 'acelera', 'rapidao')) { m.bpm = Math.min(170, m.bpm + 14); feito.push('acelerei pra ' + m.bpm + ' BPM'); }
+    if (tem('mais devagar', 'mais lent')) { m.bpm = Math.max(70, m.bpm - 14); feito.push('deixei mais devagar, ' + m.bpm + ' BPM'); }
+    if (tem('pesad', 'grave', 'estoura', 'treme')) { m.pesado = Math.min(3, m.pesado + 1); m.baixo = '808'; if (!m.baixoPassos.length) m.baixoPassos = [0, 6, 10]; feito.push('deixei mais pesado, com grave 808 🔊'); }
+    if (tem('leve', 'suave')) { m.pesado = 0; m.baixo = 'suave'; feito.push('deixei mais leve'); }
+    if (tem('melodia')) { fazMelodia(m); feito.push('fiz uma melodia nova'); }
+    if (tem('sem voz', 'tira a voz')) { m.voz = false; feito.push('tirei a voz'); }
+    if (tem('tamborzao', 'tambor')) { m.bateria.tambor = [0, 3, 6, 8, 10, 13]; feito.push('coloquei tamborzão 🪘'); }
+    if (tem('palma')) { m.bateria.palma = [4, 12]; feito.push('coloquei palmas 👏'); }
+    if (tem('piano')) { m.lead = 'piano'; feito.push('troquei pro piano 🎹'); }
+    if (tem('guitarra')) { m.lead = 'guitarra'; feito.push('coloquei guitarra 🎸'); }
+    if (tem('8 bit', '8bit', 'videogame')) { m.lead = 'gamer'; feito.push('troquei pro som de videogame 👾'); }
+    if (tem('synth', 'sintetiz')) { m.lead = 'synth'; feito.push('troquei pro synth 🎛️'); }
+    if (tem('sino', 'sininho')) { m.lead = 'sino'; feito.push('troquei pro sininho 🔔'); }
+    if (tem('acorde', 'fundo')) { m.pad = !tem('sem', 'tira'); feito.push(m.pad ? 'coloquei acordes de fundo' : 'tirei os acordes de fundo'); }
+    const palavra = pegaPalavra(original);
+    if (palavra) { m.voz = true; m.palavra = palavra; feito.push('a voz agora fala "' + palavra + '" 🎤'); }
+    const nome = (original.match(/(?:nome|titulo|chama)\s+(?:para|pra|de)?\s*["“']?([^"”']{2,30})/i) || [])[1];
+    if (nome && tem('nome', 'titulo', 'chama')) { m.titulo = nome.trim(); feito.push('mudei o nome pra "' + m.titulo + '"'); }
+    for (const k in CAPAS) if (tem('capa') && tem(k)) { m.capa.emoji = CAPAS[k]; feito.push('troquei a capa ' + CAPAS[k]); break; }
+    if (feito.length) return ['Pronto! ' + cap(feito.join(', ')) + '. ' + sorteia(['Ficou melhor?', 'E agora, curtiu?', 'Quer mudar mais alguma coisa?', 'Bora ouvir! 🔊']), m];
   }
-  // ajustes na música de agora
-  if (tem('mais rapido', 'acelera', 'rapidao', 'mais rapida')) { $('tempo').value = Math.min(170, +$('tempo').value + 15); feito.push('deixei mais rápido (' + $('tempo').value + ' BPM)'); mexeu = true; }
-  if (tem('mais devagar', 'mais lento', 'mais lenta', 'devagarinho')) { $('tempo').value = Math.max(70, +$('tempo').value - 15); feito.push('deixei mais devagar (' + $('tempo').value + ' BPM)'); mexeu = true; }
-  if (!nova && tem('mais pesad', 'mais grave', 'pesad', 'treme', 'estoura')) { const gv = linha('grave'), bb = linha('bumbo'); for (let p = 0; p < PASSOS; p++) if (grade[bb][p]) grade[gv][p] = true; for (const p of [0, 16].filter(p => p < PASSOS)) grade[bb][p + 3] = true; feito.push('coloquei mais grave 808 🔊'); mexeu = true; }
-  if (tem('mais leve', 'suave', 'menos grave', 'tira o grave', 'sem grave')) { grade[linha('grave')] = Array(PASSOS).fill(false); feito.push('tirei o grave'); mexeu = true; }
-  if (tem('tamborzao', 'tambor') && !nova) { const tb = linha('tambor'); for (let r = 0; r < PASSOS / 16; r++) for (const p of [0, 3, 6, 8, 10, 13]) grade[tb][r * 16 + p] = true; feito.push('coloquei tamborzão 🪘'); mexeu = true; }
-  if (tem('palma') && !nova) { const pl = linha('palma'); for (let p = 4; p < PASSOS; p += 8) grade[pl][p] = true; feito.push('coloquei palmas 👏'); mexeu = true; }
-  if (tem('sem voz', 'tira a voz', 'sem a voz')) { grade[linha('voz')] = Array(PASSOS).fill(false); feito.push('tirei a voz'); mexeu = true; }
-  if (palavra) {
-    falaCustom = palavra.slice(0, 20);
-    const vz = linha('voz'); if (!grade[vz].some(Boolean)) pVoz(null, true);
-    feito.push('a voz agora fala "' + falaCustom + '" 🎤'); mexeu = true;
-  }
-  if (tem('muda a melodia', 'troca a melodia', 'outra melodia', 'melodia nova')) { pMelodia(escala || (estiloIA && estiloIA.escala) || 'penta', 0.6); feito.push('fiz uma melodia nova 🎵'); mexeu = true; }
-  if (tem('sem bateria', 'tira a bateria')) { for (const L of LINHAS) if (L.tipo === 'bateria' && L.id !== 'voz') grade[linha(L.id)] = Array(PASSOS).fill(false); feito.push('tirei a bateria'); mexeu = true; }
-  if (tem('so bateria', 'sem melodia', 'tira a melodia', 'sem nota')) { for (const L of LINHAS) if (L.tipo === 'nota') grade[LINHAS.indexOf(L)] = Array(PASSOS).fill(false); feito.push('deixei só a batida'); mexeu = true; }
-  for (const [p, id, nome] of [['piano', 'piano', 'piano 🎹'], ['8 bit', 'gamer', '8-bit 👾'], ['8bit', 'gamer', '8-bit 👾'], ['flauta', 'flauta', 'flauta 🪈'], ['synth', 'synth', 'synth 🎛️'], ['sintetiz', 'synth', 'synth 🎛️'], ['sino', 'sino', 'sininho 🔔']])
-    if (t.includes(p) && !nova) { inst = id; feito.push('troquei pro ' + nome); mexeu = true; break; }
-  if (tem('limpa', 'apaga tudo', 'zera')) { grade = LINHAS.map(() => Array(PASSOS).fill(false)); feito.length = 0; feito.push('apaguei tudo, tá limpinho'); mexeu = true; tituloIA = ''; }
-  if (tem('para de', 'pare', 'chega', 'stop', 'desliga') && !mexeu) { if (tocando) stop(); return 'Parei a música! ⏹ Quando quiser, é só pedir de novo.'; }
-  if (tem('nome', 'titulo') && !nova) { tituloIA = sorteia(TITULOS_A) + ' ' + sorteia(TITULOS_B); return 'Que tal o nome "' + tituloIA + '"? 😎 Aperte 💾 SALVAR que ela fica guardada com esse nome.'; }
-  if (!mexeu) {
-    // não entendeu: faz alguma coisa mesmo assim
-    return cerebro('faz uma música');
-  }
-  monta(); montaInstrumentos(); guardaAtual();
-  if (tocando) { stop(); } play();
-  let resposta = feito.join(', ') + '! ';
-  if (nova) resposta += 'O nome dela é "' + tituloIA + '". ';
-  resposta += sorteia(['Quer mais pesado? Mais rápido? Com voz falando alguma coisa?', 'Gostou? Fala o que mudar!', 'Ficou da hora? Posso deixar mais grave, mais rápido ou trocar o instrumento.', 'Quer que a voz fale alguma coisa? É só pedir: fala "bora"!']);
-  return resposta.charAt(0).toUpperCase() + resposta.slice(1);
+  if (!E) E = humor === 'triste' ? ESTILOS.lofi : humor === 'terror' ? ESTILOS.trap : humor === 'epico' ? ESTILOS.rock : humor === 'alegre' ? ESTILOS.pop : sorteia(Object.values(ESTILOS));
+  const m = novaMusica(E, humor);
+  m.id = Date.now() + Math.random();
+  if (tem('pesad', 'grave', 'estoura')) { m.pesado = 2; m.baixo = '808'; }
+  if (tem('sem voz')) m.voz = false;
+  const palavra = pegaPalavra(original); if (palavra) { m.voz = true; m.palavra = palavra; }
+  for (const k in CAPAS) if (tem(k)) { m.capa.emoji = CAPAS[k]; break; }
+  const entendeu = palavraInteira(...E.palavras) || humor;
+  const intro = entendeu ? sorteia(['Saindo do forno! 🔥', 'Fiz essa pra você:', 'Olha só o que eu criei:', 'Prontinho! Escuta essa:']) : sorteia(['Não entendi direitinho, então criei essa pra você:', 'Fiz uma surpresa pra você:', 'Que tal essa?']);
+  return [intro + ' "' + m.titulo + '", ' + (E.nome === 'Bossa Nova' ? 'uma ' : 'um ') + E.nome + (humor ? ' ' + HUMOR_NOME[humor] : '') + '. ' + sorteia(['Quer mais pesado, mais rápido ou com a voz falando alguma coisa?', 'Se quiser, posso mudar a melodia, o instrumento ou o nome.', 'Gostou? Aperta 💾 Salvar!']), m];
 }
-function pedir(txt) {
-  txt = String(txt || '').trim();
-  if (!txt) return;
-  falaEu(txt);
-  $('ia-input').value = '';
-  $('ia-msgs').closest('.ia').classList.add('pensando');
-  setTimeout(() => { $('ia-msgs').closest('.ia').classList.remove('pensando'); falaRobo(cerebro(txt)); }, 650);
+let ocupado = false;
+function pedir(texto) {
+  texto = String(texto || '').trim();
+  if (!texto || ocupado) return;
+  ocupado = true; $('enviar').disabled = true;
+  audio();   // o som precisa começar com um toque da pessoa
+  msg('eu', texto);
+  $('texto').value = '';
+  const d = document.createElement('div'); d.className = 'msg ia'; d.innerHTML = '<div class="av">🎧</div><div class="txt digitando"><span></span><span></span><span></span></div>';
+  $('conversa').appendChild(d); $('main').scrollTop = $('main').scrollHeight;
+  setTimeout(() => {
+    d.remove();
+    const [resposta, musica] = entende(texto);
+    ultima = musica;
+    const c = msg('ia', resposta, musica);
+    toca(musica, c);   // já começa a tocar
+    ocupado = false; $('enviar').disabled = false;
+  }, 900 + Math.random() * 600);
 }
-$('ia-form').addEventListener('submit', e => { e.preventDefault(); pedir($('ia-input').value); });
-for (const sug of ['Faz um funk pesado 🔥', 'Música triste 😢', 'De videogame 👾', 'Trap com voz falando "bora"', 'Mais rápido 🐇', 'Muda a melodia 🎵', 'Música de terror 👻', 'Me surpreenda 🎲']) {
-  const b = document.createElement('button'); b.type = 'button'; b.textContent = sug; b.onclick = () => pedir(sug.replace(/[^\p{L}\p{N}"\s]/gu, '').trim()); $('ia-sug').appendChild(b);
+$('form').addEventListener('submit', e => { e.preventDefault(); pedir($('texto').value); });
+for (const s of ['🔥 Um funk da hora', '🥁 Um samba', '🌴 Bossa nova', '🪗 Forró', '😢 Música triste', '👾 De videogame', '🌙 Lo-fi pra relaxar', '💎 Trap pesado', '🎲 Me surpreenda']) {
+  const b = document.createElement('button'); b.type = 'button'; b.textContent = s; b.onclick = () => pedir(s.replace(/^\S+\s/, '')); $('sugestoes').appendChild(b);
 }
-falaRobo('Oi! Eu sou o DJ ROBÔ 🤖🎧 Me fala que música você quer, do seu jeito! Pode ser "funk pesado", "música triste", "de videogame"... ou toca num botão aí embaixo.');
-
-modo = 'dificil';   // agora o estúdio é só no difícil
-carregaModo();
-$('b-entendi').onclick = () => $('aviso').classList.add('fechado');
-monta();
-montaInstrumentos();
-lista();
-// primeira vez no fácil: já começa com um ritmo pra brincar
-if (modo === 'facil' && !dados.atual) { aplicaRitmo(RITMOS[0]); pintaTudo(); }
+msg('ia', 'E aí! Eu sou o DJ IA 🎧\nMe fala que música você quer, do seu jeito. Tipo "um funk da hora", "música triste" ou "trap com a voz falando bora". Eu crio e você ouve na hora!');
 })();
 </script>
 </body>
