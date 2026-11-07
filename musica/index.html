@@ -362,8 +362,9 @@ function msg(quem, texto, musica) {
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 // A letra que a pessoa quer na música (ex: 'coloca a letra tananã tananã, pá pá pum')
 function pegaLetra(original) {
-  let m = original.match(/(?:letra|cantando|canta|cantar)\s*(?:da musica|da música)?\s*(?:e|é|:|que|assim|tipo|falando)?\s*[:\-]?\s*["“]?([^"”]{2,160})/i);
-  if (!m) { const q = original.match(/["“]([^"”]{25,160})["”]/); if (q) m = q; }
+  // só quando a pessoa fala "letra" (e não "sem letra")
+  if (/(sem|tira|tirar|apaga)\s+(a\s+)?letra/i.test(original)) return null;
+  const m = original.match(/letra\s*(?:da musica|da música)?\s*(?:e|é|:|que|assim|tipo|falando)?\s*[:\-]?\s*["“]?([^"”]{2,160})/i);
   if (!m) return null;
   const texto = m[1].replace(/["“”]/g, '').trim();
   let partes = texto.split(/[,;.!?\n]+/).map(x => x.trim()).filter(Boolean);
@@ -375,7 +376,7 @@ function pegaLetra(original) {
 }
 function pegaPalavra(original) {
   const q = original.match(/["“'”]([^"“'”]{1,24})["“'”]/); if (q) return q[1].trim();
-  const m = original.match(/(?:falando|fala|falar|grita|gritando|dizendo|diz|canta|cantando)\s+([\p{L}\p{N}!?\s]{1,24})/iu);
+  const m = original.match(/(?:falando|fala|falar|grita|gritando|dizendo|diz)\s+([\p{L}\p{N}!?\s]{1,24})/iu);
   return m ? m[1].trim().split(/\s+/).slice(0, 3).join(' ') : '';
 }
 let ultima = null;   // a última música que eu fiz (é nela que os pedidos mexem)
@@ -390,7 +391,7 @@ function entende(original) {
   else if (tem('feliz', 'alegre', 'animad')) humor = 'alegre';
   else if (tem('terror', 'medo', 'assust', 'sinistr', 'misterio', 'suspense', 'fantasma', 'zumbi')) humor = 'terror';
   else if (tem('epic', 'batalha', 'guerra', 'heroi', 'chefao')) humor = 'epico';
-  const ajuste = tem('coloca', 'bota', 'poe', 'troca', 'tira', 'muda', 'mais', 'menos', 'sem', 'aumenta', 'diminui', 'deixa', 'letra', 'canta');
+  const ajuste = tem('coloca', 'bota', 'poe', 'troca', 'tira', 'muda', 'mais', 'menos', 'sem', 'aumenta', 'diminui', 'deixa', 'letra');
   const pedeNova = tem('faz', 'cria', 'crie', 'nova', 'outra', 'surpreend', 'quero', 'manda', 'gera');
   // ajustes na última música (cada ajuste vira uma versão nova, igual chat de IA)
   if (ultima && ajuste && !(pedeNova && (E || humor))) {
@@ -410,6 +411,7 @@ function entende(original) {
     if (tem('synth', 'sintetiz')) { m.lead = 'synth'; feito.push('troquei pro synth 🎛️'); }
     if (tem('sino', 'sininho')) { m.lead = 'sino'; feito.push('troquei pro sininho 🔔'); }
     if (tem('acorde', 'fundo')) { m.pad = !tem('sem', 'tira'); feito.push(m.pad ? 'coloquei acordes de fundo' : 'tirei os acordes de fundo'); }
+    if (tem('sem letra', 'tira a letra', 'tirar a letra', 'apaga a letra')) { m.letra = null; feito.push('tirei a letra'); }
     const letra = pegaLetra(original);
     if (letra) { m.voz = true; m.letra = letra; feito.push('coloquei a sua letra: "' + letra.join(', ') + '" 🎤'); }
     const palavra = letra ? '' : pegaPalavra(original);
@@ -430,7 +432,7 @@ function entende(original) {
   for (const k in CAPAS) if (tem(k)) { m.capa.emoji = CAPAS[k]; break; }
   const entendeu = palavraInteira(...E.palavras) || humor;
   const intro = entendeu ? sorteia(['Saindo do forno! 🔥', 'Fiz essa pra você:', 'Olha só o que eu criei:', 'Prontinho! Escuta essa:']) : sorteia(['Não entendi direitinho, então criei essa pra você:', 'Fiz uma surpresa pra você:', 'Que tal essa?']);
-  return [intro + ' "' + m.titulo + '", ' + (E.nome === 'Bossa Nova' ? 'uma ' : 'um ') + E.nome + (humor ? ' ' + HUMOR_NOME[humor] : '') + '. ' + (m.letra ? 'Coloquei a sua letra 🎤 ' : '') + sorteia(['Quer mais pesado, mais rápido ou com a voz falando alguma coisa?', 'Se quiser, posso mudar a melodia, o instrumento ou o nome.', 'Gostou? Aperta 💾 Salvar!']), m];
+  return [intro + ' "' + m.titulo + '", ' + (E.nome === 'Bossa Nova' ? 'uma ' : 'um ') + E.nome + (humor ? ' ' + HUMOR_NOME[humor] : '') + '. ' + (m.letra ? 'Coloquei a sua letra 🎤 ' : '') + sorteia(['Se quiser letra, fala: coloca a letra ... (o que você quiser) ✍️', 'Quer mais pesado, mais rápido ou com a voz falando alguma coisa?', 'Se quiser, posso mudar a melodia, o instrumento ou o nome.', 'Gostou? Aperta 💾 Salvar!']), m];
 }
 let ocupado = false;
 function pedir(texto) {
