@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#15134a">
+<title>Meu Robô</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --tinta: #0e0c33; --noite: #15134a; --creme: #fff6dc; --sol: #ffd23f; --rosa: #ff5d8f; --agua: #3fe0d0; --roxo: #b06cff; --verde: #2fd15a; --laranja: #ff9a3d;
+    --display: 'Bungee', 'Arial Black', Impact, sans-serif; --texto: 'Baloo 2', 'Segoe UI', Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { min-height: 100vh; font-family: var(--texto); color: var(--creme); background: var(--noite); -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+  #back-link { position: fixed; top: 10px; left: 10px; z-index: 20; text-decoration: none; font-weight: 800; background: var(--sol); color: var(--tinta); border: 3px solid var(--tinta); border-radius: 12px; padding: 4px 12px 2px; box-shadow: 0 4px 0 var(--tinta); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 56px 12px 30px; }
+  .topo { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+  h1 { font-family: var(--display); font-weight: 400; font-size: clamp(24px, 6vw, 40px); text-shadow: 3px 3px 0 var(--tinta); transform: rotate(-2deg); }
+  h1 span { color: var(--agua); }
+  .pill { background: rgba(0,0,0,.3); border: 2px solid rgba(255,255,255,.15); border-radius: 999px; padding: 3px 12px 1px; font-weight: 800; }
+  .pill b { font-family: var(--display); font-weight: 400; color: var(--sol); }
+
+  .main { display: grid; grid-template-columns: minmax(280px, 420px) 1fr; gap: 16px; margin-top: 14px; align-items: start; }
+  @media (max-width: 760px) { .main { grid-template-columns: 1fr; } }
+
+  /* Quartinho do robô */
+  .quarto { position: relative; aspect-ratio: 4 / 4.2; border: 4px solid var(--tinta); border-radius: 24px; overflow: hidden; box-shadow: 0 7px 0 var(--tinta);
+    background: linear-gradient(#3a3a8a 0 62%, #5a4a3a 62% 100%); }
+  .quarto.noite { background: linear-gradient(#141640 0 62%, #3a2e26 62% 100%); }
+  .janela { position: absolute; left: 8%; top: 10%; width: 26%; aspect-ratio: 1; border: 5px solid #c9b48a; border-radius: 8px; background: linear-gradient(#7fd3ff, #c8f0ff); }
+  .noite .janela { background: linear-gradient(#0a0a2a, #2a2a6a); }
+  .janela::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; border-left: 4px solid #c9b48a; }
+  .astro { position: absolute; right: 12%; top: 12%; font-size: 22px; }
+  .tomada { position: absolute; right: 10%; top: 44%; font-size: 26px; }
+  .quadro { position: absolute; right: 30%; top: 12%; width: 18%; aspect-ratio: 1.2; background: var(--creme); border: 4px solid #8a6a3a; border-radius: 4px; display: grid; place-items: center; font-size: 22px; }
+  #robo { position: absolute; left: 50%; bottom: 6%; width: 62%; transform: translateX(-50%); transition: filter .3s; }
+  #robo.sujo { filter: sepia(.6) saturate(.7) brightness(.85); }
+  #robo svg { width: 100%; height: auto; overflow: visible; }
+  .sombra { position: absolute; left: 50%; bottom: 4%; width: 44%; height: 5%; transform: translateX(-50%); background: rgba(0,0,0,.3); border-radius: 50%; }
+  .fala { position: absolute; left: 50%; top: 4%; transform: translateX(-50%); max-width: 86%; background: var(--creme); color: var(--tinta); border: 3px solid var(--tinta); border-radius: 16px; padding: 6px 12px 4px; font-weight: 800; font-size: 15px; text-align: center; box-shadow: 0 4px 0 var(--tinta); opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 3; }
+  .fala.on { opacity: 1; }
+  .zzz { position: absolute; left: 62%; top: 30%; font-size: 28px; font-weight: 800; color: #fff; animation: zzz 2s ease-in-out infinite; display: none; }
+  .dormindo .zzz { display: block; }
+  @keyframes zzz { 0% { transform: translate(0, 0) scale(.6); opacity: 0; } 50% { opacity: 1; } 100% { transform: translate(20px, -40px) scale(1.2); opacity: 0; } }
+  .fx { position: absolute; inset: 0; pointer-events: none; z-index: 2; overflow: hidden; }
+  .fx span { position: absolute; font-size: 26px; animation: sobe 1.2s ease-out forwards; }
+  @keyframes sobe { to { transform: translateY(-120px) scale(1.3); opacity: 0; } }
+
+  /* animações do robô */
+  .r-corpo { transform-origin: 100px 200px; animation: respira 2.4s ease-in-out infinite; }
+  @keyframes respira { 50% { transform: translateY(-3px); } }
+  .olho-pisca { transform-origin: center; animation: pisca 4s infinite; }
+  @keyframes pisca { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+  .dormindo .r-corpo { animation: none; transform: translateY(6px); }
+  .dormindo .olhos { opacity: .15; }
+  .r-braco-e { transform-origin: 52px 130px; } .r-braco-d { transform-origin: 148px 130px; }
+  .anima-tchau .r-braco-d { animation: tchau .4s ease-in-out 4 alternate; }
+  @keyframes tchau { to { transform: rotate(-60deg); } }
+  .anima-danca .r-corpo { animation: danca .35s ease-in-out 8 alternate; }
+  @keyframes danca { from { transform: rotate(-10deg) translateY(0); } to { transform: rotate(10deg) translateY(-8px); } }
+  .anima-danca .r-braco-e { animation: tchau .35s ease-in-out 8 alternate-reverse; }
+  .anima-danca .r-braco-d { animation: tchau .35s ease-in-out 8 alternate; }
+  .anima-pulo #robo, .anima-pulo .r-tudo { animation: pulo .5s ease-out 3; }
+  @keyframes pulo { 50% { transform: translateY(-50px); } }
+  .anima-voa .r-tudo { animation: voa 2.6s ease-in-out 1; }
+  @keyframes voa { 30%, 70% { transform: translateY(-120px) rotate(-6deg); } }
+  .anima-gira .r-tudo { transform-origin: 100px 160px; animation: gira .6s linear 3; }
+  @keyframes gira { to { transform: rotate(360deg); } }
+  .anima-forca .r-braco-e, .anima-forca .r-braco-d { animation: forca .3s ease-in-out 6 alternate; }
+  @keyframes forca { to { transform: rotate(-35deg) scale(1.15); } }
+  .laser { display: none; }
+  .anima-laser .laser { display: block; animation: laser .2s steps(2) 10; }
+  @keyframes laser { 50% { opacity: .4; } }
+
+  /* Painel */
+  .painel { background: rgba(0,0,0,.25); border: 3px solid var(--tinta); border-radius: 20px; padding: 12px; }
+  .abas { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .aba { font-family: var(--display); font-weight: 400; font-size: 14px; cursor: pointer; color: var(--creme); background: rgba(255,255,255,.08); border: 3px solid rgba(255,255,255,.15); border-radius: 12px; padding: 5px 12px 2px; }
+  .aba.on { background: var(--sol); color: var(--tinta); border-color: var(--tinta); box-shadow: 0 4px 0 var(--tinta); }
+  .stat { display: grid; grid-template-columns: 28px 1fr 46px; gap: 8px; align-items: center; font-weight: 800; margin-bottom: 7px; }
+  .stat .ic { font-size: 20px; }
+  .stat .barra { height: 16px; border-radius: 10px; background: rgba(255,255,255,.12); border: 2px solid var(--tinta); overflow: hidden; }
+  .stat .barra i { display: block; height: 100%; border-radius: 6px; transition: width .4s; }
+  .stat small { text-align: right; }
+  .acoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; margin-top: 10px; }
+  .btn { font-family: var(--texto); font-weight: 800; font-size: 15px; cursor: pointer; border: 3px solid var(--tinta); border-radius: 14px; padding: 8px 8px 5px; color: var(--tinta); background: var(--creme); box-shadow: 0 4px 0 var(--tinta); }
+  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn .peq { display: block; font-size: 11px; font-weight: 700; opacity: .75; }
+  .nivel { font-weight: 800; margin: 4px 0 8px; }
+  .nivel .xp { height: 10px; border-radius: 8px; background: rgba(255,255,255,.12); overflow: hidden; margin-top: 3px; }
+  .nivel .xp i { display: block; height: 100%; background: linear-gradient(90deg, var(--agua), var(--roxo)); }
+  .cat { font-family: var(--display); font-size: 13px; color: var(--sol); margin: 10px 2px 6px; }
+  .pecas { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
+  .peca { position: relative; background: rgba(255,255,255,.07); border: 3px solid rgba(255,255,255,.15); border-radius: 14px; padding: 4px 2px 3px; cursor: pointer; color: var(--creme); font-family: inherit; font-weight: 700; font-size: 11px; }
+  .peca svg { width: 60px; height: 60px; display: block; margin: 0 auto; }
+  .peca.on { background: var(--creme); color: var(--tinta); border-color: var(--sol); }
+  .peca.travada { opacity: .6; }
+  .peca .preco { position: absolute; top: 2px; right: 4px; font-size: 11px; font-weight: 800; color: var(--sol); }
+  .cores { display: flex; flex-wrap: wrap; gap: 6px; }
+  .cor { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--tinta); cursor: pointer; }
+  .cor.on { box-shadow: 0 0 0 3px var(--sol); }
+  #nome { width: 100%; padding: 8px 12px; font-size: 18px; border-radius: 12px; border: 3px solid var(--tinta); background: var(--creme); color: var(--tinta); font-family: inherit; font-weight: 800; }
+  .dica { font-size: 13px; opacity: .8; margin-top: 8px; }
+</style>
+</head>
+<body>
+<a href="../index.html" id="back-link">← Menu</a>
+<div class="wrap">
+  <div class="topo">
+    <h1>🤖 MEU <span>ROBÔ</span></h1>
+    <span class="pill">🔩 <b id="parafusos">0</b></span>
+  </div>
+  <div class="main">
+    <div>
+      <div class="quarto" id="quarto">
+        <div class="janela"></div><div class="astro" id="astro">☀️</div>
+        <div class="quadro" id="quadro">🏆</div>
+        <div class="tomada">🔌</div>
+        <div class="fala" id="fala"></div>
+        <div class="sombra"></div>
+        <div id="robo"></div>
+        <div class="zzz">Z</div>
+        <div class="fx" id="fx"></div>
+      </div>
+    </div>
+    <div class="painel">
+      <div class="abas" id="abas"></div>
+      <div id="conteudo"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const sorteia = l => l[Math.floor(Math.random() * l.length)];
+
+// ── Guardado (cada perfil tem o seu) ──
+const PERFIL = new URLSearchParams(location.search).get('perfil');
+const KEY = 'meuRobo' + (PERFIL ? ':' + PERFIL : '');
+const isAdm = (() => { try { const m = JSON.parse(localStorage.getItem('aventuraConta' + (PERFIL ? ':' + PERFIL : ''))); return ['endrick', 'dominic'].includes(String(m && m.user && m.user.nome || '').trim().toLowerCase()); } catch (e) { return false; } })();
+const NOVO = { nome: 'Bipo', partes: { cabeca: 'quadrada', olhos: 'redondos', corpo: 'caixa', bracos: 'simples', pernas: 'rodas', acessorio: 'antena' },
+  cor1: '#5cb8ff', cor2: '#ffd23f', corOlho: '#3fe0d0',
+  bateria: 80, oleo: 80, limpeza: 80, alegria: 80, parafusos: 30, xp: 0, nivel: 1, tem: [], dormindo: false, quando: Date.now() };
+let R; try { R = Object.assign({}, NOVO, JSON.parse(localStorage.getItem(KEY)) || {}); } catch (e) { R = Object.assign({}, NOVO); }
+R.partes = Object.assign({}, NOVO.partes, R.partes);
+const grava = () => { R.quando = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(R)); } catch (e) { /* ok */ } };
+
+// O tempo passou enquanto você estava fora: o robô gastou um pouquinho (bem devagar, nunca morre)
+(() => {
+  const min = Math.min(60 * 24, (Date.now() - (R.quando || Date.now())) / 60000);
+  const gasto = min / 6;   // -1 a cada 6 minutos
+  if (R.dormindo) R.bateria = Math.min(100, R.bateria + min / 2);
+  else R.bateria = Math.max(5, R.bateria - gasto);
+  R.oleo = Math.max(5, R.oleo - gasto); R.limpeza = Math.max(5, R.limpeza - gasto * 0.7); R.alegria = Math.max(5, R.alegria - gasto * 0.8);
+})();
+
+// ══════════════ PEÇAS (desenhos em SVG) ══════════════
+// c1 = cor principal, c2 = detalhes, co = olhos. Caixa de desenho 200 x 260
+const L = '#0e0c33';
+const P = {
+  cabeca: [
+    { id: 'quadrada', nome: 'Quadrada', nv: 1, svg: (c1, c2) => `<rect x="55" y="30" width="90" height="70" rx="14" fill="${c1}" stroke="${L}" stroke-width="5"/><rect x="75" y="82" width="50" height="9" rx="4" fill="${c2}" stroke="${L}" stroke-width="3"/>` },
+    { id: 'redonda', nome: 'Redonda', nv: 1, svg: (c1, c2) => `<circle cx="100" cy="65" r="42" fill="${c1}" stroke="${L}" stroke-width="5"/><path d="M82 86 Q100 96 118 86" stroke="${L}" stroke-width="4" fill="none" stroke-linecap="round"/>` },
+    { id: 'tv', nome: 'Televisão', nv: 2, preco: 40, svg: (c1, c2) => `<rect x="50" y="28" width="100" height="76" rx="10" fill="${c1}" stroke="${L}" stroke-width="5"/><rect x="60" y="38" width="80" height="56" rx="8" fill="#1c2a3a"/><circle cx="140" cy="100" r="4" fill="${c2}"/>` },
+    { id: 'capacete', nome: 'Capacete', nv: 3, preco: 60, svg: (c1, c2) => `<path d="M52 98 Q52 26 100 26 Q148 26 148 98Z" fill="${c1}" stroke="${L}" stroke-width="5"/><rect x="62" y="56" width="76" height="30" rx="14" fill="#1c2a3a"/><rect x="92" y="18" width="16" height="14" rx="4" fill="${c2}" stroke="${L}" stroke-width="3"/>` },
+    { id: 'triangulo', nome: 'Triângulo', nv: 4, preco: 80, svg: (c1, c2) => `<path d="M100 18 L152 100 L48 100Z" fill="${c1}" stroke="${L}" stroke-width="5" stroke-linejoin="round"/><rect x="80" y="88" width="40" height="6" rx="3" fill="${c2}"/>` },
+    { id: 'cubo', nome: 'Cubo de Ouro', nv: 6, preco: 150, svg: () => `<rect x="55" y="30" width="90" height="70" rx="6" fill="#ffd23f" stroke="#a87a00" stroke-width="5"/><path d="M55 44 H145" stroke="#fff3a0" stroke-width="5"/><rect x="75" y="84" width="50" height="8" rx="4" fill="#a87a00"/>` },
+  ],
+  olhos: [
+    { id: 'redondos', nome: 'Redondos', nv: 1, svg: (c1, c2, co) => `<g class="olho-pisca"><circle cx="82" cy="62" r="11" fill="#fff" stroke="${L}" stroke-width="3"/><circle cx="118" cy="62" r="11" fill="#fff" stroke="${L}" stroke-width="3"/><circle cx="84" cy="63" r="5" fill="${co}"/><circle cx="120" cy="63" r="5" fill="${co}"/></g>` },
+    { id: 'visor', nome: 'Visor', nv: 1, svg: (c1, c2, co) => `<rect x="66" y="52" width="68" height="20" rx="10" fill="#1c2a3a" stroke="${L}" stroke-width="3"/><rect x="74" y="58" width="52" height="8" rx="4" fill="${co}" class="olho-pisca"/>` },
+    { id: 'led', nome: 'LED', nv: 2, preco: 30, svg: (c1, c2, co) => `<g class="olho-pisca"><rect x="72" y="52" width="18" height="18" rx="3" fill="${co}" stroke="${L}" stroke-width="3"/><rect x="110" y="52" width="18" height="18" rx="3" fill="${co}" stroke="${L}" stroke-width="3"/></g>` },
+    { id: 'coracao', nome: 'Coração', nv: 3, preco: 50, svg: () => `<g class="olho-pisca"><path transform="translate(82 56) scale(.9)" d="M0 6 C-10 -6 -22 4 0 20 C22 4 10 -6 0 6Z" fill="#ff2d55"/><path transform="translate(118 56) scale(.9)" d="M0 6 C-10 -6 -22 4 0 20 C22 4 10 -6 0 6Z" fill="#ff2d55"/></g>` },
+    { id: 'ciclope', nome: 'Um olho só', nv: 4, preco: 70, svg: (c1, c2, co) => `<g class="olho-pisca"><circle cx="100" cy="62" r="18" fill="#fff" stroke="${L}" stroke-width="4"/><circle cx="102" cy="63" r="8" fill="${co}"/><circle cx="105" cy="60" r="2.5" fill="#fff"/></g>` },
+    { id: 'oculos', nome: 'Óculos', nv: 5, preco: 90, svg: (c1, c2, co) => `<circle cx="82" cy="62" r="13" fill="${co}" opacity=".35" stroke="${L}" stroke-width="5"/><circle cx="118" cy="62" r="13" fill="${co}" opacity=".35" stroke="${L}" stroke-width="5"/><path d="M95 62 H105" stroke="${L}" stroke-width="5"/><g class="olho-pisca"><circle cx="82" cy="63" r="4" fill="${L}"/><circle cx="118" cy="63" r="4" fill="${L}"/></g>` },
+  ],
+  corpo: [
+    { id: 'caixa', nome: 'Caixa', nv: 1, svg: (c1, c2) => `<rect x="58" y="108" width="84" height="86" rx="14" fill="${c1}" stroke="${L}" stroke-width="5"/><rect x="78" y="126" width="44" height="30" rx="6" fill="#1c2a3a"/><circle cx="88" cy="141" r="5" fill="${c2}"/><circle cx="112" cy="141" r="5" fill="#ff5d5d"/><rect x="80" y="166" width="40" height="8" rx="4" fill="${c2}" stroke="${L}" stroke-width="2"/>` },
+    { id: 'barril', nome: 'Barril', nv: 1, svg: (c1, c2) => `<ellipse cx="100" cy="150" rx="46" ry="46" fill="${c1}" stroke="${L}" stroke-width="5"/><path d="M60 130 H140 M56 152 H144 M60 172 H140" stroke="${c2}" stroke-width="5"/>` },
+    { id: 'nucleo', nome: 'Núcleo', nv: 2, preco: 40, svg: (c1, c2) => `<rect x="58" y="108" width="84" height="86" rx="20" fill="${c1}" stroke="${L}" stroke-width="5"/><circle cx="100" cy="150" r="20" fill="${c2}" stroke="${L}" stroke-width="4"/><circle cx="100" cy="150" r="9" fill="#fff" opacity=".8"/>` },
+    { id: 'tanque', nome: 'Tanque', nv: 3, preco: 60, svg: (c1, c2) => `<path d="M50 112 H150 L142 194 H58Z" fill="${c1}" stroke="${L}" stroke-width="5" stroke-linejoin="round"/><rect x="68" y="124" width="64" height="10" rx="5" fill="${c2}"/><rect x="68" y="142" width="64" height="10" rx="5" fill="${c2}"/><rect x="68" y="160" width="64" height="10" rx="5" fill="${c2}"/>` },
+    { id: 'foguete', nome: 'Foguete', nv: 5, preco: 100, svg: (c1, c2) => `<path d="M100 104 Q146 130 138 194 H62 Q54 130 100 104Z" fill="${c1}" stroke="${L}" stroke-width="5"/><circle cx="100" cy="146" r="14" fill="#7fd3ff" stroke="${L}" stroke-width="4"/><path d="M62 178 L44 196 L66 194 M138 178 L156 196 L134 194" fill="${c2}" stroke="${L}" stroke-width="3"/>` },
+    { id: 'estrela', nome: 'Estrela', nv: 6, preco: 140, svg: (c1, c2) => `<path d="M100 104 L114 136 L150 138 L122 160 L132 196 L100 176 L68 196 L78 160 L50 138 L86 136Z" fill="${c1}" stroke="${L}" stroke-width="5" stroke-linejoin="round"/><circle cx="100" cy="150" r="10" fill="${c2}"/>` },
+  ],
+  bracos: [
+    { id: 'simples', nome: 'Simples', nv: 1, svg: (c1, c2) => `<g class="r-braco-e"><rect x="30" y="122" width="26" height="52" rx="12" fill="${c2}" stroke="${L}" stroke-width="5"/><circle cx="43" cy="180" r="10" fill="${c1}" stroke="${L}" stroke-width="4"/></g><g class="r-braco-d"><rect x="144" y="122" width="26" height="52" rx="12" fill="${c2}" stroke="${L}" stroke-width="5"/><circle cx="157" cy="180" r="10" fill="${c1}" stroke="${L}" stroke-width="4"/></g>` },
+    { id: 'garras', nome: 'Garras', nv: 2, preco: 40, svg: (c1, c2) => `<g class="r-braco-e"><rect x="34" y="122" width="20" height="50" rx="8" fill="${c2}" stroke="${L}" stroke-width="5"/><path d="M34 172 L28 190 M54 172 L60 190" stroke="${L}" stroke-width="6" stroke-linecap="round"/></g><g class="r-braco-d"><rect x="146" y="122" width="20" height="50" rx="8" fill="${c2}" stroke="${L}" stroke-width="5"/><path d="M146 172 L140 190 M166 172 L172 190" stroke="${L}" stroke-width="6" stroke-linecap="round"/></g>` },
+    { id: 'mola', nome: 'Molinhas', nv: 3, preco: 50, svg: (c1, c2) => `<g class="r-braco-e"><path d="M52 126 q-14 6 0 12 q-14 6 0 12 q-14 6 0 12 q-14 6 0 12" fill="none" stroke="${c2}" stroke-width="6"/><circle cx="46" cy="182" r="11" fill="${c1}" stroke="${L}" stroke-width="4"/></g><g class="r-braco-d"><path d="M148 126 q14 6 0 12 q14 6 0 12 q14 6 0 12 q14 6 0 12" fill="none" stroke="${c2}" stroke-width="6"/><circle cx="154" cy="182" r="11" fill="${c1}" stroke="${L}" stroke-width="4"/></g>` },
+    { id: 'canhao', nome: 'Canhão', nv: 5, preco: 110, svg: (c1, c2) => `<g class="r-braco-e"><rect x="30" y="122" width="26" height="52" rx="12" fill="${c2}" stroke="${L}" stroke-width="5"/><circle cx="43" cy="180" r="10" fill="${c1}" stroke="${L}" stroke-width="4"/></g><g class="r-braco-d"><rect x="142" y="126" width="44" height="22" rx="8" fill="#5a5a6a" stroke="${L}" stroke-width="5"/><circle cx="186" cy="137" r="6" fill="#ff4a4a"/></g>` },
+  ],
+  pernas: [
+    { id: 'rodas', nome: 'Rodas', nv: 1, svg: (c1, c2) => `<rect x="62" y="192" width="76" height="16" rx="6" fill="${c2}" stroke="${L}" stroke-width="4"/><circle cx="74" cy="226" r="20" fill="#2a2a3a" stroke="${L}" stroke-width="4"/><circle cx="74" cy="226" r="8" fill="${c1}"/><circle cx="126" cy="226" r="20" fill="#2a2a3a" stroke="${L}" stroke-width="4"/><circle cx="126" cy="226" r="8" fill="${c1}"/>` },
+    { id: 'pernas', nome: 'Pernas', nv: 1, svg: (c1, c2) => `<rect x="70" y="192" width="20" height="44" rx="8" fill="${c2}" stroke="${L}" stroke-width="5"/><rect x="110" y="192" width="20" height="44" rx="8" fill="${c2}" stroke="${L}" stroke-width="5"/><rect x="60" y="230" width="36" height="14" rx="6" fill="${c1}" stroke="${L}" stroke-width="4"/><rect x="104" y="230" width="36" height="14" rx="6" fill="${c1}" stroke="${L}" stroke-width="4"/>` },
+    { id: 'esteira', nome: 'Esteira', nv: 2, preco: 40, svg: (c1, c2) => `<rect x="52" y="200" width="96" height="44" rx="22" fill="#2a2a3a" stroke="${L}" stroke-width="5"/><circle cx="74" cy="222" r="10" fill="${c2}"/><circle cx="100" cy="222" r="10" fill="${c2}"/><circle cx="126" cy="222" r="10" fill="${c2}"/>` },
+    { id: 'mola', nome: 'Mola', nv: 3, preco: 60, svg: (c1, c2) => `<path d="M100 194 l-22 8 l44 8 l-44 8 l44 8 l-22 8" fill="none" stroke="${c2}" stroke-width="7" stroke-linejoin="round"/><ellipse cx="100" cy="240" rx="28" ry="8" fill="${c1}" stroke="${L}" stroke-width="4"/>` },
+    { id: 'jato', nome: 'Jato', nv: 5, preco: 120, svg: (c1, c2) => `<path d="M76 194 H124 L116 216 H84Z" fill="${c2}" stroke="${L}" stroke-width="5"/><path d="M86 216 L100 252 L114 216Z" fill="#ffb02e"><animate attributeName="d" values="M86 216 L100 252 L114 216Z;M88 216 L100 240 L112 216Z;M86 216 L100 252 L114 216Z" dur=".3s" repeatCount="indefinite"/></path>` },
+  ],
+  acessorio: [
+    { id: 'nada', nome: 'Nenhum', nv: 1, svg: () => '' },
+    { id: 'antena', nome: 'Antena', nv: 1, svg: (c1, c2) => `<path d="M100 30 V8" stroke="${L}" stroke-width="5"/><circle cx="100" cy="8" r="8" fill="#ff4a5a" stroke="${L}" stroke-width="3"><animate attributeName="fill" values="#ff4a5a;#ffd23f;#ff4a5a" dur="1.4s" repeatCount="indefinite"/></circle>` },
+    { id: 'helice', nome: 'Hélice', nv: 2, preco: 40, svg: (c1, c2) => `<path d="M100 30 V14" stroke="${L}" stroke-width="5"/><g><ellipse cx="100" cy="12" rx="34" ry="5" fill="${c2}" stroke="${L}" stroke-width="3"/><animateTransform attributeName="transform" type="scale" values="1 1;0.2 1;1 1" dur=".25s" repeatCount="indefinite" additive="sum"/></g>` },
+    { id: 'laco', nome: 'Lacinho', nv: 2, preco: 30, svg: () => `<path d="M128 30 l18 -12 v24Z M128 30 l-18 -12 v24Z" fill="#ff5d8f" stroke="${L}" stroke-width="3"/><circle cx="128" cy="30" r="5" fill="#ff2d75"/>` },
+    { id: 'chapeu', nome: 'Cartola', nv: 3, preco: 60, svg: () => `<rect x="74" y="-6" width="52" height="34" rx="4" fill="#1c1c2a"/><rect x="74" y="16" width="52" height="7" fill="#e0304a"/><rect x="60" y="26" width="80" height="8" rx="4" fill="#1c1c2a"/>` },
+    { id: 'coroa', nome: 'Coroa', nv: 6, preco: 150, svg: () => `<path d="M66 32 L72 6 L88 22 L100 2 L112 22 L128 6 L134 32Z" fill="#ffc81e" stroke="#c98a00" stroke-width="4" stroke-linejoin="round"/><circle cx="100" cy="22" r="4" fill="#ff2d55"/>` },
+  ],
+};
+const CATS = [['cabeca', 'Cabeça'], ['olhos', 'Olhos'], ['corpo', 'Corpo'], ['bracos', 'Braços'], ['pernas', 'Pernas'], ['acessorio', 'Na cabeça']];
+const CORES = ['#5cb8ff', '#ff5d5d', '#5fe08a', '#ffd23f', '#b06cff', '#ff8ad8', '#ff9a3d', '#e6edf5', '#3a3a4a', '#3fe0d0', '#8a5a3a', '#ffffff'];
+const temPeca = (cat, p) => isAdm || !p.preco || R.tem.includes(cat + ':' + p.id);
+const peca = (cat, id) => P[cat].find(p => p.id === id) || P[cat][0];
+
+function desenha(partes, c1, c2, co, extra = '') {
+  const pc = cat => peca(cat, partes[cat]).svg(c1, c2, co);
+  return `<svg viewBox="0 -20 200 280" xmlns="http://www.w3.org/2000/svg"><g class="r-tudo"><g class="r-corpo">
+    ${pc('pernas')}${pc('bracos')}${pc('corpo')}
+    <rect x="88" y="98" width="24" height="14" rx="4" fill="${c2}" stroke="${L}" stroke-width="4"/>
+    ${pc('cabeca')}<g class="olhos">${pc('olhos')}</g>${pc('acessorio')}
+    <rect class="laser" x="120" y="58" width="300" height="8" rx="4" fill="#ff2d55" opacity=".9"/><rect class="laser" x="120" y="60" width="300" height="4" fill="#fff"/>
+    ${extra}</g></g></svg>`;
+}
+function mostraRobo() {
+  $('robo').innerHTML = desenha(R.partes, R.cor1, R.cor2, R.corOlho);
+  $('robo').classList.toggle('sujo', R.limpeza < 35);
+  $('quarto').classList.toggle('dormindo', R.dormindo);
+}
+
+// ══════════════ SONS ══════════════
+let ac = null;
+function bip(notas, tipo = 'square') {
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    notas.forEach((f, i) => { const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + i * 0.09; o.type = tipo; o.frequency.value = f; g.gain.setValueAtTime(0.05, t); g.gain.exponentialRampToValueAtTime(0.0008, t + 0.12); o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.14); });
+  } catch (e) { /* sem som */ }
+}
+
+// ══════════════ FALA E EFEITOS ══════════════
+function fala(t, ms = 2600) {
+  const f = $('fala'); f.textContent = t; f.classList.add('on');
+  clearTimeout(fala.t); fala.t = setTimeout(() => f.classList.remove('on'), ms);
+}
+function efeito(emoji, n = 5) {
+  const fx = $('fx');
+  for (let i = 0; i < n; i++) { const s = document.createElement('span'); s.textContent = emoji; s.style.left = (30 + Math.random() * 40) + '%'; s.style.top = (40 + Math.random() * 30) + '%'; s.style.animationDelay = (i * 0.1) + 's'; fx.appendChild(s); setTimeout(() => s.remove(), 1500); }
+}
+function anima(nome, ms) {
+  const q = $('quarto');
+  q.classList.remove('anima-tchau', 'anima-danca', 'anima-pulo', 'anima-voa', 'anima-gira', 'anima-forca', 'anima-laser');
+  void q.offsetWidth; q.classList.add('anima-' + nome);
+  clearTimeout(anima.t); anima.t = setTimeout(() => q.classList.remove('anima-' + nome), ms || 3000);
+}
+
+// ══════════════ CUIDAR ══════════════
+const xpPrecisa = () => 40 + R.nivel * 25;
+function ganha(xp, parafusos) {
+  R.xp += xp; R.parafusos += parafusos;
+  if (parafusos) efeito('🔩', Math.min(5, parafusos));
+  while (R.xp >= xpPrecisa()) {
+    R.xp -= xpPrecisa(); R.nivel++;
+    const novo = TRUQUES.find(t => t.nv === R.nivel);
+    setTimeout(() => { fala('⭐ Subi pro nível ' + R.nivel + '!' + (novo ? ' Aprendi: ' + novo.nome + '!' : ' Peças novas na loja!'), 3500); bip([523, 659, 784, 1046], 'triangle'); efeito('⭐', 8); }, 400);
+  }
+}
+const ACOES = [
+  { id: 'carregar', nome: '⚡ Carregar', dica: 'Bateria', faz: () => { if (R.bateria > 95) return fala('Bip! Minha bateria já tá cheia! 🔋'); R.bateria = Math.min(100, R.bateria + 35); efeito('⚡'); bip([300, 500, 800]); fala(sorteia(['Bzzzt! Energia! ⚡', 'Ahh, carreguei! Bip bop!', 'Bateria subindo... 🔋'])); ganha(8, 2); } },
+  { id: 'oleo', nome: '🛢️ Óleo', dica: 'Comida', faz: () => { if (R.oleo > 95) return fala('Tô cheio de óleo! 😋'); R.oleo = Math.min(100, R.oleo + 35); efeito('🛢️', 3); bip([400, 350, 450]); fala(sorteia(['Nham nham, óleo! 😋', 'Glub glub... delícia!', 'Óleo fresquinho! Valeu!'])); ganha(8, 2); } },
+  { id: 'limpar', nome: '🧽 Limpar', dica: 'Tirar ferrugem', faz: () => { if (R.limpeza > 95) return fala('Já tô brilhando! ✨'); R.limpeza = 100; efeito('🫧', 7); efeito('✨', 3); bip([900, 1100, 1300], 'triangle'); fala(sorteia(['Brilhando! ✨', 'Que cheirinho bom! 🫧', 'Tchau, ferrugem!'])); ganha(8, 2); } },
+  { id: 'brincar', nome: '⚽ Brincar', dica: 'Alegria', faz: () => { if (R.bateria < 15) return fala('Tô sem energia pra brincar... me carrega? 🔋'); R.alegria = Math.min(100, R.alegria + 30); R.bateria = Math.max(0, R.bateria - 8); anima('pulo', 1600); efeito(sorteia(['⚽', '🎈', '💛']), 4); bip([600, 800, 600, 900], 'triangle'); fala(sorteia(['Eba! Que divertido! 😄', 'Bip bip, de novo!', 'Hahaha, você é meu melhor amigo!'])); ganha(10, 3); } },
+  { id: 'dormir', nome: '😴 Dormir', dica: 'Recarrega devagar', faz: () => { R.dormindo = !R.dormindo; if (R.dormindo) { fala('Boa noite... zzz 😴'); bip([500, 400, 300], 'sine'); } else { fala('Bom dia! Bip bop! ☀️'); bip([300, 500, 700], 'triangle'); anima('tchau', 1800); } } },
+];
+// Truques: aprende subindo de nível
+const TRUQUES = [
+  { id: 'tchau', nome: '👋 Tchau', nv: 1, anima: 'tchau', fala: 'Oiii! 👋', som: [700, 900] },
+  { id: 'pulo', nome: '🦘 Pular', nv: 1, anima: 'pulo', fala: 'Boing boing!', som: [400, 800, 400, 800] },
+  { id: 'danca', nome: '💃 Dançar', nv: 2, anima: 'danca', fala: '🎶 Bip bop, bip bop! 🎶', som: [523, 659, 523, 784, 659] },
+  { id: 'forca', nome: '💪 Força', nv: 3, anima: 'forca', fala: 'Olha meu muque! 💪', som: [200, 250, 300] },
+  { id: 'gira', nome: '🌀 Girar', nv: 4, anima: 'gira', fala: 'Weeeee! 🌀', som: [400, 500, 600, 700, 800] },
+  { id: 'laser', nome: '🔦 Laser', nv: 5, anima: 'laser', fala: 'PEW PEW PEW! 🔴', som: [1200, 900, 1200, 900, 1200] },
+  { id: 'voa', nome: '🚀 Voar', nv: 6, anima: 'voa', fala: 'Até o infinito! 🚀', som: [300, 500, 700, 900, 1100] },
+];
+function fazTruque(t) {
+  if (R.dormindo) return fala('Zzz... tô dormindo 😴');
+  if (R.bateria < 10) return fala('Sem energia pra truque... 🔋');
+  R.bateria = Math.max(0, R.bateria - 4); R.alegria = Math.min(100, R.alegria + 6);
+  anima(t.anima, t.anima === 'voa' ? 2700 : 2200); fala(t.fala); bip(t.som, 'square');
+  if (t.anima === 'voa') efeito('☁️', 4); if (t.anima === 'danca') efeito('🎵', 5);
+  ganha(5, 1);
+  grava(); tela();
+}
+
+// ══════════════ PAINEL ══════════════
+let aba = 'cuidar';
+const ABAS = [['cuidar', '💚 CUIDAR'], ['truques', '🎓 TRUQUES'], ['montar', '🔧 MONTAR']];
+function tela() {
+  $('parafusos').textContent = isAdm ? '∞' : Math.floor(R.parafusos);
+  const ab = $('abas'); ab.innerHTML = '';
+  for (const [id, nome] of ABAS) { const b = document.createElement('button'); b.className = 'aba' + (id === aba ? ' on' : ''); b.textContent = nome; b.onclick = () => { aba = id; tela(); bip([700]); }; ab.appendChild(b); }
+  const c = $('conteudo'); c.innerHTML = '';
+  if (aba === 'cuidar') {
+    const n = document.createElement('div'); n.className = 'nivel';
+    n.innerHTML = '<span></span><div class="xp"><i></i></div>';
+    n.querySelector('span').textContent = '🤖 ' + R.nome + ' · nível ' + R.nivel;
+    n.querySelector('i').style.width = (R.xp / xpPrecisa() * 100) + '%';
+    c.appendChild(n);
+    for (const [k, ic, cor] of [['bateria', '🔋', '#5fe08a'], ['oleo', '🛢️', '#ffb02e'], ['limpeza', '🫧', '#5cb8ff'], ['alegria', '😄', '#ff8ad8']]) {
+      const d = document.createElement('div'); d.className = 'stat';
+      d.innerHTML = `<span class="ic">${ic}</span><div class="barra"><i style="width:${R[k]}%;background:${R[k] < 30 ? '#ff4a4a' : cor}"></i></div><small>${Math.round(R[k])}%</small>`;
+      c.appendChild(d);
+    }
+    const g = document.createElement('div'); g.className = 'acoes';
+    for (const a of ACOES) {
+      const b = document.createElement('button'); b.className = 'btn';
+      b.innerHTML = (a.id === 'dormir' && R.dormindo ? '☀️ Acordar' : a.nome) + '<span class="peq"></span>';
+      b.querySelector('.peq').textContent = a.dica;
+      b.disabled = R.dormindo && a.id !== 'dormir';
+      b.onclick = () => { a.faz(); grava(); mostraRobo(); tela(); };
+      g.appendChild(b);
+    }
+    c.appendChild(g);
+  } else if (aba === 'truques') {
+    const p = document.createElement('p'); p.className = 'dica'; p.textContent = 'Seu robô aprende truques novos quando sobe de nível. Cuide bem dele!';
+    c.appendChild(p);
+    const g = document.createElement('div'); g.className = 'acoes';
+    for (const t of TRUQUES) {
+      const b = document.createElement('button'); b.className = 'btn';
+      const pode = R.nivel >= t.nv || isAdm;
+      b.innerHTML = (pode ? t.nome : '🔒 ' + t.nome) + '<span class="peq"></span>';
+      b.querySelector('.peq').textContent = pode ? 'Fazer!' : 'Nível ' + t.nv;
+      b.disabled = !pode;
+      b.onclick = () => fazTruque(t);
+      g.appendChild(b);
+    }
+    c.appendChild(g);
+  } else {
+    const nomeL = document.createElement('div'); nomeL.className = 'cat'; nomeL.textContent = 'NOME DO ROBÔ'; c.appendChild(nomeL);
+    const inp = document.createElement('input'); inp.id = 'nome'; inp.maxLength = 16; inp.value = R.nome; inp.oninput = () => { R.nome = inp.value.trim() || 'Bipo'; grava(); }; c.appendChild(inp);
+    for (const [k, nome] of [['cor1', 'COR PRINCIPAL'], ['cor2', 'COR DOS DETALHES'], ['corOlho', 'COR DOS OLHOS']]) {
+      const t = document.createElement('div'); t.className = 'cat'; t.textContent = nome; c.appendChild(t);
+      const g = document.createElement('div'); g.className = 'cores';
+      for (const cor of CORES) { const b = document.createElement('button'); b.className = 'cor' + (R[k] === cor ? ' on' : ''); b.style.background = cor; b.onclick = () => { R[k] = cor; grava(); mostraRobo(); tela(); bip([800]); }; g.appendChild(b); }
+      c.appendChild(g);
+    }
+    for (const [cat, nome] of CATS) {
+      const t = document.createElement('div'); t.className = 'cat'; t.textContent = nome.toUpperCase(); c.appendChild(t);
+      const g = document.createElement('div'); g.className = 'pecas';
+      for (const p of P[cat]) {
+        const b = document.createElement('button');
+        const tem = temPeca(cat, p), on = R.partes[cat] === p.id;
+        b.className = 'peca' + (on ? ' on' : '') + (tem ? '' : ' travada');
+        const prova = Object.assign({}, R.partes, { [cat]: p.id });
+        b.innerHTML = desenha(prova, R.cor1, R.cor2, R.corOlho) + '<span></span>' + (tem ? '' : '<b class="preco"></b>');
+        b.querySelector('span').textContent = p.nome;
+        if (!tem) b.querySelector('.preco').textContent = R.nivel < p.nv ? '🔒 nv ' + p.nv : '🔩' + p.preco;
+        b.onclick = () => {
+          if (!tem) {
+            if (R.nivel < p.nv) return fala('Essa peça é do nível ' + p.nv + '! Cuide de mim pra subir 💚');
+            if (R.parafusos < p.preco) return fala('Faltam 🔩' + Math.ceil(p.preco - R.parafusos) + ' parafusos!');
+            R.parafusos -= p.preco; R.tem.push(cat + ':' + p.id); fala('Peça nova! Obrigado! 🎁'); bip([523, 784, 1046], 'triangle');
+          }
+          R.partes[cat] = p.id; grava(); mostraRobo(); tela(); anima('tchau', 1500);
+        };
+        g.appendChild(b);
+      }
+      c.appendChild(g);
+    }
+  }
+}
+
+// Dia e noite de verdade (pelo relógio)
+function ceu() {
+  const h = new Date().getHours(), noite = h >= 19 || h < 6;
+  $('quarto').classList.toggle('noite', noite); $('astro').textContent = noite ? '🌙' : '☀️';
+  $('quadro').textContent = R.nivel >= 6 ? '🏆' : R.nivel >= 3 ? '🥈' : '🖼️';
+}
+// O tempo passa devagar enquanto a página está aberta
+setInterval(() => {
+  if (R.dormindo) { R.bateria = Math.min(100, R.bateria + 1); }
+  else { R.bateria = Math.max(5, R.bateria - 0.25); R.oleo = Math.max(5, R.oleo - 0.25); R.limpeza = Math.max(5, R.limpeza - 0.18); R.alegria = Math.max(5, R.alegria - 0.2); }
+  grava(); mostraRobo(); ceu(); if (aba === 'cuidar') tela();
+}, 15000);
+// De vez em quando ele fala o que precisa
+setInterval(() => {
+  if (R.dormindo || $('fala').classList.contains('on')) return;
+  const precisa = [['bateria', 'Bip... bateria fraquinha 🔋'], ['oleo', 'Tô com fome de óleo! 🛢️'], ['limpeza', 'Tô enferrujando... me limpa? 🧽'], ['alegria', 'Brinca comigo? 🥺']].filter(([k]) => R[k] < 35);
+  if (precisa.length) fala(sorteia(precisa)[1]);
+  else if (Math.random() < 0.4) fala(sorteia(['Bip bop! 🤖', 'Eu gosto de você! 💛', 'Me ensina um truque?', 'Que dia legal!', 'Bzzzt... tô feliz!']));
+}, 12000);
+// Tocar no robô: ele reage
+$('robo').onclick = () => { if (R.dormindo) { fala('Zzz... 😴'); return; } anima(sorteia(['pulo', 'tchau']), 1500); fala(sorteia(['Hihi, cócegas! 😆', 'Bip! Oi!', 'Isso tá bom! 💛'])); R.alegria = Math.min(100, R.alegria + 2); bip([900, 1200], 'triangle'); grava(); };
+
+mostraRobo(); ceu(); tela();
+setTimeout(() => { fala(R.dormindo ? 'Zzz... (toque em ☀️ Acordar)' : 'Oi! Eu sou o ' + R.nome + '! Cuida de mim? 🤖'); anima('tchau', 1800); }, 500);
+})();
+</script>
+</body>
+</html>
