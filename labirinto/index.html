@@ -82,9 +82,9 @@
   <div class="botoes"><button class="btn" id="b-sair">SAIR</button><button class="btn grande" id="b-continuar" style="margin-top:0">▶ CONTINUAR</button></div>
 </div>
 <div class="tela hidden" id="fim">
-  <h2 id="fim-titulo">👾 TE PEGOU!</h2>
+  <h2 id="fim-titulo">🎉 VOCÊ SAIU!</h2>
   <p id="fim-info"></p>
-  <div class="botoes"><button class="btn" id="b-menu">MENU</button><button class="btn grande" id="b-denovo" style="margin-top:0">TENTAR DE NOVO</button></div>
+  <div class="botoes"><button class="btn" id="b-menu">MENU</button><button class="btn grande" id="b-denovo" style="margin-top:0">🌀 OUTRO LABIRINTO</button></div>
 </div>
 
 <script src="../mundo-blocos/three.min.js"></script>
@@ -98,13 +98,14 @@ $('dica').textContent = TOUCH
   ? 'Joystick anda · arraste o dedo na tela pra olhar · CORRER gasta fôlego · 🧭 mostra o caminho'
   : 'W A S D ou setas andam · arraste o mouse pra olhar · Shift corre · B = 🧭 bússola · P pausa';
 
-// ── Perfil (maior fase) ──
+// ── Perfil (recorde de tempo) ──
 const PERFIL = new URLSearchParams(location.search).get('perfil');
 const KEY = 'fugaLabirinto' + (PERFIL ? ':' + PERFIL : '');
 let save; try { save = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { save = {}; }
 save = Object.assign({ melhor: 0 }, save);
 const grava = () => { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { /* ok */ } };
-const mostraRecorde = () => { $('recorde').textContent = save.melhor ? '🏆 Sua melhor fase: ' + save.melhor : ''; };
+const mostraRecorde = () => { $('recorde').textContent = save.recorde ? '🏆 Seu recorde: ' + fmtT(save.recorde) : ''; };
+function fmtT(t) { const m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ':' + String(s).padStart(2, '0'); }
 mostraRecorde();
 
 // ══════════════ 3D ══════════════
@@ -161,7 +162,7 @@ function geraLabirinto(w, h) {
     a[p] = false; c(x, y)[q] = false; c(x, y).vis = true; pilha.push(c(x, y));
   }
   // abre poucas paredes a mais (quase todo caminho errado é beco sem saída)
-  for (let i = 0; i < Math.floor(w * h * 0.025); i++) {
+  for (let i = 0; i < Math.floor(w * h * 0.015); i++) {
     const x = 1 + Math.floor(Math.random() * (w - 2)), y = 1 + Math.floor(Math.random() * (h - 2));
     if (Math.random() < 0.5) { c(x, y).l = false; c(x + 1, y).o = false; } else { c(x, y).s = false; c(x, y + 1).n = false; }
   }
@@ -185,7 +186,7 @@ let mundo = null;
 function montaFase(fase) {
   if (mundo) cena.remove(mundo);
   mundo = new THREE.Group(); cena.add(mundo);
-  const w = 8 + fase * 2, h = 8 + fase * 2;
+  const w = 14, h = 14;   // um pouco maior que antes: mais difícil
   L = geraLabirinto(w, h);
   // começo em (0,0); a saída é a casinha da borda mais longe
   const inicio = L.c(0, 0), dIni = distancias(inicio);
@@ -235,7 +236,7 @@ function montaFase(fase) {
   L.caixas.push(L.caixaPorta);
   // luz verde lá fora (aparece quando a porta abre)
   // chaves: nas casinhas sem saída mais longe do começo, espalhadas
-  const nChaves = Math.min(3 + Math.floor((fase - 1) / 2), 6);
+  const nChaves = 4;
   const becos = L.cel.filter(a => a !== inicio && a !== saida && vizinhos(a).length === 1).sort((a, b) => dIni.get(b) - dIni.get(a));
   const escolhidas = [];
   for (const a of becos) { if (escolhidas.length >= nChaves) break; if (escolhidas.every(b => Math.abs(a.x - b.x) + Math.abs(a.y - b.y) > Math.max(3, w / 3))) escolhidas.push(a); }
@@ -309,7 +310,7 @@ function aviso(txt, sub, ms = 1800) {
   a.classList.add('on'); clearTimeout(aviso.t); aviso.t = setTimeout(() => a.classList.remove('on'), ms);
 }
 
-function novoJogo() { J = { fase: 1, bussolas: 2, total: 0 }; comecaFase(); }
+function novoJogo() { J = { fase: 1, bussolas: 2 }; comecaFase(); }
 function comecaFase() {
   montaFase(J.fase);
   const c = centro(L.inicio);
@@ -319,13 +320,13 @@ function comecaFase() {
   document.body.classList.add('jogando');
   for (const id of ['menu', 'fim', 'pausa']) $(id).classList.add('hidden');
   $('b-bussola').textContent = '🧭 x' + J.bussolas;
-  aviso('FASE ' + J.fase, 'Ache ' + L.chaves.length + ' chaves 🔑', 2200);
+  aviso('🌀 LABIRINTO NOVO!', 'Ache ' + L.chaves.length + ' chaves 🔑', 2200);
   hud();
 }
 function fmt(t) { const m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ':' + String(s).padStart(2, '0'); }
 setInterval(() => { if (J && modo === 'jogando') hud(); }, 250);
 function hud() {
-  $('info').textContent = '🔑 ' + J.chaves + '/' + L.chaves.length + ' · ⏱ ' + fmt(J.t) + ' · Fase ' + J.fase;
+  $('info').textContent = '🔑 ' + J.chaves + '/' + L.chaves.length + ' · ⏱ ' + fmt(J.t) + ' · 🧭 ' + J.bussolas;
 }
 // bater nas paredes: empurra o círculo do jogador pra fora dos retângulos
 function anda(o, dx, dz, raio) {
@@ -364,7 +365,7 @@ function atualiza(dt) {
       else aviso('🔑 ' + J.chaves + '/' + L.chaves.length, null, 1000);
     }
   }
-  // porta: fechada é parede; aberta, passou = próxima fase
+  // porta: fechada é parede; aberta, passou = venceu
   const s = L.saida, sc = centro(s);
   if (J.aberta) {
     const fora = L.ladoSaida === 'l' ? J.x > (s.x + 1) * CS - 0.6 && Math.abs(J.z - sc.z) < CS / 2 : J.z > (s.y + 1) * CS - 0.6 && Math.abs(J.x - sc.x) < CS / 2;
@@ -395,23 +396,14 @@ function bussola() {
   J.bussolas--; J.setaT = 4; $('b-bussola').textContent = '🧭 x' + J.bussolas; som('chave');
 }
 $('b-bussola').onclick = bussola;
+// saiu pela porta: mostra o tempo e o recorde
 function passouFase() {
   som('fase');
-  save.tempos = save.tempos || {};
-  const rec = save.tempos[J.fase], novo = !rec || J.t < rec;
-  if (novo) save.tempos[J.fase] = J.t;
-  if (J.fase > save.melhor) save.melhor = J.fase;
-  grava();
-  aviso('🎉 SAIU EM ' + fmt(J.t) + '!', novo ? '⭐ Recorde da fase ' + J.fase + '!' : 'Recorde da fase: ' + fmt(rec), 2200);
-  J.fase++;
-  J.bussolas = Math.min(J.bussolas + 1, 4);
-  modo = 'troca';
-  setTimeout(() => { if (J) comecaFase(); }, 2300);
-}
-function fimDeJogo() {
+  const rec = save.recorde, novo = !rec || J.t < rec;
+  if (novo) { save.recorde = J.t; grava(); }
   modo = 'fim';
-  $('fim-titulo').textContent = '👾 TE PEGOU!';
-  $('fim-info').textContent = 'Você chegou na fase ' + J.fase + (J.fase - 1 >= save.melhor && J.fase > 1 ? ' · recorde!' : '') + ' · melhor: ' + Math.max(save.melhor, 0);
+  $('fim-titulo').textContent = '🎉 VOCÊ SAIU!';
+  $('fim-info').textContent = '⏱ Seu tempo: ' + fmtT(J.t) + (novo ? ' · ⭐ NOVO RECORDE!' : ' · 🏆 recorde: ' + fmtT(rec));
   document.body.classList.remove('jogando');
   $('fim').classList.remove('hidden');
   mostraRecorde();
