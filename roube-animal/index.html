@@ -25,6 +25,9 @@
   #acao.vender { background: #ff9f1c; }
   #toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 60px); transform: translateX(-50%); z-index: 70; background: var(--tinta); color: #fff; border: 3px solid #fff; border-radius: 14px; padding: 8px 16px 5px; font-weight: 800; opacity: 0; transition: opacity .25s; pointer-events: none; max-width: 92vw; text-align: center; }
   #toast.on { opacity: 1; }
+  #natal { position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%) scale(.6); z-index: 65; font-family: var(--display); font-size: clamp(30px, 9vw, 64px); color: #fff; text-align: center; text-shadow: 4px 4px 0 #c62828, -2px -2px 0 #2e7d32; opacity: 0; transition: opacity .4s, transform .4s; pointer-events: none; }
+  #natal small { display: block; font-family: var(--texto); font-weight: 800; font-size: 18px; text-shadow: 2px 2px 0 #000; }
+  #natal.on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   #toast.alarme { background: #d62839; }
   #joy { position: fixed; z-index: 25; width: 100px; height: 100px; margin: -50px 0 0 -50px; border: 4px solid rgba(255,255,255,.6); border-radius: 50%; display: none; pointer-events: none; }
   #joy i { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: rgba(255,255,255,.75); }
@@ -52,6 +55,7 @@
   <span class="pill" id="dinheiro">💰 <b>R$ 0</b></span>
   <span class="pill">📈 <b id="renda">R$ 0</b>/s</span>
   <span class="pill">👥 <b id="gente">—</b></span>
+  <span class="pill" id="pillNatal" style="display:none;background:#c62828">🎄 <b style="color:#fff">Natal</b></span>
 </div>
 <canvas id="cv"></canvas>
 <div class="botoes">
@@ -61,6 +65,7 @@
 </div>
 <div class="dica" id="dica">Arraste o dedo pra andar 👆</div>
 <div id="toast"></div>
+<div id="natal">🎄 FELIZ NATAL! 🎅<small>Cai um monte de presente! O bicho que leva um presente vale 3x!</small></div>
 <div class="fundo" id="fundo"><div class="painel" id="painel"></div></div>
 <div class="fundo" id="telaNome" style="align-items:center"><div class="painel" style="border-radius:22px;text-align:center">
   <h2>🐾 Qual é o seu nome?</h2>
@@ -110,8 +115,10 @@ BICHOS.forEach((b, i) => {
   b.r = i < 30 ? 'comum' : i < 55 ? 'raro' : i < 75 ? 'epico' : i < 90 ? 'lendario' : i < 97 ? 'mitico' : 'secreto';
 });
 const B = id => BICHOS.find(b => b.id === id);
-const rendaDe = a => B(a.id).renda * (a.ouro ? 2 : 1);
-const precoDe = a => B(a.id).preco * (a.ouro ? 2 : 1);
+// dourado vale 2x; com a mutação de Natal (presente que caiu nele) vale 3x
+const mult = a => (a.ouro ? 2 : 1) * (a.natal ? 3 : 1);
+const rendaDe = a => B(a.id).renda * mult(a);
+const precoDe = a => B(a.id).preco * mult(a);
 // sorteia um bicho: primeiro a raridade, depois o bicho dela (de vez em quando vem DOURADO, que vale o dobro)
 function sorteia(sorte = 1, rnd = Math.random) {
   const pesos = Object.entries(RAR).map(([k, v], i) => [k, v.peso * (i ? sorte : 1)]);
@@ -269,6 +276,7 @@ function som(tipo) {
     if (tipo === 'moeda') [988, 1318].forEach((f, i) => nota(f, 0.1, 'square', 0.04, i * 0.06));
     if (tipo === 'oi') [523, 659, 784].forEach((f, i) => nota(f, 0.12, 'triangle', 0.05, i * 0.08));
     if (tipo === 'erro') nota(160, 0.25, 'sawtooth', 0.05);
+    if (tipo === 'natal') [784, 784, 784, 659, 880].forEach((f, i) => nota(f, 0.15, 'triangle', 0.06, i * 0.12));
   } catch (e) { /* sem som */ }
 }
 function toast(txt, ms = 1800) { const t = $('toast'); t.textContent = txt; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), ms); }
@@ -341,8 +349,8 @@ function pensaBots(dt) {
 // ── Servidor: até 8 pessoas jogando juntas ──
 const API = '/api/roube/';
 const api = b => fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...b, id: S.id, nome: S.nome, sala }) }).then(r => r.ok ? r.json() : Promise.reject(r.status));
-const compacta = () => S.slots.map(a => a ? a.id + (a.ouro ? '*' : '') : '');
-const descompacta = s => Array.from({ length: VAGAS }, (_, k) => { const v = (s || [])[k]; if (!v) return null; const id = v.replace('*', ''); return B(id) ? { id, ouro: v.endsWith('*') } : null; });
+const compacta = () => S.slots.map(a => a ? a.id + (a.ouro ? '*' : '') + (a.natal ? '#' : '') : '');
+const descompacta = s => Array.from({ length: VAGAS }, (_, k) => { const v = (s || [])[k]; if (!v) return null; const id = v.replace(/[*#]/g, ''); return B(id) ? { id, ouro: v.includes('*'), natal: v.includes('#') } : null; });
 let jaSincronizou = false;
 function mudaBase(i) {   // o servidor diz qual é o seu cercadinho
   const velha = minha;
@@ -450,6 +458,34 @@ function atualizaHud() {
   if (g > 0) { S.caixa += g; setTimeout(() => toast('💤 Enquanto você estava fora, seus bichos fizeram ' + real(g) + '! Pegue no seu cercadinho.', 3500), 500); }
 })();
 
+// ── Evento de Natal (20 a 30 de dezembro): cai um monte de presente, e o bicho que leva um presente ganha mutação de Natal ──
+const NATAL = (() => { const d = new Date(); return new URLSearchParams(location.search).has('natal') || (d.getMonth() === 11 && d.getDate() >= 20 && d.getDate() <= 30); })();
+const presentes = [], brilhos = [];
+let proxPresente = 0, proxMirado = 8;
+function chovePresentes(dt) {
+  if (!NATAL) return;
+  if ((proxPresente -= dt) <= 0) { proxPresente = 0.35; presentes.push({ x: eu.x + (Math.random() - 0.5) * 1400, y: eu.y + (Math.random() - 0.5) * 1000, h: 14 + Math.random() * 4 }); }
+  // de vez em quando um presente vem bem em cima de um bicho seu
+  if ((proxMirado -= dt) <= 0) {
+    proxMirado = 12 + Math.random() * 12;
+    const ks = S.slots.map((a, k) => a && !a.natal ? k : -1).filter(k => k >= 0);
+    if (ks.length) { const k = ks[Math.floor(Math.random() * ks.length)], st = solto(minha, k); presentes.push({ x: st.x, y: st.y, h: 14, alvo: k }); }
+  }
+  for (let i = presentes.length - 1; i >= 0; i--) {
+    const p = presentes[i];
+    if (p.alvo != null) { const st = minha.slots[p.alvo] && solto(minha, p.alvo); if (st) { p.x = st.x; p.y = st.y; } }   // segue o bicho
+    if ((p.h -= 9 * dt) > 0) continue;
+    presentes.splice(i, 1); brilhos.push({ x: p.x, y: p.y, t: 0 });
+    // caiu num bicho seu?
+    let k = p.alvo;
+    if (k == null || !minha.slots[k]) k = minha.slots.findIndex((a, j) => a && !a.natal && Math.hypot(solto(minha, j).x - p.x, solto(minha, j).y - p.y) < 45);
+    const a = k >= 0 ? minha.slots[k] : null;
+    if (a && !a.natal) { a.natal = true; som('natal'); toast('🎄 Um presente caiu no seu ' + B(a.id).nome + '! Agora ele vale 3x! 🎁', 3000); grava(); atualizaHud(); }
+  }
+  for (let i = brilhos.length - 1; i >= 0; i--) if ((brilhos[i].t += dt) > 0.5) brilhos.splice(i, 1);
+}
+if (NATAL) { $('natal').classList.add('on'); setTimeout(() => $('natal').classList.remove('on'), 4000); $('pillNatal').style.display = ''; }
+
 // ── Loop ──
 function passo(dt) {
   // você anda
@@ -464,6 +500,7 @@ function passo(dt) {
   for (const o of Object.values(remotos)) { const k = Math.min(1, dt * 5); o.x += (o.tx - o.x) * k; o.y += (o.ty - o.y) * k; }
   // dinheiro dos bichos vai pro caixa do cercadinho; entrando nele você pega
   andaSoltos(dt);
+  chovePresentes(dt);
   S.caixa += rendaTotal() * dt;
   if (dentro(eu, minha) && S.caixa >= 1) { S.dinheiro += S.caixa; minha.caixaFlut = Math.floor(S.caixa); minha.caixaT = 1; S.caixa = 0; if (minha.caixaFlut >= 1) som('moeda'); }
   if (minha.caixaT > 0) minha.caixaT -= dt;
@@ -550,11 +587,12 @@ function texPlaca(l1, l2, cor, fundo = 'rgba(14,12,51,.88)') {
     if (l2) { g.fillStyle = l2[0] === '+' ? '#7dff8a' : '#fff'; g.fillText(l2, w / 2, 68); }
   });
 }
+const texNatal = tex('natal', 128, 128, (g) => { const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,40,60,.85)'); gr.addColorStop(0.55, 'rgba(40,200,90,.45)'); gr.addColorStop(1, 'rgba(40,200,90,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); });
 const texBrilho = tex('brilho', 128, 128, (g) => { const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,215,64,.9)'); gr.addColorStop(1, 'rgba(255,215,64,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); });
 // placas com o nome do dono de cada cercadinho
 for (const b of bases) {
   b.placa = new THREE.Sprite(new THREE.SpriteMaterial({ map: texPlaca('Base', '', '#fff') }));
-  b.placa.scale.set(5, 5 * 60 / 256, 1); b.placa.position.set((b.x + b.w / 2) * SC, 3.2, (b.cima ? b.y + 30 : b.y + b.h - 30) * SC); cena.add(b.placa);
+  b.placa.scale.set(5, 5 * 60 / 256, 1); b.placa.position.set((b.x + b.w / 2) * SC, 3.2, (b.y + 30) * SC);   // sempre no lado de longe da câmera, pra não tapar os bichos cena.add(b.placa);
 }
 function pintaBases() {
   for (const b of bases) {
@@ -574,9 +612,10 @@ function sprite(t, x, y, h, sx, sy = sx) {
 }
 function bicho3d(a, x, y, t, mostraPreco, dir = 1) {
   const b = B(a.id), r = RAR[b.r], h = 0.85 + Math.sin(t / 300 + x) * 0.06;
+  if (a.natal) sprite(texNatal, x, y, h, 2.4);
   if (a.ouro) sprite(texBrilho, x, y, h, 2.2);
   sprite(texEmoji(b.e, b.f), x, y, h, 1.4).scale.x = 1.4 * dir;
-  sprite(texPlaca((a.ouro ? '✨' : '') + b.nome, mostraPreco ? real(precoDe(a)) : '+' + real(rendaDe(a)) + '/s', r.cor), x, y, 1.95, 1.7, 1.7 * 96 / 256);
+  sprite(texPlaca((a.natal ? '🎄' : '') + (a.ouro ? '✨' : '') + b.nome, mostraPreco ? real(precoDe(a)) : '+' + real(rendaDe(a)) + '/s', r.cor), x, y, 1.95, 1.7, 1.7 * 96 / 256);
 }
 // bonecos de bloquinho
 function boneco(camisa, calca, cabelo) {
@@ -622,6 +661,8 @@ function desenha(t) {
   texEsteira.offset.x = -(agoraServ() / 1000 * 70) / 60;
   for (const b of bases) b.slots.forEach((a, k) => { if (!a) return; const st = solto(b, k); bicho3d(a, st.x, st.y, t, false, st.dir); });
   for (const m of moedas) sprite(texEmoji('🪙'), m.x, m.y, 1.4 + m.t * 1.5, 0.6);
+  for (const p of presentes) sprite(texEmoji('🎁'), p.x, p.y, p.h + 0.45, 0.9);
+  for (const b of brilhos) sprite(texEmoji('✨'), b.x, b.y, 0.6 + b.t, 0.6 + b.t * 2);
   for (const a of esteira) bicho3d(a, a.x, a.y, t, true);
   for (const a of andando) sprite(texEmoji(B(a.id).e, B(a.id).f), a.x, a.y, 0.85, 1.3);
   for (const b of bots) b.g.visible = botAtivo(b);
@@ -652,7 +693,7 @@ else if (!S.slots.some(Boolean)) setTimeout(() => toast('👋 Vá até a esteira
 requestAnimationFrame(loop);
 // usado nos testes
 window.__ra = { get S() { return S; }, eu, bots, bases, esteira, remotos, compras, get minha() { return minha; }, get sala() { return sala; }, get online() { return online; }, sincroniza,
-  passo: (n, dt = 1 / 30) => { for (let i = 0; i < n; i++) { passo(dt); mostraAcao(); } desenha(performance.now()); atualizaHud(); }, fazAcao, get alvo() { return alvoAcao; }, abreIndice, BICHOS,
+  passo: (n, dt = 1 / 30) => { for (let i = 0; i < n; i++) { passo(dt); mostraAcao(); } desenha(performance.now()); atualizaHud(); }, fazAcao, get alvo() { return alvoAcao; }, presentes, NATAL, abreIndice, BICHOS,
   foto: () => fetch('http://127.0.0.1:8767/', { method: 'POST', body: cv.toDataURL('image/jpeg', 0.7) }) };
 })();
 </script>

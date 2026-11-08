@@ -35,7 +35,7 @@ function limpaNome(n) {
   return t.length >= 2 && !ruim ? t : 'Jogador';
 }
 const limpaId = (v) => (typeof v === 'string' && /^[a-z0-9]{6,16}$/.test(v) ? v : null);
-const limpaSlots = (s) => (Array.isArray(s) ? s.slice(0, 10).map((v) => (typeof v === 'string' && /^[a-z-]{1,24}\*?$/.test(v) ? v : '')) : []);
+const limpaSlots = (s) => (Array.isArray(s) ? s.slice(0, 10).map((v) => (typeof v === 'string' && /^[a-z-]{1,24}\*?#?$/.test(v) ? v : '')) : []);
 const num = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
 
 // Tudo do "sync" numa vez só (um comando): escolhe o servidor e o cercadinho, guarda você e devolve os outros
