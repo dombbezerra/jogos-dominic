@@ -145,7 +145,11 @@ const KEY = 'parqueAquario' + (PERFIL ? ':' + PERFIL : '');
 const isAdm = false;   // sem ADM: todo mundo paga, até o Dominic
 const custo = v => isAdm ? 0 : v;   // na conta do ADM tudo é de graça
 let S; try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) { S = null; }
+// o parque do Dominic (conta do ADM) começa do zero uma vez, já que agora não tem mais ADM
+const contaDoDominic = (() => { try { const m = JSON.parse(localStorage.getItem('aventuraConta' + (PERFIL ? ':' + PERFIL : ''))); return ['endrick', 'dominic'].includes(String(m && m.user && m.user.nome || '').trim().toLowerCase()); } catch (e) { return false; } })();
+if (contaDoDominic && S && !S.semAdm) S = null;
 S = Object.assign({ dinheiro: 1000, lotes: 2, tanques: [], salvo: Date.now(), ganhoTotal: 0 }, S || {});
+if (contaDoDominic) S.semAdm = true;
 const grava = () => { S.salvo = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ok */ } };
 
 // ── Contas do parque ──
