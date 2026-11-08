@@ -109,43 +109,77 @@ function fmtT(t) { const m = Math.floor(t / 60), s = Math.floor(t % 60); return 
 mostraRecorde();
 
 // ══════════════ 3D ══════════════
-const renderer = new THREE.WebGLRenderer({ antialias: !TOUCH });
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(TOUCH ? 1.5 : 2, devicePixelRatio || 1));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;   // sombras de verdade
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
 document.body.appendChild(renderer.domElement);
 const cena = new THREE.Scene();
-cena.background = new THREE.Color('#8fd3ff');
-cena.fog = new THREE.Fog('#bfe6ff', 30, 110);
-const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 200);
+cena.background = new THREE.Color('#a8dcff');
+cena.fog = new THREE.Fog('#cfe9ff', 45, 170);
+const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 900);
 cena.add(camera);
 function ajusta() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 addEventListener('resize', ajusta); ajusta();
-cena.add(new THREE.HemisphereLight('#ffffff', '#6a8a4a', 1.5));
-const sol = new THREE.DirectionalLight('#fff4d6', 2.2); sol.position.set(40, 80, 25); cena.add(sol);   // dia de sol
-
-function texParede() {   // arbusto cheio de folhinhas
-  const cv = document.createElement('canvas'); cv.width = cv.height = 128;
-  const g = cv.getContext('2d'); g.fillStyle = '#2e7d32'; g.fillRect(0, 0, 128, 128);
-  for (let i = 0; i < 900; i++) {
-    const v = Math.random();
-    g.fillStyle = v < 0.33 ? '#1b5e20' : v < 0.66 ? '#43a047' : '#66bb6a';
-    g.beginPath(); g.ellipse(Math.random() * 128, Math.random() * 128, 2 + Math.random() * 3, 1.5 + Math.random() * 2, Math.random() * 3, 0, 7); g.fill();
+cena.add(new THREE.HemisphereLight('#cfe8ff', '#4a6a34', 1.05));
+const sol = new THREE.DirectionalLight('#fff0cc', 3.2); cena.add(sol); cena.add(sol.target);   // dia de sol
+sol.castShadow = true; sol.shadow.mapSize.set(TOUCH ? 1024 : 2048, TOUCH ? 1024 : 2048); sol.shadow.bias = -0.0004; sol.shadow.normalBias = 0.05;
+const SOL_DIR = new THREE.Vector3(0.55, 1, 0.35).normalize();
+// céu: degradê azul, sol brilhando e nuvens fofas
+(() => {
+  const cv = document.createElement('canvas'); cv.width = 4; cv.height = 256; const g = cv.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#2f7fe0'); gr.addColorStop(0.5, '#7fc4ff'); gr.addColorStop(0.75, '#d6efff'); gr.addColorStop(1, '#d6efff');
+  g.fillStyle = gr; g.fillRect(0, 0, 4, 256);
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace;
+  const ceu = new THREE.Mesh(new THREE.SphereGeometry(600, 24, 16), new THREE.MeshBasicMaterial({ map: tx, side: THREE.BackSide, fog: false, toneMapped: false }));
+  cena.add(ceu); ceu.userData.segue = true; window.__ceu = ceu;
+  const cs = document.createElement('canvas'); cs.width = cs.height = 128; const gs = cs.getContext('2d');
+  const rg = gs.createRadialGradient(64, 64, 4, 64, 64, 64); rg.addColorStop(0, 'rgba(255,255,240,1)'); rg.addColorStop(0.25, 'rgba(255,245,200,.9)'); rg.addColorStop(1, 'rgba(255,240,180,0)');
+  gs.fillStyle = rg; gs.fillRect(0, 0, 128, 128);
+  const brilho = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cs), fog: false, toneMapped: false, depthWrite: false }));
+  brilho.scale.set(90, 90, 1); ceu.add(brilho); brilho.position.copy(SOL_DIR).multiplyScalar(520);
+  const branco = new THREE.MeshLambertMaterial({ color: '#ffffff', emissive: '#c8d8f0', fog: false });
+  for (let i = 0; i < 16; i++) {
+    const nuvem = new THREE.Group(), a = i / 16 * Math.PI * 2 + Math.random() * 0.3, r = 300 + Math.random() * 150;
+    for (let k = 0; k < 6; k++) { const b = new THREE.Mesh(new THREE.SphereGeometry(14 + Math.random() * 12, 10, 8), branco); b.position.set((k - 2.5) * 16 + Math.random() * 8, Math.random() * 8, Math.random() * 14); b.scale.y = 0.6; nuvem.add(b); }
+    nuvem.position.set(Math.cos(a) * r, 110 + Math.random() * 90, Math.sin(a) * r); nuvem.lookAt(0, nuvem.position.y, 0); ceu.add(nuvem);
   }
-  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
+
+function texParede() {   // arbusto: milhares de folhinhas, mais escuro embaixo
+  const cv = document.createElement('canvas'); cv.width = cv.height = 256;
+  const g = cv.getContext('2d'); g.fillStyle = '#2f6f28'; g.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 5200; i++) {
+    const x = Math.random() * 256, y = Math.random() * 256, v = Math.random();
+    const luz = 0.8 + (1 - y / 256) * 0.35 + v * 0.35;
+    g.fillStyle = `rgb(${Math.round(55 * luz)},${Math.round(150 * luz)},${Math.round(45 * luz)})`;
+    g.beginPath(); g.ellipse(x, y, 2.5 + Math.random() * 3.5, 1.4 + Math.random() * 2, Math.random() * 3.14, 0, 7); g.fill();
+    if (v > 0.85) { g.fillStyle = 'rgba(190,240,120,.35)'; g.beginPath(); g.ellipse(x - 1, y - 1, 1.5, 0.8, 0.5, 0, 7); g.fill(); }
+  }
+  for (let i = 0; i < 160; i++) { g.fillStyle = 'rgba(10,40,10,.45)'; g.beginPath(); g.arc(Math.random() * 256, Math.random() * 256, 1.5 + Math.random() * 3, 0, 7); g.fill(); }   // buraquinhos escuros
+  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
 }
-function texChao() {   // grama com caminho de terra batida
-  const cv = document.createElement('canvas'); cv.width = cv.height = 64;
-  const g = cv.getContext('2d'); g.fillStyle = '#c8a46a'; g.fillRect(0, 0, 64, 64);
-  for (let i = 0; i < 160; i++) { g.fillStyle = Math.random() < 0.5 ? 'rgba(120,80,40,.25)' : 'rgba(255,240,200,.25)'; g.fillRect(Math.random() * 64, Math.random() * 64, 2, 2); }
-  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t;
+function texChao() {   // caminho de pedrinhas
+  const cv = document.createElement('canvas'); cv.width = cv.height = 256;
+  const g = cv.getContext('2d'); g.fillStyle = '#6b5a44'; g.fillRect(0, 0, 256, 256);
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+    const ox = (y % 2) * 16 + x * 32 + (Math.random() - 0.5) * 5, oy = y * 32 + (Math.random() - 0.5) * 5, v = 150 + Math.random() * 50;
+    g.fillStyle = `rgb(${v},${v * 0.9},${v * 0.78})`;
+    g.beginPath(); g.ellipse(ox + 16, oy + 16, 13 + Math.random() * 2, 12 + Math.random() * 2, Math.random(), 0, 7); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.12)'; g.beginPath(); g.ellipse(ox + 13, oy + 12, 7, 5, 0.3, 0, 7); g.fill();
+  }
+  for (let i = 0; i < 1500; i++) { g.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,.08)' : 'rgba(255,255,255,.06)'; g.fillRect(Math.random() * 256, Math.random() * 256, 2, 2); }
+  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
 }
-const MAT_PAREDE = new THREE.MeshLambertMaterial({ map: texParede() });
+const TEX_ARBUSTO = texParede();
+const MAT_PAREDE = new THREE.MeshStandardMaterial({ map: TEX_ARBUSTO, bumpMap: TEX_ARBUSTO, bumpScale: 2.2, roughness: 0.95 });
 // grama fora do labirinto
-const GRAMA = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.MeshLambertMaterial({ color: '#5cae4a' }));
-GRAMA.rotation.x = -Math.PI / 2; GRAMA.position.y = -0.02; cena.add(GRAMA);
+const GRAMA = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), new THREE.MeshStandardMaterial({ color: '#4f9a3c', roughness: 1 }));
+GRAMA.rotation.x = -Math.PI / 2; GRAMA.position.y = -0.02; GRAMA.receiveShadow = true; cena.add(GRAMA);
 const TEX_CHAO = texChao();
 
 // ── Labirinto ──
-const CS = 4, ALT = 3.4, ESP = 0.4;   // tamanho da casinha, altura e grossura da parede
+const CS = 4.4, ALT = 3.4, ESP = 0.9;   // tamanho da casinha, altura e grossura da parede
 let L = null;   // labirinto da fase
 function geraLabirinto(w, h) {
   // cada casinha começa com as 4 paredes; o "cavador" vai abrindo caminho
@@ -194,7 +228,7 @@ function montaFase(fase) {
   const ladoSaida = saida.x === L.w - 1 ? 'l' : 's';
   L.inicio = inicio; L.saida = saida; L.ladoSaida = ladoSaida;
   L.caixas = [];   // paredes como retângulos (pra bater nelas)
-  const geo = new THREE.BoxGeometry(1, 1, 1), lista = [];
+  const lista = [];
   const parede = (x0, z0, x1, z1) => { lista.push([x0, z0, x1, z1]); L.caixas.push({ x0, z0, x1, z1 }); };
   for (const a of L.cel) {
     const X = a.x * CS, Z = a.y * CS;
@@ -203,23 +237,65 @@ function montaFase(fase) {
     if (a.y === L.h - 1 && a.s && !(a === saida && ladoSaida === 's')) parede(X - ESP / 2, Z + CS - ESP / 2, X + CS + ESP / 2, Z + CS + ESP / 2);
     if (a.x === L.w - 1 && a.l && !(a === saida && ladoSaida === 'l')) parede(X + CS - ESP / 2, Z - ESP / 2, X + CS + ESP / 2, Z + CS + ESP / 2);
   }
-  const inst = new THREE.InstancedMesh(geo, MAT_PAREDE, lista.length), m4 = new THREE.Matrix4();
-  lista.forEach(([x0, z0, x1, z1], i) => { m4.makeScale(x1 - x0, ALT, z1 - z0); m4.setPosition((x0 + x1) / 2, ALT / 2, (z0 + z1) / 2); inst.setMatrixAt(i, m4); });
-  mundo.add(inst);
+  // dois tipos de parede (deitada e em pé), cada um com o tamanho certo: as folhas não esticam
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), um = new THREE.Vector3(1, 1, 1), pv = new THREE.Vector3();
+  const geoX = new THREE.BoxGeometry(CS + ESP, ALT, ESP), geoZ = new THREE.BoxGeometry(ESP, ALT, CS + ESP);
+  for (const geo2 of [geoX, geoZ]) {   // folhas no tamanho de verdade (1 desenho a cada 2,2 m)
+    const uv = geo2.attributes.uv, p = geo2.attributes.position, n = geo2.attributes.normal;
+    for (let i = 0; i < uv.count; i++) {
+      const nx = Math.abs(n.getX(i)), ny = Math.abs(n.getY(i));
+      const u = nx > 0.5 ? p.getZ(i) : p.getX(i), v = ny > 0.5 ? p.getZ(i) : p.getY(i);
+      uv.setXY(i, u / 2.2, v / 2.2);
+    }
+  }
+  const deitadas = lista.filter(([x0, z0, x1, z1]) => x1 - x0 > z1 - z0), empe = lista.filter(([x0, z0, x1, z1]) => x1 - x0 <= z1 - z0);
+  for (const [grupo, geo2] of [[deitadas, geoX], [empe, geoZ]]) {
+    const inst = new THREE.InstancedMesh(geo2, MAT_PAREDE, grupo.length);
+    grupo.forEach(([x0, z0, x1, z1], i) => { m4.makeTranslation((x0 + x1) / 2, ALT / 2, (z0 + z1) / 2); inst.setMatrixAt(i, m4); });
+    inst.castShadow = inst.receiveShadow = true; mundo.add(inst);
+  }
+  // topo fofo: bolotas de folha em cima de cada arbusto
+  const bolas = [];
+  for (const [x0, z0, x1, z1] of lista) {
+    const deit = x1 - x0 > z1 - z0, comp = deit ? x1 - x0 : z1 - z0, n = Math.ceil(comp / 1.0);
+    for (let k = 0; k < n; k++) { const t = (k + 0.5) / n; bolas.push([deit ? x0 + (x1 - x0) * t : (x0 + x1) / 2, deit ? (z0 + z1) / 2 : z0 + (z1 - z0) * t]); }
+  }
+  const topo = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.62, 1), MAT_PAREDE, bolas.length), corB = new THREE.Color();
+  bolas.forEach(([x, z], i) => {
+    const e = 0.85 + Math.random() * 0.35; pv.set(x + (Math.random() - 0.5) * 0.2, ALT - 0.12 + Math.random() * 0.12, z + (Math.random() - 0.5) * 0.2);
+    q.setFromEuler(new THREE.Euler(Math.random() * 3, Math.random() * 3, 0)); m4.compose(pv, q, um.clone().multiplyScalar(e)); topo.setMatrixAt(i, m4);
+    topo.setColorAt(i, corB.setHSL(0.3, 0.5, 0.82 + Math.random() * 0.25));
+  });
+  topo.castShadow = true; topo.receiveShadow = true; mundo.add(topo);
+  // tufinhos de grama no pé dos arbustos
+  const nTufos = Math.min(lista.length * 10, TOUCH ? 2500 : 6000);
+  const tufos = new THREE.InstancedMesh(new THREE.ConeGeometry(0.07, 0.42, 4), new THREE.MeshStandardMaterial({ color: '#5aa83a', roughness: 1 }), nTufos);
+  for (let i = 0; i < nTufos; i++) {
+    const [x0, z0, x1, z1] = lista[(i * 13) % lista.length], deit = x1 - x0 > z1 - z0, lado = Math.random() < 0.5 ? -1 : 1, t = Math.random();
+    const x = deit ? x0 + (x1 - x0) * t : (x0 + x1) / 2 + lado * (ESP / 2 + 0.05 + Math.random() * 0.15);
+    const z = deit ? (z0 + z1) / 2 + lado * (ESP / 2 + 0.05 + Math.random() * 0.15) : z0 + (z1 - z0) * t;
+    q.setFromEuler(new THREE.Euler((Math.random() - 0.5) * 0.6, 0, (Math.random() - 0.5) * 0.6)); m4.compose(pv.set(x, 0.18, z), q, um.clone().multiplyScalar(0.7 + Math.random() * 0.7)); tufos.setMatrixAt(i, m4);
+    tufos.setColorAt(i, corB.setHSL(0.27 + Math.random() * 0.06, 0.55, 0.32 + Math.random() * 0.15));
+  }
+  mundo.add(tufos);
   // florzinhas coloridas no pé dos arbustos
-  const nFlores = lista.length * 7, flores = new THREE.InstancedMesh(new THREE.SphereGeometry(0.11, 8, 6), new THREE.MeshLambertMaterial(), nFlores);
+  const nFlores = Math.min(lista.length * 4, 2500), flores = new THREE.InstancedMesh(new THREE.SphereGeometry(0.075, 8, 6), new THREE.MeshLambertMaterial(), nFlores);
   const corF = new THREE.Color(), CORES_F = ['#ff5d8f', '#ffd23f', '#ffffff', '#b06cff', '#ff8a3d', '#5cb8ff'];
   for (let i = 0; i < nFlores; i++) {
     const [x0, z0, x1, z1] = lista[i % lista.length], deitada = x1 - x0 > z1 - z0, lado = Math.random() < 0.5 ? -1 : 1, t = Math.random();
     const x = deitada ? x0 + (x1 - x0) * t : (x0 + x1) / 2 + lado * (ESP / 2 + 0.12);
     const z = deitada ? (z0 + z1) / 2 + lado * (ESP / 2 + 0.12) : z0 + (z1 - z0) * t;
-    m4.makeScale(1, 1, 1); m4.setPosition(x, 0.12 + Math.random() * 0.5, z); flores.setMatrixAt(i, m4);
+    m4.makeScale(1, 1, 1); m4.setPosition(x + (deitada ? 0 : lado * 0.12), 0.2 + Math.random() * 0.3, z + (deitada ? lado * 0.12 : 0)); flores.setMatrixAt(i, m4);
     flores.setColorAt(i, corF.set(CORES_F[i % CORES_F.length]));
   }
   mundo.add(flores);
-  const tc = TEX_CHAO.clone(); tc.needsUpdate = true; tc.repeat.set(w * 2, h * 2);
-  const chao = new THREE.Mesh(new THREE.PlaneGeometry(w * CS, h * CS), new THREE.MeshLambertMaterial({ map: tc }));
-  chao.rotation.x = -Math.PI / 2; chao.position.set(w * CS / 2, 0, h * CS / 2); mundo.add(chao);
+  const tc = TEX_CHAO.clone(); tc.needsUpdate = true; tc.repeat.set(w * CS / 2.5, h * CS / 2.5);
+  const chao = new THREE.Mesh(new THREE.PlaneGeometry(w * CS, h * CS), new THREE.MeshStandardMaterial({ map: tc, bumpMap: tc, bumpScale: 1.5, roughness: 0.9 }));
+  chao.rotation.x = -Math.PI / 2; chao.position.set(w * CS / 2, 0.01, h * CS / 2); chao.receiveShadow = true; mundo.add(chao);
+  // sol de lado: as sombras cobrem o labirinto todo
+  const meio = new THREE.Vector3(w * CS / 2, 0, h * CS / 2), R = w * CS * 0.75;
+  sol.target.position.copy(meio); sol.position.copy(meio).addScaledVector(SOL_DIR, 90);
+  Object.assign(sol.shadow.camera, { left: -R, right: R, top: R, bottom: -R, near: 1, far: 220 }); sol.shadow.camera.updateProjectionMatrix();
   // porta (fechada até pegar todas as chaves)
   const pc = centro(saida), porta = new THREE.Group();
   const madeira = new THREE.Mesh(new THREE.BoxGeometry(CS - ESP, ALT - 0.4, 0.3), new THREE.MeshLambertMaterial({ color: '#8a3a1a', emissive: '#3a0a00' }));
@@ -454,7 +530,7 @@ function loop(agora) {
     if (!L) montaFase(2);
     ang += dt * 0.15;
     const cx = L.w * CS / 2, cz = L.h * CS / 2;
-    camera.position.set(cx + Math.cos(ang) * 30, 26, cz + Math.sin(ang) * 30); camera.rotation.set(0, 0, 0); camera.lookAt(cx, 0, cz);
+    camera.position.set(cx + Math.cos(ang) * 48, 36, cz + Math.sin(ang) * 48); camera.rotation.set(0, 0, 0); camera.lookAt(cx, 0, cz);
   }
   renderer.render(cena, camera);
   requestAnimationFrame(loop);
