@@ -94,11 +94,11 @@ const real = v => 'R$ ' + Math.floor(v).toLocaleString('pt-BR');
 
 // ── O que dá pra comprar ──
 const TANQUES = [
-  { id: 'pequeno', nome: 'Aquário Pequeno', ic: '🫙', preco: 300, cap: 4, nivel: 1, agua: ['#7fd6ff', '#2a8fd0'] },
-  { id: 'medio', nome: 'Aquário Médio', ic: '🧊', preco: 900, cap: 8, nivel: 2, agua: ['#6ccfff', '#1f78c0'] },
-  { id: 'grande', nome: 'Aquário Grande', ic: '🌊', preco: 2500, cap: 12, nivel: 3, agua: ['#58c4ff', '#1560a8'] },
-  { id: 'tubarao', nome: 'Tanque dos Tubarões', ic: '🦈', preco: 8000, cap: 6, nivel: 4, agua: ['#3fa8e8', '#0d3f7a'] },
-  { id: 'gigante', nome: 'Oceano Gigante', ic: '🐋', preco: 25000, cap: 8, nivel: 5, agua: ['#2f8fd8', '#06264f'] },
+  { id: 'pequeno', nome: 'Aquário Pequeno', ic: '🫙', preco: 300, cap: 10, nivel: 1, agua: ['#7fd6ff', '#2a8fd0'] },
+  { id: 'medio', nome: 'Aquário Médio', ic: '🧊', preco: 900, cap: 18, nivel: 2, agua: ['#6ccfff', '#1f78c0'] },
+  { id: 'grande', nome: 'Aquário Grande', ic: '🌊', preco: 2500, cap: 30, nivel: 3, agua: ['#58c4ff', '#1560a8'] },
+  { id: 'tubarao', nome: 'Tanque dos Tubarões', ic: '🦈', preco: 8000, cap: 15, nivel: 4, agua: ['#3fa8e8', '#0d3f7a'] },
+  { id: 'gigante', nome: 'Oceano Gigante', ic: '🐋', preco: 25000, cap: 20, nivel: 5, agua: ['#2f8fd8', '#06264f'] },
 ];
 const PEIXES = [
   { id: 'palhaco', e: '🐠', nome: 'Peixe-palhaço', preco: 50, atr: 2, nivel: 1 },
@@ -122,7 +122,8 @@ const DECOR = [
   { id: 'estatua', e: '🗿', nome: 'Estátua', preco: 450, atr: 8 },
   { id: 'tesouro', e: '💎', nome: 'Tesouro', preco: 900, atr: 15 },
 ];
-const TERRENOS = [0, 0, 1500, 3000, 6000, 12000, 24000, 48000, 96000];   // preço de cada lote (os 2 primeiros já são seus)
+// preço de cada terreno: os 2 primeiros já são seus, depois cada um fica um pouco mais caro (sem limite!)
+const precoTerreno = i => i < 2 ? 0 : Math.round(1500 * Math.pow(1.45, i - 2) / 100) * 100;
 const P = id => PEIXES.find(p => p.id === id), D = id => DECOR.find(d => d.id === id), TQ = id => TANQUES.find(t => t.id === id);
 
 // ── Perfil e ADM ──
@@ -146,7 +147,7 @@ const visitantesMin = () => Math.round(atracao());   // 1 visitante por minuto p
 const INGRESSO = 10;
 // dinheiro que entrou enquanto você estava fora (até 10 minutos, pela metade)
 (() => {
-  const fora = Math.min((Date.now() - (S.salvo || Date.now())) / 60000, 10);
+  const fora = Math.min((Date.now() - (S.salvo || Date.now())) / 60000, 30);
   const ganho = Math.floor(visitantesMin() * INGRESSO * fora * 0.5);
   if (ganho > 20) setTimeout(() => toast('🎟️ Enquanto você estava fora, o parque ganhou ' + real(ganho) + '!', 3500), 600);
   S.dinheiro += ganho;
@@ -185,14 +186,15 @@ const calcadas = [], lotesEl = [];
 function montaParque() {
   const p = $('parque'); p.innerHTML = ''; canvases.length = 0; calcadas.length = 0; lotesEl.length = 0;
   let fileira = null;
-  for (let i = 0; i < 9; i++) {
+  const total = Math.max(9, Math.ceil((S.lotes + 1) / 3) * 3);   // sempre aparece o próximo terreno pra comprar
+  for (let i = 0; i < total; i++) {
     if (i % 3 === 0) { fileira = document.createElement('div'); fileira.className = 'fileira'; p.appendChild(fileira); }
     const t = S.tanques[i];
     const div = document.createElement('div');
     if (i >= S.lotes) {
       div.className = 'lote vazio travado';
-      div.innerHTML = '<div><b>🔒</b>Terreno<br>' + (isAdm ? 'grátis (ADM)' : real(TERRENOS[i])) + '</div>';
-      if (i === S.lotes) div.onclick = () => { if (paga(TERRENOS[i])) { S.lotes++; toast('🏗️ Terreno novo!'); montaParque(); } };
+      div.innerHTML = '<div><b>🔒</b>Terreno<br>' + (isAdm ? 'grátis (ADM)' : real(precoTerreno(i))) + '</div>';
+      if (i === S.lotes) div.onclick = () => { if (paga(precoTerreno(i))) { S.lotes++; toast('🏗️ Terreno novo!'); montaParque(); } };
       else div.onclick = () => toast('Compre o terreno anterior primeiro!');
     } else if (!t) {
       div.className = 'lote vazio';
@@ -217,7 +219,8 @@ function montaParque() {
       const c = document.createElement('div'); c.className = 'calcada';
       const r = calcadas.length;
       if (r === 0) c.innerHTML = '<span class="placa" style="left:6px">🎪 ENTRADA</span>';
-      c.innerHTML += '<span class="arvore" style="left:-8px">🌳</span><span class="arvore" style="right:-8px">🌴</span>';
+      const arv = ['🌳', '🌴', '🌲', '🌻', '🌷'];
+      c.innerHTML += '<span class="arvore" style="left:-8px">' + arv[r % 5] + '</span><span class="arvore" style="right:-8px">' + arv[(r + 2) % 5] + '</span>';
       p.appendChild(c); calcadas.push(c);
     }
   }
@@ -312,13 +315,13 @@ function abreTanque(i) {
     };
     it.appendChild(b);
   }
-  h('h3', '🏰 Enfeites (' + t.decor.length + '/4)');
+  h('h3', '🏰 Enfeites (' + t.decor.length + '/10)');
   const id2 = h('div', null, 'itens');
   for (const de of DECOR) {
     const b = document.createElement('button'); b.className = 'item' + (S.dinheiro < custo(de.preco) ? ' caro' : '');
     b.innerHTML = '<b></b><span></span><span style="font-weight:600"></span><small></small>';
     b.children[0].textContent = de.e; b.children[1].textContent = de.nome; b.children[2].textContent = '+' + de.atr + ' ⭐'; b.children[3].textContent = isAdm ? 'grátis (ADM)' : real(de.preco);
-    b.onclick = () => { if (t.decor.length >= 4) return toast('Já tem 4 enfeites!'); if (paga(de.preco)) { t.decor.push(de.id); grava(); abreTanque(i); atualizaBarra(); } };
+    b.onclick = () => { if (t.decor.length >= 10) return toast('Já tem 10 enfeites!'); if (paga(de.preco)) { t.decor.push(de.id); grava(); abreTanque(i); atualizaBarra(); } };
     id2.appendChild(b);
   }
   const ac3 = h('div', null, 'acoes');
@@ -408,8 +411,8 @@ function tick(agora) {
   // os aquários sujam e os bichos ficam com fome devagarinho
   for (const t of S.tanques) if (t && t.peixes.length) { t.sujeira = Math.min(100, t.sujeira + dt / 6); t.fome = Math.min(100, t.fome + dt / 4); }
   // gente chegando no parque e passeando
-  acumulaVis += dt * Math.min(vpm, 40) / 60 * 2;
-  while (acumulaVis >= 1) { acumulaVis -= 1; if (visitas.length < 14) novoVisitante(); }
+  acumulaVis += dt * Math.min(vpm, 120) / 60 * 2;
+  while (acumulaVis >= 1) { acumulaVis -= 1; if (visitas.length < 30) novoVisitante(); }
   andaVisitantes(dt);
   if ((acumulaSalva += dt) > 5) { acumulaSalva = 0; grava(); }
   requestAnimationFrame(tick);
