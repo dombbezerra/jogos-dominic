@@ -109,6 +109,8 @@ const PEIXES = [
   { id: 'baiacu', e: '🐡', nome: 'Baiacu', preco: 150, atr: 5, nivel: 1 },
   { id: 'caranguejo', e: '🦀', nome: 'Caranguejo', preco: 200, atr: 6, nivel: 1, fundo: true },
   { id: 'lagosta', e: '🦞', nome: 'Lagosta', preco: 350, atr: 9, nivel: 1, fundo: true },
+  // o cascudo come a sujeira: o aquário suja bem mais devagar
+  { id: 'cascudo', e: '🐟', nome: 'Cascudo', preco: 100, atr: 1, nivel: 1, fundo: true, limpa: true, filtro: 'sepia(1) saturate(1.6) hue-rotate(-15deg) brightness(.55)' },
   // do polvo pra cima: bichos grandes
   { id: 'polvo', e: '🐙', nome: 'Polvo', preco: 600, atr: 14, nivel: 2, tam: 48 },
   { id: 'lula', e: '🦑', nome: 'Lula', preco: 750, atr: 17, nivel: 2, tam: 50 },
@@ -263,7 +265,7 @@ function desenha(agora) {
       let x, y, dir;
       if (p.fundo) { const s = Math.sin(agora / 1000 * n.v * 0.6 + n.f); x = W / 2 + s * (W / 2 - 30); y = H - 36; dir = Math.cos(agora / 1000 * n.v * 0.6 + n.f) > 0 ? 1 : -1; }
       else { const fase = agora / 1000 * n.v * 0.5 + n.f; x = W / 2 + Math.sin(fase) * (W / 2 - tam / 2 - 6); y = H * n.y + Math.sin(fase * 3) * 8; dir = Math.cos(fase) > 0 ? 1 : -1; }
-      g.save(); g.translate(x, y); g.scale(-dir, 1); g.fillText(p.e, 0, 0); g.restore();   // os emojis olham pra esquerda
+      g.save(); g.translate(x, y); g.scale(-dir, 1); if (p.filtro) g.filter = p.filtro; g.fillText(p.e, 0, 0); g.restore();   // os emojis olham pra esquerda
     });
     // bolhas
     g.fillStyle = 'rgba(255,255,255,.6)';
@@ -317,7 +319,7 @@ function abreTanque(i) {
     const pode = pe.nivel <= tq.nivel;
     const b = document.createElement('button'); b.className = 'item' + (!pode || S.dinheiro < custo(pe.preco) ? ' caro' : '');
     b.innerHTML = '<b></b><span></span><span style="font-weight:600"></span><small></small>';
-    b.children[0].textContent = pe.e; b.children[1].textContent = pe.nome; b.children[2].textContent = '+' + pe.atr + ' ⭐';
+    b.children[0].textContent = pe.e; b.children[1].textContent = pe.nome; if (pe.filtro) b.children[0].style.filter = pe.filtro; b.children[2].textContent = '+' + pe.atr + ' ⭐' + (pe.limpa ? ' · limpa 🧽' : '');
     b.children[3].textContent = !pode ? '🔒 aquário maior' : isAdm ? 'grátis (ADM)' : real(pe.preco);
     b.onclick = () => {
       if (!pode) return toast(pe.e + ' ' + pe.nome + ' precisa de um ' + TANQUES[pe.nivel - 1].nome + ' ou maior!');
@@ -420,7 +422,7 @@ function tick(agora) {
   ganha(vpm / 60 * INGRESSO * dt);
   if (Math.floor(S.dinheiro) !== antes) { atualizaBarra(); }
   // os aquários sujam e os bichos ficam com fome devagarinho
-  for (const t of S.tanques) if (t && t.peixes.length) { t.sujeira = Math.min(100, t.sujeira + dt / 6); t.fome = Math.min(100, t.fome + dt / 4); }
+  for (const t of S.tanques) if (t && t.peixes.length) { t.sujeira = Math.min(100, t.sujeira + dt / 9 * Math.pow(0.45, t.peixes.filter(id => id === 'cascudo').length)); t.fome = Math.min(100, t.fome + dt / 4); }
   // gente chegando no parque e passeando
   acumulaVis += dt * Math.min(vpm, 120) / 60 * 2;
   while (acumulaVis >= 1) { acumulaVis -= 1; if (visitas.length < 30) novoVisitante(); }
