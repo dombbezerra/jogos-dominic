@@ -144,7 +144,7 @@ function atracaoTanque(t) {
 }
 const atracao = () => S.tanques.reduce((s, t) => s + (t ? atracaoTanque(t) : 0), 0);
 const visitantesMin = () => Math.round(atracao());   // 1 visitante por minuto pra cada ⭐
-const INGRESSO = 10;
+const INGRESSO = 25;   // cada visitante paga R$ 25
 // dinheiro que entrou enquanto você estava fora (até 10 minutos, pela metade)
 (() => {
   const fora = Math.min((Date.now() - (S.salvo || Date.now())) / 60000, 30);
