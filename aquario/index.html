@@ -370,9 +370,9 @@ function novoVisitante() {
   const el = document.createElement('span'); el.className = 'vis'; el.textContent = GENTE[Math.floor(Math.random() * GENTE.length)];
   const v = { el, pts, k: 0, x: pts[0].x, y: pts[0].y, vel: 45 + Math.random() * 30, espera: 0 };
   el.style.transform = `translate(${v.x}px, ${v.y}px)`;
-  el.onclick = e => {   // toque no visitante: ele dá uma gorjeta!
-    e.stopPropagation(); ganha(5); som('moeda'); atualizaBarra();
-    const m = document.createElement('span'); m.className = 'moeda'; m.textContent = '+R$5'; m.style.left = v.x + 'px'; m.style.top = (v.y - 10) + 'px'; $('gente').appendChild(m); setTimeout(() => m.remove(), 1000);
+  el.onclick = e => {   // toque no visitante: ele dá R$ 25 de gorjeta!
+    e.stopPropagation(); ganha(25); som('moeda'); atualizaBarra();
+    const m = document.createElement('span'); m.className = 'moeda'; m.textContent = '+R$25'; m.style.left = v.x + 'px'; m.style.top = (v.y - 10) + 'px'; $('gente').appendChild(m); setTimeout(() => m.remove(), 1000);
     el.remove(); visitas.splice(visitas.indexOf(v), 1);
   };
   $('gente').appendChild(el); visitas.push(v);
