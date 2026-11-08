@@ -42,6 +42,7 @@
   .carta small { display: block; color: #1a8a3a; font-size: 11px; }
   .carta.nao { background: #e6e0cc; }
   .carta.nao b { filter: brightness(0) opacity(.35) !important; }
+  #inNome { font-family: var(--texto); font-weight: 800; font-size: 22px; width: min(320px, 90%); padding: 10px 14px 6px; border: 3px solid var(--tinta); border-radius: 14px; text-align: center; color: var(--tinta); }
   .dica { position: fixed; left: 14px; bottom: calc(env(safe-area-inset-bottom) + 16px); z-index: 20; font-weight: 800; font-size: 13px; color: #fff; text-shadow: 1px 1px 0 #000; pointer-events: none; opacity: .85; }
 </style>
 </head>
@@ -50,15 +51,24 @@
 <div class="barra">
   <span class="pill" id="dinheiro">💰 <b>R$ 0</b></span>
   <span class="pill">📈 <b id="renda">R$ 0</b>/s</span>
+  <span class="pill">👥 <b id="gente">—</b></span>
 </div>
 <canvas id="cv"></canvas>
 <div class="botoes">
   <button class="btn" id="acao"></button>
+  <button class="btn" id="b-nome">✏️ Nome</button>
   <button class="btn" id="b-indice">📖 Índice</button>
 </div>
 <div class="dica" id="dica">Arraste o dedo pra andar 👆</div>
 <div id="toast"></div>
 <div class="fundo" id="fundo"><div class="painel" id="painel"></div></div>
+<div class="fundo" id="telaNome" style="align-items:center"><div class="painel" style="border-radius:22px;text-align:center">
+  <h2>🐾 Qual é o seu nome?</h2>
+  <p style="font-weight:700;margin:6px 0 10px">Ele aparece em cima do seu boneco e no seu cercadinho.<br>Todo mundo no servidor vai ver!</p>
+  <input id="inNome" maxlength="14" autocomplete="off" placeholder="Seu nome">
+  <p id="erroNome" style="color:#c0303a;font-weight:800;min-height:20px"></p>
+  <button class="btn" id="okNome" style="background:var(--verde);color:#fff">JOGAR! ▶</button>
+</div></div>
 <div id="joy"><i></i></div>
 <script src="../mundo-blocos/three.min.js"></script>
 <script>
@@ -103,12 +113,12 @@ const B = id => BICHOS.find(b => b.id === id);
 const rendaDe = a => B(a.id).renda * (a.ouro ? 2 : 1);
 const precoDe = a => B(a.id).preco * (a.ouro ? 2 : 1);
 // sorteia um bicho: primeiro a raridade, depois o bicho dela (de vez em quando vem DOURADO, que vale o dobro)
-function sorteia(sorte = 1) {
+function sorteia(sorte = 1, rnd = Math.random) {
   const pesos = Object.entries(RAR).map(([k, v], i) => [k, v.peso * (i ? sorte : 1)]);
-  let n = Math.random() * pesos.reduce((s, p) => s + p[1], 0), r = 'comum';
+  let n = rnd() * pesos.reduce((s, p) => s + p[1], 0), r = 'comum';
   for (const [k, p] of pesos) { if ((n -= p) < 0) { r = k; break; } }
   const lista = BICHOS.filter(b => b.r === r);
-  return { id: lista[Math.floor(Math.random() * lista.length)].id, ouro: Math.random() < 0.06 };
+  return { id: lista[Math.floor(rnd() * lista.length)].id, ouro: rnd() < 0.06 };
 }
 
 // ── Save ──
@@ -116,35 +126,11 @@ const PERFIL = new URLSearchParams(location.search).get('perfil');
 const KEY = 'roubeAnimal' + (PERFIL ? ':' + PERFIL : '');
 const VAGAS = 10;
 let S; try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) { S = null; }
-S = Object.assign({ dinheiro: 100, caixa: 0, slots: Array(VAGAS).fill(null), trancaAte: 0, trancaPode: 0, salvo: Date.now() }, S || {});
+S = Object.assign({ dinheiro: 100, caixa: 0, slots: Array(VAGAS).fill(null), salvo: Date.now(), nome: '', id: '' }, S || {});
+if (!S.id) S.id = Math.random().toString(36).slice(2, 12).padEnd(8, '0');
 const grava = () => { S.salvo = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ok */ } };
-
-// ── Mapa: 4 bases (a sua embaixo à esquerda) e a esteira de bichos no meio ──
-const MW = 1800, MH = 1400, T = 18, PORTA = 130;
-const bases = [];
-function criaBase(i, x, y, cima, dono) {
-  const w = 640, h = 400, px = x + w / 2 - PORTA / 2, py = cima ? y + h - T : y;
-  const b = { i, x, y, w, h, cima, dono, slots: Array(VAGAS).fill(null), solto: {}, trancaAte: 0, caixaFlut: 0 };
-  b.paredes = [[x, y, w, T], [x, y + h - T, w, T], [x, y, T, h], [x + w - T, y, T, h]];
-  b.paredes[cima ? 1 : 0] = [x, py, px - x, T];
-  b.paredes.push([px + PORTA, py, x + w - px - PORTA, T]);
-  b.porta = [px, py, PORTA, T];
-  b.dIn = { x: x + w / 2, y: cima ? y + h - 60 : y + 60 };
-  b.dOut = { x: x + w / 2, y: cima ? y + h + 50 : y - 50 };
-  b.pos = [];
-  for (let k = 0; k < VAGAS; k++) {
-    const c = k % 5, r = Math.floor(k / 5);
-    b.pos.push({ x: x + 80 + c * (w - 160) / 4, y: cima ? y + 80 + r * 100 : y + h - 80 - r * 100 });
-  }
-  bases.push(b); return b;
-}
-const minha = criaBase(0, 80, 920, false, 'voce');
-criaBase(1, 1080, 920, false, 'bot');
-criaBase(2, 80, 80, true, 'bot');
-criaBase(3, 1080, 80, true, 'bot');
 S.slots = S.slots.map(a => a && B(a.id) ? a : null);
 S.indice = S.indice || {}; S.grupoOk = S.grupoOk || {};
-minha.slots = S.slots;
 // Índice: marca o bicho como descoberto (e dá prêmio quando completa um grupo)
 function descobre(id) {
   if (S.indice[id]) return; S.indice[id] = true;
@@ -156,8 +142,35 @@ function descobre(id) {
   }
 }
 for (const a of S.slots) if (a) S.indice[a.id] = true;
+// sorteio que dá igual em todo aparelho (a mesma "semente" dá o mesmo bicho)
+function rng(seed) {
+  return () => { seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+
+// ── Mapa: 8 cercadinhos (4 em cima, 4 embaixo) e a esteira de bichos no meio ──
+const PW = 480, PH = 380, VAO = 70, T = 18, PORTA = 120;
+const MW = 4 * PW + 5 * VAO, MH = 1400;
+const bases = [];
+function criaBase(i) {
+  const cima = i >= 4, x = VAO + (i % 4) * (PW + VAO), y = cima ? 100 : 920, w = PW, h = PH;
+  const px = x + w / 2 - PORTA / 2, py = cima ? y + h - T : y;
+  const b = { i, x, y, w, h, cima, slots: Array(VAGAS).fill(null), solto: {}, caixaFlut: 0 };
+  b.paredes = [[x, y, w, T], [x, y + h - T, w, T], [x, y, T, h], [x + w - T, y, T, h]];
+  b.paredes[cima ? 1 : 0] = [x, py, px - x, T];
+  b.paredes.push([px + PORTA, py, x + w - px - PORTA, T]);
+  b.dIn = { x: x + w / 2, y: cima ? y + h - 60 : y + 60 };
+  b.dOut = { x: x + w / 2, y: cima ? y + h + 50 : y - 50 };
+  b.pos = [];
+  for (let k = 0; k < VAGAS; k++) {
+    const c = k % 5, r = Math.floor(k / 5);
+    b.pos.push({ x: x + 60 + c * (w - 120) / 4, y: cima ? y + 70 + r * 95 : y + h - 70 - r * 95 });
+  }
+  bases.push(b); return b;
+}
+for (let i = 0; i < 8; i++) criaBase(i);
+let minha = bases[0];
+minha.slots = S.slots;
 const ESTEIRA = { y1: 650, y2: 750 };
-const trancada = b => (b === minha ? S.trancaAte : b.trancaAte) > Date.now();
 const dentro = (p, b) => p.x > b.x + T && p.x < b.x + b.w - T && p.y > b.y + T && p.y < b.y + b.h - T;
 const baseDe = p => bases.find(b => dentro(p, b)) || null;
 // cada bicho anda solto pelo cercadinho
@@ -166,6 +179,7 @@ function solto(b, k) {
   if (!st) st = b.solto[k] = { x: b.pos[k].x, y: b.pos[k].y, tx: b.pos[k].x, ty: b.pos[k].y, espera: Math.random() * 2, dir: 1, moeda: 1 + Math.random() * 3 };
   return st;
 }
+const moedas = [];
 function andaSoltos(dt) {
   for (const b of bases) for (let k = 0; k < VAGAS; k++) {
     if (!b.slots[k]) { delete b.solto[k]; continue; }
@@ -181,47 +195,53 @@ function andaSoltos(dt) {
   }
   for (let i = moedas.length - 1; i >= 0; i--) if ((moedas[i].t += dt) > 1) moedas.splice(i, 1);
 }
-const moedas = [];
 const livre = b => b.slots.findIndex((s, k) => !s && !b.reserva?.[k]);
 
-// ── Gente: você e os 3 jogadores (bots) ──
-const eu = { x: minha.dIn.x, y: minha.dIn.y - 40, r: 20, e: '🧒', nome: 'Você', base: minha, vel: 230, carrega: null, tonto: 0 };
-const BOTS = [['Lucas', '👦'], ['Bia', '👧'], ['Theo', '🧑']];
-const bots = BOTS.map(([nome, e], k) => {
-  const b = bases[k + 1];
-  // cada base de bot começa com uns bichos
-  const n = 4 + Math.floor(Math.random() * 3);
-  for (let j = 0; j < n; j++) b.slots[j] = sorteia(1 + j * 0.6);
-  return { x: b.dIn.x, y: b.dIn.y, r: 20, e, nome, base: b, vel: 165, carrega: null, rota: [], estado: 'casa', espera: 1 + Math.random() * 3, tonto: 0 };
-});
+// ── Gente: você, as outras pessoas do servidor e os bots (nos cercadinhos sem ninguém) ──
+const eu = { x: minha.dIn.x, y: minha.dIn.y, r: 20, nome: S.nome || 'Você', base: minha, vel: 230 };
+const remotos = {};   // id → outra pessoa
+const donoHumano = b => Object.values(remotos).find(r => r.base === b) || null;
+const BOT_NOMES = ['Lucas', 'Bia', 'Theo', 'Ana', 'Davi', 'Lara', 'Enzo', 'Malu'];
+const bots = bases.map((b, i) => ({ x: b.dIn.x, y: b.dIn.y, r: 20, nome: BOT_NOMES[i] + ' (bot)', base: b, rota: [], espera: Math.random() * 3 }));
+const botAtivo = bt => bt.base !== minha && !donoHumano(bt.base);
+let sala = 0;
+function slotsBot(i) {   // os bichos do cercadinho de um bot (iguais pra todo mundo do servidor)
+  const r = rng(sala * 1000 + i * 17 + 5), n = 3 + Math.floor(r() * 4), s = Array(VAGAS).fill(null);
+  for (let j = 0; j < n; j++) s[j] = sorteia(1 + j * 0.6, r);
+  return s;
+}
+function semeiaBots(tudo) { for (const b of bases) if (b !== minha && !donoHumano(b) && (tudo || b.humano)) { b.slots = slotsBot(b.i); b.solto = {}; b.humano = false; } }
+semeiaBots(true);
 
-// ── Esteira: os bichos passam e você compra ──
-const esteira = [], andando = [];
-let proxBicho = 0;
-function novoNaEsteira() {
-  const a = sorteia();
-  esteira.push({ ...a, x: -40, y: (ESTEIRA.y1 + ESTEIRA.y2) / 2 });
+// ── Esteira: é a mesma pra todo mundo (sai do relógio do servidor) ──
+let difRelogio = 0, online = false;
+const agoraServ = () => Date.now() + difRelogio;
+const PASSO_E = 2200, VEL_E = 0.07;   // um bicho a cada 2,2s, andando 70 por segundo
+const esteira = [], andando = [], cacheE = {}, compras = {};   // compras: n → { id, nome }
+const itemDaEsteira = n => cacheE[n] || (cacheE[n] = { n, ...sorteia(1, rng(n * 7919 + sala * 104729)), y: (ESTEIRA.y1 + ESTEIRA.y2) / 2 });
+function atualizaEsteira() {
+  const t = agoraServ(), n1 = Math.ceil((t - (MW + 80) / VEL_E) / PASSO_E), n2 = Math.floor(t / PASSO_E);
+  esteira.length = 0;
+  for (let n = n1; n <= n2; n++) { if (compras[n]) continue; const a = itemDaEsteira(n); a.x = -40 + (t - n * PASSO_E) * VEL_E; esteira.push(a); }
+  for (const k in cacheE) if (k < n1) delete cacheE[k];
+  for (const k in compras) if (k < n1 - 20) delete compras[k];
 }
 
-// caminho entre dois pontos passando pelas portas das bases
+// caminho entre dois pontos passando pelas portas dos cercadinhos
 function rota(de, para) {
   const A = baseDe(de), Bb = baseDe(para), pts = [];
   if (A !== Bb) { if (A) pts.push(A.dIn, A.dOut); if (Bb) pts.push(Bb.dOut, Bb.dIn); }
   pts.push(para); return pts.map(p => ({ x: p.x, y: p.y }));
 }
 
-// ── Colisão com paredes (porta trancada também é parede, menos pro dono) ──
+// ── Colisão com as cercas ──
 function empurra(ent) {
-  for (const b of bases) {
-    const rects = b.paredes.slice();
-    if (trancada(b) && ent.base !== b) rects.push(b.porta);
-    for (const [rx, ry, rw, rh] of rects) {
-      const cx = Math.max(rx, Math.min(ent.x, rx + rw)), cy = Math.max(ry, Math.min(ent.y, ry + rh));
-      const dx = ent.x - cx, dy = ent.y - cy, d = Math.hypot(dx, dy);
-      if (d < ent.r) {
-        if (d < 0.01) { ent.y += (ent.y < ry + rh / 2 ? -1 : 1) * ent.r; continue; }
-        ent.x = cx + dx / d * ent.r; ent.y = cy + dy / d * ent.r;
-      }
+  for (const b of bases) for (const [rx, ry, rw, rh] of b.paredes) {
+    const cx = Math.max(rx, Math.min(ent.x, rx + rw)), cy = Math.max(ry, Math.min(ent.y, ry + rh));
+    const dx = ent.x - cx, dy = ent.y - cy, d = Math.hypot(dx, dy);
+    if (d < ent.r) {
+      if (d < 0.01) { ent.y += (ent.y < ry + rh / 2 ? -1 : 1) * ent.r; continue; }
+      ent.x = cx + dx / d * ent.r; ent.y = cy + dy / d * ent.r;
     }
   }
   ent.x = Math.max(ent.r, Math.min(MW - ent.r, ent.x)); ent.y = Math.max(ent.r, Math.min(MH - ent.r, ent.y));
@@ -233,11 +253,8 @@ function anda(ent, alvo, vel, dt) {
 }
 function segueRota(ent, vel, dt) {
   if (!ent.rota.length) return true;
-  const ax = ent.x, ay = ent.y;
   if (anda(ent, ent.rota[0], vel, dt)) ent.rota.shift();
   empurra(ent);
-  // ficou preso na porta trancada? desiste
-  if (Math.hypot(ent.x - ax, ent.y - ay) < vel * dt * 0.1) ent.preso = (ent.preso || 0) + dt; else ent.preso = 0;
   return !ent.rota.length;
 }
 
@@ -250,120 +267,144 @@ function som(tipo) {
     const nota = (f, d, tp = 'triangle', v = 0.07, at = 0) => { const o = ac.createOscillator(), g = ac.createGain(); o.type = tp; o.frequency.value = f; g.gain.setValueAtTime(v, t + at); g.gain.exponentialRampToValueAtTime(0.0008, t + at + d); o.connect(g); g.connect(ac.destination); o.start(t + at); o.stop(t + at + d + 0.02); };
     if (tipo === 'compra') [660, 880].forEach((f, i) => nota(f, 0.12, 'triangle', 0.07, i * 0.07));
     if (tipo === 'moeda') [988, 1318].forEach((f, i) => nota(f, 0.1, 'square', 0.04, i * 0.06));
-    if (tipo === 'rouba') [300, 450, 600].forEach((f, i) => nota(f, 0.1, 'square', 0.05, i * 0.06));
-    if (tipo === 'alarme') [880, 660, 880, 660].forEach((f, i) => nota(f, 0.14, 'sawtooth', 0.05, i * 0.15));
+    if (tipo === 'oi') [523, 659, 784].forEach((f, i) => nota(f, 0.12, 'triangle', 0.05, i * 0.08));
     if (tipo === 'erro') nota(160, 0.25, 'sawtooth', 0.05);
-    if (tipo === 'pow') nota(120, 0.2, 'square', 0.08);
   } catch (e) { /* sem som */ }
 }
-function toast(txt, ms = 1800, alarme = false) { const t = $('toast'); t.textContent = txt; t.classList.toggle('alarme', alarme); t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), ms); }
+function toast(txt, ms = 1800) { const t = $('toast'); t.textContent = txt; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), ms); }
 
 // ── O que dá pra fazer perto de você (um botão só que muda) ──
-let alvoAcao = null;
+let alvoAcao = null, comprando = false;
 function procuraAcao() {
-  if (eu.tonto > 0) return null;
-  // ladrão carregando bicho seu? empurra ele!
-  for (const b of bots) if (b.carrega && b.carrega.de.base === minha && Math.hypot(b.x - eu.x, b.y - eu.y) < 75) return { tipo: 'empurrar', bot: b };
-  if (eu.carrega) return null;
-  // comprar da esteira
-  let melhor = null, md = 80;
-  for (const a of esteira) { const d = Math.hypot(a.x - eu.x, a.y - eu.y); if (!a.dono && d < md) { md = d; melhor = a; } }
+  let melhor = null, md = 80;   // comprar da esteira
+  for (const a of esteira) { const d = Math.hypot(a.x - eu.x, a.y - eu.y); if (d < md) { md = d; melhor = a; } }
   if (melhor) return { tipo: 'comprar', a: melhor };
-  const b = baseDe(eu);
-  if (b === minha) for (let k = 0; k < VAGAS; k++) {   // ninguém rouba ninguém: só dá pra vender os seus
-    const s = b.slots[k]; if (!s) continue;
-    const st = solto(b, k); if (Math.hypot(st.x - eu.x, st.y - eu.y) < 60) return { tipo: 'vender', b, k };
+  if (baseDe(eu) === minha) for (let k = 0; k < VAGAS; k++) {   // ninguém rouba ninguém: só dá pra vender os seus
+    if (!minha.slots[k]) continue;
+    const st = solto(minha, k); if (Math.hypot(st.x - eu.x, st.y - eu.y) < 60) return { tipo: 'vender', b: minha, k };
   }
   return null;
 }
 function mostraAcao() {
   const a = procuraAcao(), bt = $('acao');
-  const chave = a ? a.tipo + (a.a ? esteira.indexOf(a.a) : '') + (a.k ?? '') + (a.b ? a.b.i : '') : '';
+  const chave = a ? a.tipo + (a.a ? a.a.n : '') + (a.k ?? '') : '';
   if (chave === mostraAcao.chave) { alvoAcao = a; return; }
   mostraAcao.chave = chave; alvoAcao = a; delete bt.dataset.certeza;
   if (!a) { bt.style.display = 'none'; return; }
-  bt.style.display = 'block'; bt.className = 'btn ' + (a.tipo === 'roubar' || a.tipo === 'empurrar' ? 'roubar' : a.tipo === 'vender' ? 'vender' : '');
+  bt.style.display = 'block'; bt.className = 'btn ' + (a.tipo === 'vender' ? 'vender' : '');
   if (a.tipo === 'comprar') bt.textContent = '🛒 Comprar ' + B(a.a.id).e + ' ' + real(precoDe(a.a));
-  if (a.tipo === 'roubar') bt.textContent = '🦹 Roubar ' + B(a.b.slots[a.k].id).e;
-  if (a.tipo === 'vender') bt.textContent = '💲 Vender ' + B(a.b.slots[a.k].id).e + ' ' + real(precoDe(a.b.slots[a.k]) / 2);
-  if (a.tipo === 'empurrar') bt.textContent = '👊 Empurrar ' + a.bot.nome + '!';
+  if (a.tipo === 'vender') bt.textContent = '💲 Vender ' + B(minha.slots[a.k].id).e + ' ' + real(precoDe(minha.slots[a.k]) / 2);
 }
 function fazAcao() {
   const a = alvoAcao; if (!a) return;
   if (a.tipo === 'comprar') {
-    const preco = precoDe(a.a), k = livre(minha);
-    if (k < 0) { toast('🏠 Sua base tá cheia! Venda um bicho.'); som('erro'); return; }
+    const item = a.a, preco = precoDe(item);
+    if (livre(minha) < 0) { toast('🏠 Seu cercadinho tá cheio! Venda um bicho.'); som('erro'); return; }
     if (S.dinheiro < preco) { toast('💸 Falta dinheiro! Precisa de ' + real(preco)); som('erro'); return; }
-    S.dinheiro -= preco; a.a.dono = 'voce'; vaiPraBase(a.a, minha, k); som('compra'); toast('🎉 Comprou ' + B(a.a.id).nome + (a.a.ouro ? ' DOURADO' : '') + '!'); grava();
-  }
-  if (a.tipo === 'roubar') {
-    if (livre(minha) < 0) { toast('🏠 Sua base tá cheia! Venda um bicho primeiro.'); som('erro'); return; }
-    eu.carrega = { ...a.b.slots[a.k], de: { base: a.b, k: a.k } }; a.b.slots[a.k] = null; som('rouba');
-    const dono = bots.find(b => b.base === a.b);
-    toast('🦹 Corre pra sua base! ' + dono.nome + ' vai atrás de você!', 2200);
-    if (dono && !dono.carrega) setTimeout(() => { if (eu.carrega && eu.carrega.de.base === a.b) { dono.estado = 'persegue'; dono.rota = []; } }, 700);
+    if (comprando) return;
+    const leva = () => {
+      const k = livre(minha); if (k < 0 || S.dinheiro < preco) return;
+      S.dinheiro -= preco; compras[item.n] = { id: S.id, nome: S.nome }; vaiPraBase(item, minha, k);
+      som('compra'); toast('🎉 Comprou ' + B(item.id).nome + (item.ouro ? ' DOURADO' : '') + '!'); grava(); atualizaHud();
+    };
+    if (!online) { leva(); return; }
+    // pergunta pro servidor se ninguém comprou antes
+    comprando = true;
+    api({ acao: 'compra', n: item.n }).then(r => {
+      comprando = false;
+      if (r.ok) leva();
+      else { compras[item.n] = { id: '?', nome: r.dono }; toast('😮 ' + (r.dono || 'Alguém') + ' comprou antes de você!'); som('erro'); }
+    }).catch(() => { comprando = false; leva(); });
   }
   if (a.tipo === 'vender') {
     const bt = $('acao');
     if (!bt.dataset.certeza) { bt.dataset.certeza = '1'; bt.textContent = '⚠️ Tem certeza? Toque de novo'; return; }
     const s = minha.slots[a.k]; S.dinheiro += precoDe(s) / 2; minha.slots[a.k] = null; som('moeda'); toast('💲 Vendeu ' + B(s.id).nome + '!'); grava();
   }
-  if (a.tipo === 'empurrar') {
-    const b = a.bot, c = b.carrega; b.carrega = null; som('pow');
-    minha.slots[c.de.k] ? (minha.slots[livre(minha)] = { id: c.id, ouro: c.ouro }) : (minha.slots[c.de.k] = { id: c.id, ouro: c.ouro });
-    b.tonto = 2.5; b.estado = 'volta'; b.rota = rota(b, b.base.dIn); toast('👊 POW! Você pegou seu ' + B(c.id).nome + ' de volta!'); grava();
-  }
   mostraAcao.chave = null; atualizaHud();
 }
-// bicho comprado anda até a vaga
+// bicho comprado anda até a vaga (o dos outros vai até o cercadinho deles)
 function vaiPraBase(a, base, k) {
-  const i = esteira.indexOf(a); if (i >= 0) esteira.splice(i, 1);
   base.reserva = base.reserva || {}; base.reserva[k] = true;
-  andando.push({ id: a.id, ouro: a.ouro, x: a.x, y: a.y, r: 14, base, k, rota: rota(a, base.pos[k]) });
+  andando.push({ id: a.id, ouro: a.ouro, x: a.x, y: a.y, base, k, rota: rota(a, base.pos[k]) });
 }
 
-// ── Cabeça dos bots ──
-let proxCompraBot = 5;   // ninguém rouba ninguém: os bots só compram da esteira
+// ── Bots: só passeiam no cercadinho deles ──
 function pensaBots(dt) {
-  // de vez em quando um bot compra da esteira
-  if ((proxCompraBot -= dt) <= 0) {
-    proxCompraBot = 6 + Math.random() * 8;
-    const b = bots[Math.floor(Math.random() * 3)], k = livre(b.base);
-    const a = esteira.filter(x => !x.dono && x.x > 200 && x.x < MW - 200);
-    if (k >= 0 && b.base.slots.filter(Boolean).length < 8 && a.length) { const esc = a[Math.floor(Math.random() * a.length)]; esc.dono = b.nome; vaiPraBase(esc, b.base, k); }
-  }
   for (const b of bots) {
-    if (b.tonto > 0) { b.tonto -= dt; continue; }
-    if (b.estado === 'casa') {
-      if ((b.espera -= dt) <= 0) { b.espera = 2 + Math.random() * 3; const bb = b.base; b.rota = [{ x: bb.x + 60 + Math.random() * (bb.w - 120), y: bb.cima ? bb.y + bb.h - 80 - Math.random() * 80 : bb.y + 80 + Math.random() * 80 }]; }
-      segueRota(b, 70, dt);
-    } else if (b.estado === 'roubar') {
-      if (!b.avisou && dentro(b, minha)) { b.avisou = true; som('alarme'); toast('🚨 ' + b.nome + ' entrou na sua base pra roubar!', 2500, true); }
-      const chegou = segueRota(b, b.vel, dt);
-      if (b.preso > 1.2) { b.estado = 'volta'; b.rota = rota(b, b.base.dIn); }   // base trancada: desiste
-      else if (chegou) {
-        const s = minha.slots[b.alvoK];
-        if (s) { b.carrega = { ...s, de: { base: minha, k: b.alvoK } }; minha.slots[b.alvoK] = null; som('alarme'); toast('🚨 ' + b.nome + ' pegou seu ' + B(s.id).nome + '! Corre e empurra ele!', 3000, true); grava(); }
-        b.estado = 'volta'; b.rota = rota(b, b.base.pos[Math.max(0, livre(b.base))]);
-      }
-    } else if (b.estado === 'volta') {
-      if (segueRota(b, b.carrega ? 125 : b.vel, dt)) {
-        if (b.carrega) { const k = livre(b.base); if (k >= 0) b.base.slots[k] = { id: b.carrega.id, ouro: b.carrega.ouro }; toast('😭 ' + b.nome + ' levou seu ' + B(b.carrega.id).nome + '... Vai lá roubar de volta!', 3000, true); b.carrega = null; }
-        b.estado = 'casa'; b.espera = 1;
-      }
-    } else if (b.estado === 'persegue') {
-      if (!eu.carrega || eu.carrega.de.base !== b.base) { b.estado = 'volta'; b.rota = rota(b, b.base.dIn); continue; }
-      b.recalc = (b.recalc || 0) - dt;
-      if (b.recalc <= 0) { b.recalc = 0.3; b.rota = rota(b, eu); }
-      segueRota(b, 175, dt);
-      if (Math.hypot(b.x - eu.x, b.y - eu.y) < eu.r + b.r + 4) {   // te pegou!
-        const c = eu.carrega; eu.carrega = null; c.de.base.slots[c.de.k] = { id: c.id, ouro: c.ouro };
-        eu.tonto = 1.2; som('pow'); toast('😵 ' + b.nome + ' te pegou e levou o bicho de volta!', 2200, true);
-        b.estado = 'volta'; b.rota = rota(b, b.base.dIn);
-      }
-    }
+    if (!botAtivo(b)) continue;
+    if ((b.espera -= dt) <= 0) { b.espera = 2 + Math.random() * 3; const bb = b.base; b.rota = [{ x: bb.x + 60 + Math.random() * (bb.w - 120), y: bb.y + 60 + Math.random() * (bb.h - 120) }]; }
+    segueRota(b, 70, dt);
   }
 }
+
+// ── Servidor: até 8 pessoas jogando juntas ──
+const API = '/api/roube';
+const api = b => fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...b, id: S.id, nome: S.nome, sala }) }).then(r => r.ok ? r.json() : Promise.reject(r.status));
+const compacta = () => S.slots.map(a => a ? a.id + (a.ouro ? '*' : '') : '');
+const descompacta = s => Array.from({ length: VAGAS }, (_, k) => { const v = (s || [])[k]; if (!v) return null; const id = v.replace('*', ''); return B(id) ? { id, ouro: v.endsWith('*') } : null; });
+let jaSincronizou = false;
+function mudaBase(i) {   // o servidor diz qual é o seu cercadinho
+  const velha = minha;
+  for (let j = andando.length - 1; j >= 0; j--) { const a = andando[j]; if (a.base === velha && !a.remoto) { S.slots[a.k] = { id: a.id, ouro: a.ouro }; andando.splice(j, 1); } }
+  velha.reserva = {}; velha.solto = {};
+  minha = bases[i]; minha.slots = S.slots; minha.solto = {}; minha.humano = false; eu.base = minha;
+  eu.x = minha.dIn.x; eu.y = minha.dIn.y;
+  velha.slots = slotsBot(velha.i);
+  pintaBases();
+}
+async function sincroniza() {
+  if (!S.nome) return;
+  const ida = Date.now();
+  let r;
+  try { r = await api({ acao: 'sync', x: eu.x, y: eu.y, s: compacta() }); }
+  catch (e) { online = false; if (e === 503) toast('😮 Todos os servidores estão cheios! Jogando sozinho.'); return; }
+  const volta = Date.now();
+  difRelogio = r.agora - (ida + volta) / 2; online = true;
+  if (r.sala !== sala) { sala = r.sala; for (const k in cacheE) delete cacheE[k]; for (const k in compras) delete compras[k]; semeiaBots(true); }
+  if (bases[r.base] !== minha) mudaBase(r.base);
+  // as outras pessoas
+  const lista = Array.isArray(r.jogadores) ? r.jogadores : Object.values(r.jogadores || {}), ids = new Set();
+  for (const p of lista) {
+    if (p.id === S.id || !bases[p.base] || bases[p.base] === minha) continue;
+    ids.add(p.id);
+    let o = remotos[p.id];
+    if (!o) { o = remotos[p.id] = { id: p.id, x: p.x, y: p.y, r: 20, g: boneco(CORES[p.base], '#333', '#3b2314') }; if (jaSincronizou) { toast('👋 ' + p.nome + ' entrou no servidor!'); som('oi'); } }
+    o.nome = p.nome; o.tx = p.x; o.ty = p.y;
+    if (o.base && o.base !== bases[p.base]) o.base.humano = true;
+    o.base = bases[p.base]; o.base.slots = descompacta(p.s); o.base.humano = true;
+  }
+  for (const id in remotos) if (!ids.has(id)) { const o = remotos[id]; cena.remove(o.g); delete remotos[id]; toast('👋 ' + o.nome + ' saiu do servidor.'); }
+  semeiaBots(false);   // cercadinho que ficou vazio volta pro bot
+  // bichos que os outros compraram andam até o cercadinho deles
+  for (const n in r.compras) {
+    if (compras[n]) continue;
+    const [id, nome] = String(r.compras[n]).split('|'); compras[n] = { id, nome };
+    const o = remotos[id];
+    if (o && id !== S.id) { const a = itemDaEsteira(Number(n)); a.x = -40 + (agoraServ() - n * PASSO_E) * VEL_E; if (a.x < MW) andando.push({ id: a.id, ouro: a.ouro, x: a.x, y: a.y, base: o.base, remoto: true, rota: rota(a, { x: o.base.x + o.base.w / 2, y: o.base.y + o.base.h / 2 }) }); }
+  }
+  pintaBases();
+  jaSincronizou = true;
+}
+(function ciclo() { if (!document.hidden) sincroniza(); setTimeout(ciclo, 1500); })();
+addEventListener('pagehide', () => { if (sala) navigator.sendBeacon(API, JSON.stringify({ acao: 'sai', id: S.id, sala })); });
+
+// ── Seu nome ──
+function limpaNome(n) { return String(n || '').replace(/[^\p{L}\p{N} ]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 14); }
+function pedeNome() {
+  let sugestao = S.nome;
+  if (!sugestao) try { const m = JSON.parse(localStorage.getItem('aventuraConta' + (PERFIL ? ':' + PERFIL : ''))); sugestao = limpaNome(m && m.user && m.user.nome); } catch (e) { /* ok */ }
+  $('inNome').value = sugestao || '';
+  $('telaNome').classList.add('on'); setTimeout(() => $('inNome').focus(), 100);
+}
+function confirmaNome() {
+  const n = limpaNome($('inNome').value);
+  if (n.length < 2) { $('erroNome').textContent = 'Escreva um nome com pelo menos 2 letras!'; return; }
+  S.nome = n; eu.nome = n; grava(); $('telaNome').classList.remove('on'); pintaBases(); sincroniza();
+}
+$('okNome').onclick = confirmaNome;
+$('inNome').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') confirmaNome(); });
+$('b-nome').onclick = pedeNome;
 
 // ── Controles: arrastar o dedo (joystick) ou teclado ──
 const joy = { on: false, ox: 0, oy: 0, x: 0, y: 0 }, teclas = {};
@@ -396,16 +437,17 @@ $('b-indice').onclick = abreIndice;
 $('fundo').addEventListener('click', e => { if (e.target === $('fundo')) $('fundo').classList.remove('on'); });
 
 // ── HUD ──
-const rendaTotal = () => minha.slots.reduce((s, a) => s + (a ? rendaDe(a) : 0), 0);
+const rendaTotal = () => S.slots.reduce((s, a) => s + (a ? rendaDe(a) : 0), 0);
 function atualizaHud() {
   $('dinheiro').innerHTML = '💰 <b>' + real(S.dinheiro) + '</b>';
   $('renda').textContent = real(rendaTotal());
+  $('gente').textContent = online ? (1 + Object.keys(remotos).length) + '/8' : '—';
 }
 
 // dinheiro de quando você estava fora (até 30 minutos, pela metade)
 (() => {
   const fora = Math.min((Date.now() - S.salvo) / 1000, 1800), g = Math.floor(rendaTotal() * fora * 0.5);
-  if (g > 0) { S.caixa += g; setTimeout(() => toast('💤 Enquanto você estava fora, seus bichos fizeram ' + real(g) + '! Pegue na sua base.', 3500), 500); }
+  if (g > 0) { S.caixa += g; setTimeout(() => toast('💤 Enquanto você estava fora, seus bichos fizeram ' + real(g) + '! Pegue no seu cercadinho.', 3500), 500); }
 })();
 
 // ── Loop ──
@@ -416,28 +458,23 @@ function passo(dt) {
   if (teclas['arrowleft'] || teclas['a']) mx = -1; if (teclas['arrowright'] || teclas['d']) mx = 1;
   if (teclas['arrowup'] || teclas['w']) my = -1; if (teclas['arrowdown'] || teclas['s']) my = 1;
   const m = Math.hypot(mx, my); if (m > 1) { mx /= m; my /= m; }
-  if (eu.tonto > 0) { eu.tonto -= dt; mx = my = 0; }
-  const vel = eu.carrega ? 160 : eu.vel;
-  eu.x += mx * vel * dt; eu.y += my * vel * dt; if (mx) eu.dir = mx < 0 ? -1 : 1; eu.mexe = m > 0.1;
+  eu.x += mx * eu.vel * dt; eu.y += my * eu.vel * dt;
   empurra(eu);
-  // chegou em casa com bicho roubado
-  if (eu.carrega && dentro(eu, minha)) {
-    const k = livre(minha), c = eu.carrega; eu.carrega = null;
-    if (k >= 0) { minha.slots[k] = { id: c.id, ouro: c.ouro }; som('moeda'); toast('😎 ROUBOU! ' + B(c.id).nome + ' agora é seu!', 2500); setTimeout(() => descobre(c.id), 2500); grava(); }
-    else c.de.base.slots[c.de.k] = { id: c.id, ouro: c.ouro };
-  }
-  // dinheiro dos bichos vai pro caixa da base; entrando na base você pega
+  // as outras pessoas deslizam até onde o servidor disse que elas estão
+  for (const o of Object.values(remotos)) { const k = Math.min(1, dt * 5); o.x += (o.tx - o.x) * k; o.y += (o.ty - o.y) * k; }
+  // dinheiro dos bichos vai pro caixa do cercadinho; entrando nele você pega
   andaSoltos(dt);
   S.caixa += rendaTotal() * dt;
   if (dentro(eu, minha) && S.caixa >= 1) { S.dinheiro += S.caixa; minha.caixaFlut = Math.floor(S.caixa); minha.caixaT = 1; S.caixa = 0; if (minha.caixaFlut >= 1) som('moeda'); }
   if (minha.caixaT > 0) minha.caixaT -= dt;
-  // esteira
-  if ((proxBicho -= dt) <= 0) { proxBicho = 2.2; novoNaEsteira(); }
-  for (let i = esteira.length - 1; i >= 0; i--) { esteira[i].x += 70 * dt; if (esteira[i].x > MW + 40) esteira.splice(i, 1); }
+  atualizaEsteira();
   // bichos comprados andando até a vaga
   for (let i = andando.length - 1; i >= 0; i--) {
     const a = andando[i];
-    if (!a.rota.length || anda(a, a.rota[0], 150, dt) && (a.rota.shift(), !a.rota.length)) { a.base.slots[a.k] = { id: a.id, ouro: a.ouro }; delete a.base.reserva[a.k]; if (a.base === minha) descobre(a.id); andando.splice(i, 1); }
+    if (!a.rota.length || anda(a, a.rota[0], 150, dt) && (a.rota.shift(), !a.rota.length)) {
+      if (!a.remoto) { a.base.slots[a.k] = { id: a.id, ouro: a.ouro }; delete a.base.reserva[a.k]; if (a.base === minha) descobre(a.id); grava(); }
+      andando.splice(i, 1);
+    }
   }
   pensaBots(dt);
   if ((passo.salva = (passo.salva || 0) + dt) > 5) { passo.salva = 0; grava(); }
@@ -478,14 +515,12 @@ for (let i = 0; i < 40; i++) {
   caixa(0.5, 2, 0.5, tronco, x, 1, z);
   const cp = new THREE.Mesh(new THREE.ConeGeometry(1.6, 3.2, 7), folha); cp.position.set(x, 3.4, z); cp.castShadow = true; cena.add(cp);
 }
-// bases
-const CORES = ['#4fc3f7', '#ff8a65', '#ba68c8', '#ffd54f'];
-const ALT = 1.6;
+// cercadinhos (cada um com a cor do dono em cima dos postes)
+const CORES = ['#4fc3f7', '#ff8a65', '#ba68c8', '#ffd54f', '#66bb6a', '#f06292', '#90a4ae', '#ff7043'];
 const madeira = mat('#b07a45'), madeiraEsc = mat('#8a5a2e'), corDono = CORES.map(c => mat(c));
-const laserMat = new THREE.MeshBasicMaterial({ color: '#ff1744', transparent: true, opacity: 0.7 });
+const chaoMeu = mat('#8fd16a'), chaoOutro = mat('#b8c96a');
 for (const b of bases) {
-  caixa(b.w * SC, 0.1, b.h * SC, mat(b === minha ? '#8fd16a' : '#b8c96a'), (b.x + b.w / 2) * SC, 0.05, (b.y + b.h / 2) * SC, false);
-  // cercadinho de madeira: postes e duas tábuas (o poste de cima tem a cor do dono)
+  b.chao = caixa(b.w * SC, 0.1, b.h * SC, chaoOutro, (b.x + b.w / 2) * SC, 0.05, (b.y + b.h / 2) * SC, false);
   for (const [x, y, w, h] of b.paredes) {
     const deitado = w > h, comp = (deitado ? w : h) * SC, cx = (x + w / 2) * SC, cz = (y + h / 2) * SC;
     for (const alt of [0.45, 0.95]) caixa(deitado ? comp : 0.12, 0.16, deitado ? 0.12 : comp, madeira, cx, alt, cz);
@@ -496,8 +531,6 @@ for (const b of bases) {
       caixa(0.26, 0.12, 0.26, corDono[b.i], px, 1.3, pz);
     }
   }
-  const [px, py, pw, ph] = b.porta;
-  b.laser = caixa(pw * SC, 1.2, ph * SC * 0.6, laserMat, (px + pw / 2) * SC, 0.6, (py + ph / 2) * SC, false);
 }
 // texturas de emoji e etiquetas (guardadas pra não refazer)
 const cache = {};
@@ -512,18 +545,24 @@ function texPlaca(l1, l2, cor, fundo = 'rgba(14,12,51,.88)') {
     g.fillStyle = fundo; g.beginPath(); g.roundRect(4, 4, w - 8, h - 8, 18); g.fill();
     g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '800 34px "Baloo 2", Arial, sans-serif';
     if (cor === 'arco') { const gr = g.createLinearGradient(40, 0, 216, 0); ['#ff5d5d', '#ffd23f', '#5ee06b', '#5cb8ff', '#b37bff'].forEach((c, i) => gr.addColorStop(i / 4, c)); g.fillStyle = gr; } else g.fillStyle = cor;
+    let fs = 34; while (fs > 18 && g.measureText(l1).width > w - 24) g.font = '800 ' + (fs -= 2) + 'px "Baloo 2", Arial, sans-serif';
     g.fillText(l1, w / 2, l2 ? 32 : h / 2 + 2);
     if (l2) { g.fillStyle = l2[0] === '+' ? '#7dff8a' : '#fff'; g.fillText(l2, w / 2, 68); }
   });
 }
 const texBrilho = tex('brilho', 128, 128, (g) => { const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,215,64,.9)'); gr.addColorStop(1, 'rgba(255,215,64,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); });
-// placas com o nome de cada base
+// placas com o nome do dono de cada cercadinho
 for (const b of bases) {
-  const nome = b === minha ? 'SUA BASE' : 'Base: ' + bots.find(x => x.base === b).nome;
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texPlaca(nome, '', b === minha ? '#7dff8a' : '#fff') }));
-  s.scale.set(5, 5 * 60 / 256, 1); s.position.set((b.x + b.w / 2) * SC, 3.2, (b.cima ? b.y + 30 : b.y + b.h - 30) * SC); cena.add(s);
-  b.cadeado = new THREE.Sprite(new THREE.SpriteMaterial({ map: texEmoji('🔒') })); b.cadeado.scale.set(1, 1, 1);
-  b.cadeado.position.set((b.porta[0] + PORTA / 2) * SC, 1.9, (b.porta[1] + T / 2) * SC); cena.add(b.cadeado);
+  b.placa = new THREE.Sprite(new THREE.SpriteMaterial({ map: texPlaca('Base', '', '#fff') }));
+  b.placa.scale.set(5, 5 * 60 / 256, 1); b.placa.position.set((b.x + b.w / 2) * SC, 3.2, (b.cima ? b.y + 30 : b.y + b.h - 30) * SC); cena.add(b.placa);
+}
+function pintaBases() {
+  for (const b of bases) {
+    const h = donoHumano(b);
+    const nome = 'Base: ' + (b === minha ? S.nome || 'Você' : h ? h.nome : BOT_NOMES[b.i] + ' (bot)');
+    b.placa.material.map = texPlaca(nome, '', b === minha ? '#7dff8a' : h ? '#ffd23f' : '#fff');
+    b.chao.material = b === minha ? chaoMeu : chaoOutro;
+  }
 }
 // sprites reaproveitados a cada quadro
 const pool = []; let usados = 0;
@@ -554,8 +593,7 @@ function boneco(camisa, calca, cabelo) {
   cena.add(g); return g;
 }
 eu.g = boneco('#2f8fe0', '#1e3a5f', '#3b2314');
-const ROUPAS = [['#ff6b35', '#333', '#111'], ['#e91e63', '#4a148c', '#f4c542'], ['#43a047', '#5d4037', '#6d4c41']];
-bots.forEach((b, k) => b.g = boneco(...ROUPAS[k]));
+bots.forEach((b, k) => b.g = boneco(CORES[k], '#333', ['#111', '#f4c542', '#6d4c41', '#3b2314'][k % 4]));
 function pessoa3d(p, t, dt) {
   const g = p.g, dx = p.x - (p.ax ?? p.x), dy = p.y - (p.ay ?? p.y), anda = Math.hypot(dx, dy) > 0.3;
   p.ax = p.x; p.ay = p.y;
@@ -566,7 +604,7 @@ function pessoa3d(p, t, dt) {
   g.position.set(p.x * SC, 0.1 + (anda ? Math.abs(Math.sin(t / 110)) * 0.08 : 0), p.y * SC);
   if (p.carrega) sprite(texEmoji(B(p.carrega.id).e, B(p.carrega.id).f), p.x, p.y, 3.0, 1.3);
   if (p.tonto > 0) sprite(texEmoji('💫'), p.x, p.y, 2.5, 0.8);
-  sprite(texPlaca(p.nome, '', p === eu ? '#7dff8a' : '#fff'), p.x, p.y, p.carrega ? 3.9 : 2.75, 1.4, 1.4 * 60 / 256);
+  sprite(texPlaca(p === eu ? S.nome || 'Você' : p.nome, '', p === eu ? '#7dff8a' : p.tx !== undefined ? '#ffd23f' : '#fff'), p.x, p.y, p.carrega ? 3.9 : 2.75, 1.4, 1.4 * 60 / 256);
 }
 // dinheiro em cima da sua base (canvas próprio, só redesenha quando muda)
 const cvCaixa = document.createElement('canvas'); cvCaixa.width = 256; cvCaixa.height = 64;
@@ -581,14 +619,14 @@ function desenhaCaixa(txt) {
 let tAnt = performance.now();
 function desenha(t) {
   const dt = Math.min(0.1, (t - tAnt) / 1000); tAnt = t; usados = 0;
-  texEsteira.offset.x = -(t / 1000 * 70) / 60;
-  for (const b of bases) { const tr = trancada(b); b.laser.visible = tr; b.cadeado.visible = tr; if (tr) laserMat.opacity = 0.55 + Math.sin(t / 120) * 0.25; }
-  for (const b of bases) b.slots.forEach((a, k) => { if (!a) return; const st = solto(b, k); bicho3d(a, st.x, st.y, t + (st.espera > 0 ? 0 : 0), false, st.dir); });
+  texEsteira.offset.x = -(agoraServ() / 1000 * 70) / 60;
+  for (const b of bases) b.slots.forEach((a, k) => { if (!a) return; const st = solto(b, k); bicho3d(a, st.x, st.y, t, false, st.dir); });
   for (const m of moedas) sprite(texEmoji('🪙'), m.x, m.y, 1.4 + m.t * 1.5, 0.6);
-  for (const a of esteira) bicho3d(a, a.x, a.y, t, !a.dono);
+  for (const a of esteira) bicho3d(a, a.x, a.y, t, true);
   for (const a of andando) sprite(texEmoji(B(a.id).e, B(a.id).f), a.x, a.y, 0.85, 1.3);
-  for (const p of [eu, ...bots]) pessoa3d(p, t, dt);
-  if (alvoAcao) { const p = alvoAcao.a || alvoAcao.bot || (alvoAcao.b && solto(alvoAcao.b, alvoAcao.k)); if (p) sprite(texEmoji('⬇️'), p.x, p.y, (alvoAcao.bot ? 4.6 : 2.9) + Math.sin(t / 150) * 0.15, 0.8); }
+  for (const b of bots) b.g.visible = botAtivo(b);
+  for (const p of [eu, ...bots.filter(botAtivo), ...Object.values(remotos)]) pessoa3d(p, t, dt);
+  if (alvoAcao) { const p = alvoAcao.a || solto(minha, alvoAcao.k); if (p) sprite(texEmoji('⬇️'), p.x, p.y, 2.9 + Math.sin(t / 150) * 0.15, 0.8); }
   const txt = minha.caixaT > 0 ? '+' + real(minha.caixaFlut) : S.caixa >= 1 ? '💰 ' + real(S.caixa) : '';
   spCaixa.visible = !!txt; if (txt) { desenhaCaixa(txt); spCaixa.position.set((minha.x + minha.w / 2) * SC, 2.6 + (minha.caixaT > 0 ? (1 - minha.caixaT) * 1.5 : 0), (minha.y + minha.h / 2) * SC); }
   for (let i = usados; i < pool.length; i++) pool[i].visible = false;
@@ -606,16 +644,18 @@ function loop(agora) {
   desenha(agora);
   requestAnimationFrame(loop);
 }
-for (let i = 0; i < 14; i++) { novoNaEsteira(); esteira[esteira.length - 1].x = MW - i * 130; }
 addEventListener('visibilitychange', () => { if (document.hidden) grava(); else ultimo = performance.now(); });
 addEventListener('pagehide', grava);
-atualizaHud();
-if (!minha.slots.some(Boolean)) setTimeout(() => toast('👋 Vá até a esteira e compre seu primeiro bicho!', 3500), 600);
+pintaBases(); atualizaHud();
+if (!S.nome) pedeNome();
+else if (!S.slots.some(Boolean)) setTimeout(() => toast('👋 Vá até a esteira e compre seu primeiro bicho!', 3500), 600);
 requestAnimationFrame(loop);
 // usado nos testes
-window.__ra = { get S() { return S; }, eu, bots, bases, esteira, passo: (n, dt = 1 / 30) => { for (let i = 0; i < n; i++) { passo(dt); mostraAcao(); } desenha(performance.now()); atualizaHud(); }, fazAcao, get alvo() { return alvoAcao; }, abreIndice, BICHOS,
+window.__ra = { get S() { return S; }, eu, bots, bases, esteira, remotos, compras, get minha() { return minha; }, get sala() { return sala; }, get online() { return online; }, sincroniza,
+  passo: (n, dt = 1 / 30) => { for (let i = 0; i < n; i++) { passo(dt); mostraAcao(); } desenha(performance.now()); atualizaHud(); }, fazAcao, get alvo() { return alvoAcao; }, abreIndice, BICHOS,
   foto: () => fetch('http://127.0.0.1:8767/', { method: 'POST', body: cv.toDataURL('image/jpeg', 0.7) }) };
 })();
 </script>
+
 </body>
 </html>
