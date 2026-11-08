@@ -11,8 +11,8 @@
 <style>
   :root { --tinta: #0e0c33; --creme: #fff6dc; --sol: #ffd23f; --verde: #2fd15a; --display: 'Bungee', 'Arial Black', Impact, sans-serif; --texto: 'Baloo 2', 'Segoe UI', Arial, sans-serif; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; overflow: hidden; background: #3d8b3d; font-family: var(--texto); color: var(--creme); -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; touch-action: none; }
-  canvas { display: block; width: 100vw; height: 100vh; }
+  html, body { height: 100%; overflow: hidden; background: #3d8b3d; font-family: var(--texto); color: var(--creme); -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+  canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
   #back-link { position: fixed; top: calc(env(safe-area-inset-top) + 10px); left: 10px; z-index: 40; text-decoration: none; font-weight: 800; background: var(--sol); color: var(--tinta); border: 3px solid var(--tinta); border-radius: 12px; padding: 4px 12px 2px; box-shadow: 0 4px 0 var(--tinta); }
   .barra { position: fixed; top: calc(env(safe-area-inset-top) + 10px); left: 0; right: 0; z-index: 30; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; pointer-events: none; padding: 0 60px 0 100px; }
   .pill { background: var(--tinta); border: 3px solid #fff; border-radius: 999px; padding: 4px 14px 2px; font-weight: 800; font-size: 16px; white-space: nowrap; }
@@ -29,6 +29,20 @@
   #toast.alarme { background: #d62839; }
   #joy { position: fixed; z-index: 25; width: 100px; height: 100px; margin: -50px 0 0 -50px; border: 4px solid rgba(255,255,255,.6); border-radius: 50%; display: none; pointer-events: none; }
   #joy i { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: rgba(255,255,255,.75); }
+  .fundo { position: fixed; inset: 0; z-index: 60; background: rgba(5,20,40,.6); display: none; align-items: flex-end; justify-content: center; touch-action: auto; }
+  .fundo.on { display: flex; }
+  .painel { width: min(620px, 100%); max-height: 88vh; overflow-y: auto; background: #fff6dc; color: var(--tinta); border: 4px solid var(--tinta); border-radius: 22px 22px 0 0; padding: 14px 14px calc(env(safe-area-inset-bottom) + 18px); }
+  .painel h2 { font-family: var(--display); font-weight: 400; font-size: 24px; text-align: center; }
+  .painel h3 { font-weight: 800; margin: 14px 0 4px; font-size: 18px; display: flex; justify-content: space-between; }
+  .fechar { float: right; font-size: 22px; background: none; border: none; cursor: pointer; }
+  .barrinha { height: 12px; border: 2px solid var(--tinta); border-radius: 8px; overflow: hidden; background: #fff; margin: 2px 0 8px; }
+  .barrinha i { display: block; height: 100%; background: var(--verde); }
+  .cartas { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
+  .carta { border: 3px solid var(--c); border-radius: 12px; background: #fff; text-align: center; padding: 4px 2px 3px; font-weight: 800; font-size: 11px; line-height: 1.15; }
+  .carta b { display: block; font-size: 34px; line-height: 1.2; }
+  .carta small { display: block; color: #1a8a3a; font-size: 11px; }
+  .carta.nao { background: #e6e0cc; }
+  .carta.nao b { filter: brightness(0) opacity(.35) !important; }
   .dica { position: fixed; left: 14px; bottom: calc(env(safe-area-inset-bottom) + 16px); z-index: 20; font-weight: 800; font-size: 13px; color: #fff; text-shadow: 1px 1px 0 #000; pointer-events: none; opacity: .85; }
 </style>
 </head>
@@ -41,16 +55,22 @@
 <canvas id="cv"></canvas>
 <div class="botoes">
   <button class="btn" id="acao"></button>
+  <button class="btn" id="b-indice">📖 Índice</button>
   <button class="btn" id="tranca">🔒 Trancar base</button>
 </div>
 <div class="dica" id="dica">Arraste o dedo pra andar 👆</div>
 <div id="toast"></div>
+<div class="fundo" id="fundo"><div class="painel" id="painel"></div></div>
 <div id="joy"><i></i></div>
 <script src="../mundo-blocos/three.min.js"></script>
 <script>
 (() => {
 const $ = id => document.getElementById(id);
-const real = v => 'R$ ' + Math.floor(v).toLocaleString('pt-BR');
+const real = v => {   // números grandes ficam curtinhos: mil, mi, bi, tri
+  v = Math.floor(v);
+  for (const [n, nome] of [[1e12, ' tri'], [1e9, ' bi'], [1e6, ' mi']]) if (v >= n) return 'R$ ' + (v / n).toLocaleString('pt-BR', { maximumFractionDigits: v / n < 10 ? 1 : 0 }) + nome;
+  return 'R$ ' + v.toLocaleString('pt-BR');
+};
 
 // ── Bichos (raridades) ──
 const RAR = {
@@ -61,26 +81,26 @@ const RAR = {
   mitico:   { nome: 'Mítico',   cor: '#ff5d5d', peso: 0.9 },
   secreto:  { nome: 'SECRETO',  cor: 'arco',    peso: 0.12 },
 };
-const BICHOS = [
-  { id: 'rato', e: '🐭', nome: 'Ratinho', r: 'comum', preco: 25, renda: 1 },
-  { id: 'galinha', e: '🐔', nome: 'Galinha', r: 'comum', preco: 50, renda: 2 },
-  { id: 'coelho', e: '🐰', nome: 'Coelho', r: 'comum', preco: 100, renda: 4 },
-  { id: 'sapo', e: '🐸', nome: 'Sapo', r: 'comum', preco: 150, renda: 6 },
-  { id: 'porco', e: '🐷', nome: 'Porquinho', r: 'raro', preco: 400, renda: 12 },
-  { id: 'ovelha', e: '🐑', nome: 'Ovelha', r: 'raro', preco: 700, renda: 20 },
-  { id: 'cachorro', e: '🐶', nome: 'Cachorro', r: 'raro', preco: 1000, renda: 28 },
-  { id: 'gato', e: '🐱', nome: 'Gato', r: 'raro', preco: 1300, renda: 35 },
-  { id: 'panda', e: '🐼', nome: 'Panda', r: 'epico', preco: 3000, renda: 70 },
-  { id: 'raposa', e: '🦊', nome: 'Raposa', r: 'epico', preco: 5000, renda: 110 },
-  { id: 'pinguim', e: '🐧', nome: 'Pinguim', r: 'epico', preco: 7500, renda: 150 },
-  { id: 'leao', e: '🦁', nome: 'Leão', r: 'lendario', preco: 15000, renda: 300 },
-  { id: 'tigre', e: '🐯', nome: 'Tigre', r: 'lendario', preco: 25000, renda: 450 },
-  { id: 'girafa', e: '🦒', nome: 'Girafa', r: 'lendario', preco: 40000, renda: 650 },
-  { id: 'elefante', e: '🐘', nome: 'Elefante', r: 'mitico', preco: 80000, renda: 1200 },
-  { id: 'unicornio', e: '🦄', nome: 'Unicórnio', r: 'mitico', preco: 150000, renda: 2000 },
-  { id: 'dragao', e: '🐉', nome: 'Dragão', r: 'secreto', preco: 500000, renda: 6000 },
-  { id: 'trex', e: '🦖', nome: 'T-Rex', r: 'secreto', preco: 1000000, renda: 10000 },
+// os 100 bichos, em grupos (o Índice). Cada um é um pouco mais caro que o anterior: de R$ 1 até R$ 2 trilhões!
+// [nome, emoji, filtro de cor (pra bichos que não têm emoji próprio)]
+const GRUPOS = [
+  { id: 'fazenda', nome: 'Fazenda', e: '🏡', bichos: [['Formiga', '🐜'], ['Borboleta', '🦋'], ['Lagartixa', '🦎', 'saturate(.3) brightness(1.3)'], ['Rato', '🐭'], ['Hamster', '🐹'], ['Porquinho-da-índia', '🐹', 'hue-rotate(-30deg) saturate(1.6)'], ['Esquilo', '🐿️'], ['Coelho', '🐰'], ['Galinha', '🐔'], ['Pato', '🦆'], ['Peru', '🦃'], ['Ganso', '🪿'], ['Gato', '🐱'], ['Cachorro', '🐶'], ['Ovelha', '🐑'], ['Cabra', '🐐'], ['Porco', '🐷'], ['Vaca', '🐮'], ['Burro', '🫏'], ['Cavalo', '🐴']] },
+  { id: 'ceu', nome: 'Céu', e: '☁️', bichos: [['Beija-flor', '🐦', 'hue-rotate(120deg) saturate(2)'], ['Pica-pau', '🐦', 'hue-rotate(160deg) saturate(2.5)'], ['Papagaio', '🦜'], ['Arara', '🦜', 'hue-rotate(200deg) saturate(1.5)'], ['Tucano', '🐦‍⬛'], ['Coruja', '🦉'], ['Falcão', '🦅', 'sepia(.6) brightness(1.1)'], ['Águia', '🦅'], ['Pavão', '🦚'], ['Flamingo', '🦩'], ['Cisne', '🦢'], ['Pinguim', '🐧'], ['Avestruz', '🦤', 'grayscale(.8) brightness(.8)'], ['Emu', '🦤', 'sepia(.8) brightness(.8)'], ['Morcego', '🦇']] },
+  { id: 'pantano', nome: 'Pântano', e: '🪷', bichos: [['Sapo', '🐸'], ['Rã', '🐸', 'hue-rotate(60deg)'], ['Salamandra', '🦎', 'hue-rotate(-90deg) saturate(2)'], ['Axolote', '🦎', 'hue-rotate(200deg) saturate(.7) brightness(1.4)'], ['Camaleão', '🦎', 'hue-rotate(40deg) saturate(2.5)'], ['Iguana', '🦎', 'hue-rotate(-30deg)'], ['Cobra', '🐍'], ['Cobra-coral', '🐍', 'hue-rotate(-110deg) saturate(3)'], ['Jiboia', '🐍', 'sepia(.9) brightness(.85)'], ['Píton', '🐍', 'hue-rotate(-60deg) saturate(1.5)'], ['Jacaré', '🐊'], ['Crocodilo', '🐊', 'brightness(.7) saturate(.8)'], ['Tartaruga-marinha', '🐢']] },
+  { id: 'floresta', nome: 'Floresta', e: '🌲', bichos: [['Ouriço', '🦔'], ['Tatu', '🦔', 'grayscale(.7) brightness(1.1)'], ['Preguiça', '🦥'], ['Tamanduá', '🦡', 'sepia(.7)'], ['Capivara', '🦫', 'sepia(.5) brightness(1.15)'], ['Castor', '🦫'], ['Lontra', '🦦'], ['Raposa', '🦊'], ['Lobo', '🐺'], ['Cervo', '🦌'], ['Alce', '🫎'], ['Lince', '🐈', 'sepia(.7) saturate(1.4)'], ['Urso-pardo', '🐻'], ['Urso-polar', '🐻‍❄️'], ['Panda', '🐼'], ['Coala', '🐨']] },
+  { id: 'selva', nome: 'Selva', e: '🌴', bichos: [['Macaco', '🐒'], ['Gorila', '🦍'], ['Canguru', '🦘'], ['Zebra', '🦓'], ['Camelo', '🐫'], ['Dromedário', '🐪'], ['Antílope', '🦌', 'sepia(.6) saturate(1.8)'], ['Gazela', '🦌', 'hue-rotate(-20deg) brightness(1.2)'], ['Búfalo', '🐃'], ['Hiena', '🐺', 'sepia(.8) saturate(1.3)'], ['Guepardo', '🐆', 'brightness(1.2) saturate(1.3)'], ['Leopardo', '🐆'], ['Onça-pintada', '🐆', 'hue-rotate(-15deg) saturate(2)'], ['Girafa', '🦒'], ['Tigre', '🐯'], ['Leão', '🦁'], ['Hipopótamo', '🦛'], ['Rinoceronte', '🦏'], ['Elefante', '🐘']] },
+  { id: 'mar', nome: 'Mar', e: '🌊', bichos: [['Camarão', '🦐'], ['Caranguejo', '🦀'], ['Estrela-do-mar', '⭐', 'hue-rotate(-40deg) saturate(2)'], ['Lagosta', '🦞'], ['Água-viva', '🪼'], ['Peixe-palhaço', '🐠'], ['Cavalo-marinho', '🐟', 'hue-rotate(-160deg) saturate(2)'], ['Lula', '🦑'], ['Polvo', '🐙'], ['Foca', '🦭'], ['Leão-marinho', '🦭', 'sepia(.8)'], ['Morsa', '🦭', 'sepia(1) saturate(1.6) brightness(.85)'], ['Tubarão-martelo', '🦈', 'brightness(.8)'], ['Tubarão-branco', '🦈'], ['Golfinho', '🐬'], ['Orca', '🐋', 'grayscale(1) brightness(.5) contrast(1.6)'], ['Baleia-azul', '🐳']] },
 ];
+const slug = n => n.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]+/g, '-');
+const BICHOS = [];
+for (const g of GRUPOS) for (const [nome, e, f] of g.bichos) BICHOS.push({ id: slug(nome), nome, e, f, grupo: g.id });
+// preço sobe um pouquinho a cada bicho (uns 33%), e o dinheiro por segundo acompanha
+BICHOS.forEach((b, i) => {
+  const bruto = Math.pow(2e12, i / (BICHOS.length - 1)), dig = Math.pow(10, Math.max(0, Math.floor(Math.log10(bruto)) - 1));
+  b.preco = Math.max(Math.round(bruto / dig) * dig, i ? BICHOS[i - 1].preco + 1 : 1);
+  b.renda = Math.max(1, Math.round(b.preco / (12 + i * 0.6)));
+  b.r = i < 30 ? 'comum' : i < 55 ? 'raro' : i < 75 ? 'epico' : i < 90 ? 'lendario' : i < 97 ? 'mitico' : 'secreto';
+});
 const B = id => BICHOS.find(b => b.id === id);
 const rendaDe = a => B(a.id).renda * (a.ouro ? 2 : 1);
 const precoDe = a => B(a.id).preco * (a.ouro ? 2 : 1);
@@ -124,7 +144,20 @@ const minha = criaBase(0, 80, 920, false, 'voce');
 criaBase(1, 1080, 920, false, 'bot');
 criaBase(2, 80, 80, true, 'bot');
 criaBase(3, 1080, 80, true, 'bot');
+S.slots = S.slots.map(a => a && B(a.id) ? a : null);
+S.indice = S.indice || {}; S.grupoOk = S.grupoOk || {};
 minha.slots = S.slots;
+// Índice: marca o bicho como descoberto (e dá prêmio quando completa um grupo)
+function descobre(id) {
+  if (S.indice[id]) return; S.indice[id] = true;
+  const g = GRUPOS.find(x => x.id === B(id).grupo), lista = BICHOS.filter(b => b.grupo === g.id);
+  toast('📖 Novo no Índice: ' + B(id).e + ' ' + B(id).nome + '!', 2200);
+  if (!S.grupoOk[g.id] && lista.every(b => S.indice[b.id])) {
+    S.grupoOk[g.id] = true; const premio = lista[lista.length - 1].preco; S.dinheiro += premio;
+    setTimeout(() => toast('🏆 Você completou ' + g.e + ' ' + g.nome + '! Ganhou ' + real(premio) + '!', 4000), 2300);
+  }
+}
+for (const a of S.slots) if (a) S.indice[a.id] = true;
 const ESTEIRA = { y1: 650, y2: 750 };
 const trancada = b => (b === minha ? S.trancaAte : b.trancaAte) > Date.now();
 const dentro = (p, b) => p.x > b.x + T && p.x < b.x + b.w - T && p.y > b.y + T && p.y < b.y + b.h - T;
@@ -138,7 +171,7 @@ const bots = BOTS.map(([nome, e], k) => {
   const b = bases[k + 1];
   // cada base de bot começa com uns bichos (alguns bons, pra valer a pena roubar!)
   const n = 4 + Math.floor(Math.random() * 3);
-  for (let j = 0; j < n; j++) b.slots[j] = sorteia(3 + j);
+  for (let j = 0; j < n; j++) b.slots[j] = sorteia(1 + j * 0.6);
   return { x: b.dIn.x, y: b.dIn.y, r: 20, e, nome, base: b, vel: 165, carrega: null, rota: [], estado: 'casa', espera: 1 + Math.random() * 3, tonto: 0 };
 });
 
@@ -341,6 +374,24 @@ function tranca() {
   S.trancaAte = Date.now() + 60000; S.trancaPode = Date.now() + 90000; som('compra'); toast('🔒 Base trancada por 60 segundos!'); grava();
 }
 $('tranca').onclick = tranca;
+const corRar = r => RAR[r].cor === 'arco' ? '#ff5dd8' : RAR[r].cor === '#cfd8dc' ? '#9aa5ab' : RAR[r].cor;
+function abreIndice() {
+  const tem = BICHOS.filter(b => S.indice[b.id]).length;
+  let h = '<button class="fechar" aria-label="Fechar">✖</button><h2>📖 ÍNDICE</h2><p style="text-align:center;font-weight:800">' + tem + ' de ' + BICHOS.length + ' bichos</p><div class="barrinha"><i style="width:' + tem / BICHOS.length * 100 + '%"></i></div>';
+  for (const g of GRUPOS) {
+    const lista = BICHOS.filter(b => b.grupo === g.id), n = lista.filter(b => S.indice[b.id]).length;
+    h += '<h3><span>' + g.e + ' ' + g.nome + (S.grupoOk[g.id] ? ' 🏆' : '') + '</span><span>' + n + '/' + lista.length + '</span></h3><div class="cartas">';
+    for (const b of lista) {
+      const ok = S.indice[b.id];
+      h += '<div class="carta' + (ok ? '' : ' nao') + '" style="--c:' + corRar(b.r) + '"><b style="filter:' + (b.f || 'none') + '">' + b.e + '</b>' + (ok ? b.nome : '???') + '<small>' + real(b.preco) + '</small></div>';
+    }
+    h += '</div>';
+  }
+  $('painel').innerHTML = h; $('painel').querySelector('.fechar').onclick = () => $('fundo').classList.remove('on');
+  $('fundo').classList.add('on');
+}
+$('b-indice').onclick = abreIndice;
+$('fundo').addEventListener('click', e => { if (e.target === $('fundo')) $('fundo').classList.remove('on'); });
 
 // ── HUD ──
 const rendaTotal = () => minha.slots.reduce((s, a) => s + (a ? rendaDe(a) : 0), 0);
@@ -374,7 +425,7 @@ function passo(dt) {
   // chegou em casa com bicho roubado
   if (eu.carrega && dentro(eu, minha)) {
     const k = livre(minha), c = eu.carrega; eu.carrega = null;
-    if (k >= 0) { minha.slots[k] = { id: c.id, ouro: c.ouro }; som('moeda'); toast('😎 ROUBOU! ' + B(c.id).nome + ' agora é seu!', 2500); grava(); }
+    if (k >= 0) { minha.slots[k] = { id: c.id, ouro: c.ouro }; som('moeda'); toast('😎 ROUBOU! ' + B(c.id).nome + ' agora é seu!', 2500); setTimeout(() => descobre(c.id), 2500); grava(); }
     else c.de.base.slots[c.de.k] = { id: c.id, ouro: c.ouro };
   }
   // dinheiro dos bichos vai pro caixa da base; entrando na base você pega
@@ -387,7 +438,7 @@ function passo(dt) {
   // bichos comprados andando até a vaga
   for (let i = andando.length - 1; i >= 0; i--) {
     const a = andando[i];
-    if (!a.rota.length || anda(a, a.rota[0], 150, dt) && (a.rota.shift(), !a.rota.length)) { a.base.slots[a.k] = { id: a.id, ouro: a.ouro }; delete a.base.reserva[a.k]; andando.splice(i, 1); }
+    if (!a.rota.length || anda(a, a.rota[0], 150, dt) && (a.rota.shift(), !a.rota.length)) { a.base.slots[a.k] = { id: a.id, ouro: a.ouro }; delete a.base.reserva[a.k]; if (a.base === minha) descobre(a.id); andando.splice(i, 1); }
   }
   pensaBots(dt);
   if ((passo.salva = (passo.salva || 0) + dt) > 5) { passo.salva = 0; grava(); }
@@ -447,7 +498,7 @@ function tex(chave, w, h, pinta) {
   const c = document.createElement('canvas'); c.width = w; c.height = h; pinta(c.getContext('2d'), w, h);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return cache[chave] = t;
 }
-const texEmoji = e => tex('e' + e, 128, 128, (g) => { g.font = '100px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(e, 64, 70); });
+const texEmoji = (e, f) => tex('e' + e + (f || ''), 128, 128, (g) => { if (f) g.filter = f; g.font = '100px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(e, 64, 70); });
 function texPlaca(l1, l2, cor, fundo = 'rgba(14,12,51,.88)') {
   return tex('p' + l1 + '|' + l2 + '|' + cor, 256, l2 ? 96 : 60, (g, w, h) => {
     g.fillStyle = fundo; g.beginPath(); g.roundRect(4, 4, w - 8, h - 8, 18); g.fill();
@@ -477,7 +528,7 @@ function sprite(t, x, y, h, sx, sy = sx) {
 function bicho3d(a, x, y, t, mostraPreco) {
   const b = B(a.id), r = RAR[b.r], h = 0.85 + Math.sin(t / 300 + x) * 0.06;
   if (a.ouro) sprite(texBrilho, x, y, h, 2.2);
-  sprite(texEmoji(b.e), x, y, h, 1.4);
+  sprite(texEmoji(b.e, b.f), x, y, h, 1.4);
   sprite(texPlaca((a.ouro ? '✨' : '') + b.nome, mostraPreco ? real(precoDe(a)) : '+' + real(rendaDe(a)) + '/s', r.cor), x, y, 1.95, 1.7, 1.7 * 96 / 256);
 }
 // bonecos de bloquinho
@@ -505,7 +556,7 @@ function pessoa3d(p, t, dt) {
   g.pE.rotation.x = bal; g.pD.rotation.x = -bal;
   g.bE.rotation.x = p.carrega ? -2.6 : -bal; g.bD.rotation.x = p.carrega ? -2.6 : bal;
   g.position.set(p.x * SC, 0.1 + (anda ? Math.abs(Math.sin(t / 110)) * 0.08 : 0), p.y * SC);
-  if (p.carrega) sprite(texEmoji(B(p.carrega.id).e), p.x, p.y, 3.0, 1.3);
+  if (p.carrega) sprite(texEmoji(B(p.carrega.id).e, B(p.carrega.id).f), p.x, p.y, 3.0, 1.3);
   if (p.tonto > 0) sprite(texEmoji('💫'), p.x, p.y, 2.5, 0.8);
   sprite(texPlaca(p.nome, '', p === eu ? '#7dff8a' : '#fff'), p.x, p.y, p.carrega ? 3.9 : 2.75, 1.4, 1.4 * 60 / 256);
 }
@@ -526,7 +577,7 @@ function desenha(t) {
   for (const b of bases) { const tr = trancada(b); b.laser.visible = tr; b.cadeado.visible = tr; if (tr) laserMat.opacity = 0.55 + Math.sin(t / 120) * 0.25; }
   for (const b of bases) b.slots.forEach((a, k) => a && bicho3d(a, b.pos[k].x, b.pos[k].y, t, false));
   for (const a of esteira) bicho3d(a, a.x, a.y, t, !a.dono);
-  for (const a of andando) sprite(texEmoji(B(a.id).e), a.x, a.y, 0.85, 1.3);
+  for (const a of andando) sprite(texEmoji(B(a.id).e, B(a.id).f), a.x, a.y, 0.85, 1.3);
   for (const p of [eu, ...bots]) pessoa3d(p, t, dt);
   if (alvoAcao) { const p = alvoAcao.a || alvoAcao.bot || (alvoAcao.b && alvoAcao.b.pos[alvoAcao.k]); if (p) sprite(texEmoji('⬇️'), p.x, p.y, (alvoAcao.bot ? 4.6 : 2.9) + Math.sin(t / 150) * 0.15, 0.8); }
   const txt = minha.caixaT > 0 ? '+' + real(minha.caixaFlut) : S.caixa >= 1 ? '💰 ' + real(S.caixa) : '';
@@ -553,7 +604,7 @@ atualizaHud();
 if (!minha.slots.some(Boolean)) setTimeout(() => toast('👋 Vá até a esteira e compre seu primeiro bicho!', 3500), 600);
 requestAnimationFrame(loop);
 // usado nos testes
-window.__ra = { get S() { return S; }, eu, bots, bases, esteira, passo: (n, dt = 1 / 30) => { for (let i = 0; i < n; i++) { passo(dt); mostraAcao(); } desenha(performance.now()); atualizaHud(); }, fazAcao, get alvo() { return alvoAcao; },
+window.__ra = { get S() { return S; }, eu, bots, bases, esteira, passo: (n, dt = 1 / 30) => { for (let i = 0; i < n; i++) { passo(dt); mostraAcao(); } desenha(performance.now()); atualizaHud(); }, fazAcao, get alvo() { return alvoAcao; }, abreIndice, BICHOS,
   foto: () => fetch('http://127.0.0.1:8767/', { method: 'POST', body: cv.toDataURL('image/jpeg', 0.7) }) };
 })();
 </script>
