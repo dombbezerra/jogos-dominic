@@ -23,7 +23,6 @@
   #acao { font-size: 20px; padding: 14px 20px 10px; background: var(--verde); color: #fff; display: none; }
   #acao.roubar { background: #ff4d6d; }
   #acao.vender { background: #ff9f1c; }
-  #tranca.on { background: #ff6b6b; color: #fff; }
   #toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 60px); transform: translateX(-50%); z-index: 70; background: var(--tinta); color: #fff; border: 3px solid #fff; border-radius: 14px; padding: 8px 16px 5px; font-weight: 800; opacity: 0; transition: opacity .25s; pointer-events: none; max-width: 92vw; text-align: center; }
   #toast.on { opacity: 1; }
   #toast.alarme { background: #d62839; }
@@ -56,7 +55,6 @@
 <div class="botoes">
   <button class="btn" id="acao"></button>
   <button class="btn" id="b-indice">📖 Índice</button>
-  <button class="btn" id="tranca">🔒 Trancar base</button>
 </div>
 <div class="dica" id="dica">Arraste o dedo pra andar 👆</div>
 <div id="toast"></div>
@@ -126,7 +124,7 @@ const MW = 1800, MH = 1400, T = 18, PORTA = 130;
 const bases = [];
 function criaBase(i, x, y, cima, dono) {
   const w = 640, h = 400, px = x + w / 2 - PORTA / 2, py = cima ? y + h - T : y;
-  const b = { i, x, y, w, h, cima, dono, slots: Array(VAGAS).fill(null), trancaAte: 0, caixaFlut: 0 };
+  const b = { i, x, y, w, h, cima, dono, slots: Array(VAGAS).fill(null), solto: {}, trancaAte: 0, caixaFlut: 0 };
   b.paredes = [[x, y, w, T], [x, y + h - T, w, T], [x, y, T, h], [x + w - T, y, T, h]];
   b.paredes[cima ? 1 : 0] = [x, py, px - x, T];
   b.paredes.push([px + PORTA, py, x + w - px - PORTA, T]);
@@ -162,6 +160,28 @@ const ESTEIRA = { y1: 650, y2: 750 };
 const trancada = b => (b === minha ? S.trancaAte : b.trancaAte) > Date.now();
 const dentro = (p, b) => p.x > b.x + T && p.x < b.x + b.w - T && p.y > b.y + T && p.y < b.y + b.h - T;
 const baseDe = p => bases.find(b => dentro(p, b)) || null;
+// cada bicho anda solto pelo cercadinho
+function solto(b, k) {
+  let st = b.solto[k];
+  if (!st) st = b.solto[k] = { x: b.pos[k].x, y: b.pos[k].y, tx: b.pos[k].x, ty: b.pos[k].y, espera: Math.random() * 2, dir: 1, moeda: 1 + Math.random() * 3 };
+  return st;
+}
+function andaSoltos(dt) {
+  for (const b of bases) for (let k = 0; k < VAGAS; k++) {
+    if (!b.slots[k]) { delete b.solto[k]; continue; }
+    const st = solto(b, k);
+    if (st.espera > 0) st.espera -= dt;
+    else {
+      const dx = st.tx - st.x, dy = st.ty - st.y, d = Math.hypot(dx, dy), p = 35 * dt;
+      if (d <= p) { st.x = st.tx; st.y = st.ty; st.espera = 1 + Math.random() * 3; st.tx = b.x + 60 + Math.random() * (b.w - 120); st.ty = b.y + 60 + Math.random() * (b.h - 120); }
+      else { st.x += dx / d * p; st.y += dy / d * p; st.dir = dx > 0 ? -1 : 1; }
+    }
+    // os seus bichos vão soltando moedinhas enquanto andam
+    if (b === minha && (st.moeda -= dt) <= 0) { st.moeda = 2.5 + Math.random() * 2; moedas.push({ x: st.x, y: st.y, t: 0 }); }
+  }
+  for (let i = moedas.length - 1; i >= 0; i--) if ((moedas[i].t += dt) > 1) moedas.splice(i, 1);
+}
+const moedas = [];
 const livre = b => b.slots.findIndex((s, k) => !s && !b.reserva?.[k]);
 
 // ── Gente: você e os 3 jogadores (bots) ──
@@ -252,7 +272,7 @@ function procuraAcao() {
   const b = baseDe(eu);
   if (b) for (let k = 0; k < VAGAS; k++) {
     const s = b.slots[k]; if (!s) continue;
-    if (Math.hypot(b.pos[k].x - eu.x, b.pos[k].y - eu.y) < 55) return { tipo: b === minha ? 'vender' : 'roubar', b, k };
+    const st = solto(b, k); if (Math.hypot(st.x - eu.x, st.y - eu.y) < 60) return { tipo: b === minha ? 'vender' : 'roubar', b, k };
   }
   return null;
 }
@@ -303,7 +323,7 @@ function vaiPraBase(a, base, k) {
 }
 
 // ── Cabeça dos bots ──
-let proxRoubo = 25 + Math.random() * 20, proxCompraBot = 5;
+let proxCompraBot = 5;   // os bots NÃO roubam você: só você rouba deles!
 function pensaBots(dt) {
   // de vez em quando um bot compra da esteira
   if ((proxCompraBot -= dt) <= 0) {
@@ -311,17 +331,6 @@ function pensaBots(dt) {
     const b = bots[Math.floor(Math.random() * 3)], k = livre(b.base);
     const a = esteira.filter(x => !x.dono && x.x > 200 && x.x < MW - 200);
     if (k >= 0 && b.base.slots.filter(Boolean).length < 8 && a.length) { const esc = a[Math.floor(Math.random() * a.length)]; esc.dono = b.nome; vaiPraBase(esc, b.base, k); }
-  }
-  // de vez em quando um bot tenta roubar a SUA base
-  if ((proxRoubo -= dt) <= 0) {
-    proxRoubo = 35 + Math.random() * 40;
-    const tem = minha.slots.map((s, k) => s ? k : -1).filter(k => k >= 0);
-    const b = bots.filter(x => x.estado === 'casa' && !x.carrega)[0];
-    if (tem.length && b && !trancada(minha)) {
-      // vai no bicho mais caro
-      const k = tem.sort((x, y) => precoDe(minha.slots[y]) - precoDe(minha.slots[x]))[0];
-      b.estado = 'roubar'; b.alvoK = k; b.rota = rota(b, minha.pos[k]); b.avisou = false;
-    }
   }
   for (const b of bots) {
     if (b.tonto > 0) { b.tonto -= dt; continue; }
@@ -366,14 +375,9 @@ cv.addEventListener('pointerdown', e => { joy.on = true; joy.id = e.pointerId; j
 addEventListener('pointermove', e => { if (joy.on && e.pointerId === joy.id) { joy.x = e.clientX; joy.y = e.clientY; mostraJoy(); } });
 addEventListener('pointerup', e => { if (e.pointerId === joy.id) { joy.on = false; mostraJoy(); } });
 addEventListener('pointercancel', e => { if (e.pointerId === joy.id) { joy.on = false; mostraJoy(); } });
-addEventListener('keydown', e => { teclas[e.key.toLowerCase()] = true; if (e.key === ' ' || e.key.toLowerCase() === 'e') { e.preventDefault(); fazAcao(); } if (e.key.toLowerCase() === 'l') tranca(); $('dica').style.display = 'none'; });
+addEventListener('keydown', e => { teclas[e.key.toLowerCase()] = true; if (e.key === ' ' || e.key.toLowerCase() === 'e') { e.preventDefault(); fazAcao(); } $('dica').style.display = 'none'; });
 addEventListener('keyup', e => { teclas[e.key.toLowerCase()] = false; });
 $('acao').onclick = fazAcao;
-function tranca() {
-  if (Date.now() < S.trancaPode) { toast('⏳ Espera ' + Math.ceil((S.trancaPode - Date.now()) / 1000) + 's pra trancar de novo'); return; }
-  S.trancaAte = Date.now() + 60000; S.trancaPode = Date.now() + 90000; som('compra'); toast('🔒 Base trancada por 60 segundos!'); grava();
-}
-$('tranca').onclick = tranca;
 const corRar = r => RAR[r].cor === 'arco' ? '#ff5dd8' : RAR[r].cor === '#cfd8dc' ? '#9aa5ab' : RAR[r].cor;
 function abreIndice() {
   const tem = BICHOS.filter(b => S.indice[b.id]).length;
@@ -398,10 +402,6 @@ const rendaTotal = () => minha.slots.reduce((s, a) => s + (a ? rendaDe(a) : 0), 
 function atualizaHud() {
   $('dinheiro').innerHTML = '💰 <b>' + real(S.dinheiro) + '</b>';
   $('renda').textContent = real(rendaTotal());
-  const bt = $('tranca'), ag = Date.now();
-  if (S.trancaAte > ag) { bt.className = 'btn on'; bt.textContent = '🔒 Trancada ' + Math.ceil((S.trancaAte - ag) / 1000) + 's'; }
-  else if (S.trancaPode > ag) { bt.className = 'btn'; bt.textContent = '⏳ ' + Math.ceil((S.trancaPode - ag) / 1000) + 's'; }
-  else { bt.className = 'btn'; bt.textContent = '🔒 Trancar base'; }
 }
 
 // dinheiro de quando você estava fora (até 30 minutos, pela metade)
@@ -429,6 +429,7 @@ function passo(dt) {
     else c.de.base.slots[c.de.k] = { id: c.id, ouro: c.ouro };
   }
   // dinheiro dos bichos vai pro caixa da base; entrando na base você pega
+  andaSoltos(dt);
   S.caixa += rendaTotal() * dt;
   if (dentro(eu, minha) && S.caixa >= 1) { S.dinheiro += S.caixa; minha.caixaFlut = Math.floor(S.caixa); minha.caixaT = 1; S.caixa = 0; if (minha.caixaFlut >= 1) som('moeda'); }
   if (minha.caixaT > 0) minha.caixaT -= dt;
@@ -482,14 +483,23 @@ for (let i = 0; i < 40; i++) {
 // bases
 const CORES = ['#4fc3f7', '#ff8a65', '#ba68c8', '#ffd54f'];
 const ALT = 1.6;
+const madeira = mat('#b07a45'), madeiraEsc = mat('#8a5a2e'), corDono = CORES.map(c => mat(c));
 const laserMat = new THREE.MeshBasicMaterial({ color: '#ff1744', transparent: true, opacity: 0.7 });
 for (const b of bases) {
-  caixa(b.w * SC, 0.1, b.h * SC, mat(b === minha ? '#a5d6a7' : '#e8dcc4'), (b.x + b.w / 2) * SC, 0.05, (b.y + b.h / 2) * SC, false);
-  const mp = mat(CORES[b.i]);
-  for (const [x, y, w, h] of b.paredes) caixa(w * SC, ALT, h * SC, mp, (x + w / 2) * SC, ALT / 2, (y + h / 2) * SC);
+  caixa(b.w * SC, 0.1, b.h * SC, mat(b === minha ? '#8fd16a' : '#b8c96a'), (b.x + b.w / 2) * SC, 0.05, (b.y + b.h / 2) * SC, false);
+  // cercadinho de madeira: postes e duas tábuas (o poste de cima tem a cor do dono)
+  for (const [x, y, w, h] of b.paredes) {
+    const deitado = w > h, comp = (deitado ? w : h) * SC, cx = (x + w / 2) * SC, cz = (y + h / 2) * SC;
+    for (const alt of [0.45, 0.95]) caixa(deitado ? comp : 0.12, 0.16, deitado ? 0.12 : comp, madeira, cx, alt, cz);
+    const n = Math.max(1, Math.round(comp / 1.4));
+    for (let q = 0; q <= n; q++) {
+      const px = deitado ? x * SC + comp * q / n : cx, pz = deitado ? cz : y * SC + comp * q / n;
+      caixa(0.22, 1.25, 0.22, madeiraEsc, px, 0.62, pz);
+      caixa(0.26, 0.12, 0.26, corDono[b.i], px, 1.3, pz);
+    }
+  }
   const [px, py, pw, ph] = b.porta;
-  b.laser = caixa(pw * SC, ALT, ph * SC * 0.6, laserMat, (px + pw / 2) * SC, ALT / 2, (py + ph / 2) * SC, false);
-  for (const p of b.pos) { const d = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.08, 24), mat('#000', { transparent: true, opacity: 0.15 })); d.position.set(p.x * SC, 0.12, p.y * SC); cena.add(d); }
+  b.laser = caixa(pw * SC, 1.2, ph * SC * 0.6, laserMat, (px + pw / 2) * SC, 0.6, (py + ph / 2) * SC, false);
 }
 // texturas de emoji e etiquetas (guardadas pra não refazer)
 const cache = {};
@@ -515,7 +525,7 @@ for (const b of bases) {
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texPlaca(nome, '', b === minha ? '#7dff8a' : '#fff') }));
   s.scale.set(5, 5 * 60 / 256, 1); s.position.set((b.x + b.w / 2) * SC, 3.2, (b.cima ? b.y + 30 : b.y + b.h - 30) * SC); cena.add(s);
   b.cadeado = new THREE.Sprite(new THREE.SpriteMaterial({ map: texEmoji('🔒') })); b.cadeado.scale.set(1, 1, 1);
-  b.cadeado.position.set((b.porta[0] + PORTA / 2) * SC, ALT + 0.7, (b.porta[1] + T / 2) * SC); cena.add(b.cadeado);
+  b.cadeado.position.set((b.porta[0] + PORTA / 2) * SC, 1.9, (b.porta[1] + T / 2) * SC); cena.add(b.cadeado);
 }
 // sprites reaproveitados a cada quadro
 const pool = []; let usados = 0;
@@ -525,10 +535,10 @@ function sprite(t, x, y, h, sx, sy = sx) {
   if (s.material.map !== t) s.material.map = t;
   s.position.set(x * SC, h, y * SC); s.scale.set(sx, sy, 1); s.visible = true; usados++; return s;
 }
-function bicho3d(a, x, y, t, mostraPreco) {
+function bicho3d(a, x, y, t, mostraPreco, dir = 1) {
   const b = B(a.id), r = RAR[b.r], h = 0.85 + Math.sin(t / 300 + x) * 0.06;
   if (a.ouro) sprite(texBrilho, x, y, h, 2.2);
-  sprite(texEmoji(b.e, b.f), x, y, h, 1.4);
+  sprite(texEmoji(b.e, b.f), x, y, h, 1.4).scale.x = 1.4 * dir;
   sprite(texPlaca((a.ouro ? '✨' : '') + b.nome, mostraPreco ? real(precoDe(a)) : '+' + real(rendaDe(a)) + '/s', r.cor), x, y, 1.95, 1.7, 1.7 * 96 / 256);
 }
 // bonecos de bloquinho
@@ -575,11 +585,12 @@ function desenha(t) {
   const dt = Math.min(0.1, (t - tAnt) / 1000); tAnt = t; usados = 0;
   texEsteira.offset.x = -(t / 1000 * 70) / 60;
   for (const b of bases) { const tr = trancada(b); b.laser.visible = tr; b.cadeado.visible = tr; if (tr) laserMat.opacity = 0.55 + Math.sin(t / 120) * 0.25; }
-  for (const b of bases) b.slots.forEach((a, k) => a && bicho3d(a, b.pos[k].x, b.pos[k].y, t, false));
+  for (const b of bases) b.slots.forEach((a, k) => { if (!a) return; const st = solto(b, k); bicho3d(a, st.x, st.y, t + (st.espera > 0 ? 0 : 0), false, st.dir); });
+  for (const m of moedas) sprite(texEmoji('🪙'), m.x, m.y, 1.4 + m.t * 1.5, 0.6);
   for (const a of esteira) bicho3d(a, a.x, a.y, t, !a.dono);
   for (const a of andando) sprite(texEmoji(B(a.id).e, B(a.id).f), a.x, a.y, 0.85, 1.3);
   for (const p of [eu, ...bots]) pessoa3d(p, t, dt);
-  if (alvoAcao) { const p = alvoAcao.a || alvoAcao.bot || (alvoAcao.b && alvoAcao.b.pos[alvoAcao.k]); if (p) sprite(texEmoji('⬇️'), p.x, p.y, (alvoAcao.bot ? 4.6 : 2.9) + Math.sin(t / 150) * 0.15, 0.8); }
+  if (alvoAcao) { const p = alvoAcao.a || alvoAcao.bot || (alvoAcao.b && solto(alvoAcao.b, alvoAcao.k)); if (p) sprite(texEmoji('⬇️'), p.x, p.y, (alvoAcao.bot ? 4.6 : 2.9) + Math.sin(t / 150) * 0.15, 0.8); }
   const txt = minha.caixaT > 0 ? '+' + real(minha.caixaFlut) : S.caixa >= 1 ? '💰 ' + real(S.caixa) : '';
   spCaixa.visible = !!txt; if (txt) { desenhaCaixa(txt); spCaixa.position.set((minha.x + minha.w / 2) * SC, 2.6 + (minha.caixaT > 0 ? (1 - minha.caixaT) * 1.5 : 0), (minha.y + minha.h / 2) * SC); }
   for (let i = usados; i < pool.length; i++) pool[i].visible = false;
