@@ -973,7 +973,15 @@ function cartao(cor) {
   if (vermelho) {
     M.vermelhos++; if (vermelho === 'segundo') M.amarelos++;
     aviso(vermelho === 'segundo' ? '🟨🟨 = 🟥 EXPULSO!' : '🟥 EXPULSO!', nome, 2200); som('vaia');
+    alvo.expulso = true;
     setTimeout(() => { if (!M) return; alvo.fora = true; alvo.b.visible = false; if (M.bola.dono === alvo) M.bola.dono = null; }, 1600);
+    // 3 expulsos: o jogo acaba e o outro time vence
+    const exp = M.jogadores.filter(p => p.time === alvo.time && p.expulso).length;
+    if (exp >= 3) {
+      M.vencedorWO = 1 - alvo.time;
+      setTimeout(() => { if (!M || modo === 'fim') return; som('apito3'); fimDeJogo(); }, 2400);
+      setTimeout(() => aviso('🟥🟥🟥 3 EXPULSOS!', 'O ' + M.times[1 - alvo.time].nome + ' vence o jogo!', 2200), 300);
+    }
   } else { alvo.amarelo = true; M.amarelos++; aviso('🟨 AMARELO!', nome, 1800); }
   M.pausa = Math.max(M.pausa, 100);
   hud();
@@ -1201,11 +1209,11 @@ setInterval(() => { if (M && modo === 'jogando') hud(); }, 500);
 function fimDeJogo() {
   modo = 'fim'; $('acres').classList.remove('on');
   const E = ETAPAS[save.escolhido];
-  $('fim-titulo').textContent = '🏁 FIM DE JOGO';
+  $('fim-titulo').textContent = M.vencedorWO != null ? '🏆 VITÓRIA DO ' + M.times[M.vencedorWO].nome.toUpperCase() + '!' : '🏁 FIM DE JOGO';
   $('fim-nota').textContent = M.placar[0] + ' x ' + M.placar[1];
   $('fim-nota').style.color = '#ffd23f';
   $('fim-info').textContent = E.ic + ' ' + M.times[0].nome + ' ' + M.placar[0] + ' x ' + M.placar[1] + ' ' + M.times[1].nome;
-  $('fim-msg').textContent = '📣 ' + M.faltas + ' faltas apitadas · 🟨 ' + M.amarelos + ' amarelos · 🟥 ' + M.vermelhos + ' vermelhos';
+  $('fim-msg').textContent = (M.vencedorWO != null ? '🟥 O ' + M.times[1 - M.vencedorWO].nome + ' ficou com 3 expulsos! · ' : '') + '📣 ' + M.faltas + ' faltas apitadas · 🟨 ' + M.amarelos + ' amarelos · 🟥 ' + M.vermelhos + ' vermelhos';
   document.body.classList.remove('jogando', 'espera');
   $('fim').classList.remove('hidden');
 }
