@@ -423,21 +423,21 @@ function aplicaLiga() {
 
 // ── Bonequinhos (jogadores fofinhos) ──
 function textoNumero(n, cor) {
-  const cv = document.createElement('canvas'); cv.width = cv.height = 64;
-  const g = cv.getContext('2d'); g.font = 'bold 50px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  const clara = cor === '#111111';
-  g.lineJoin = 'round'; g.lineWidth = clara ? 5 : 9; g.strokeStyle = clara ? 'rgba(255,255,255,.8)' : '#000000'; g.strokeText(n, 32, 34); g.fillStyle = cor; g.fillText(n, 32, 34);
-  return new THREE.CanvasTexture(cv);
+  const cv = document.createElement('canvas'); cv.width = cv.height = 128;
+  const g = cv.getContext('2d'); g.font = '900 104px "Arial Black", Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  if (cor !== '#111111') { g.lineJoin = 'round'; g.lineWidth = 12; g.strokeStyle = '#000000'; g.strokeText(n, 64, 70); }   // camisa escura: branco com contorno preto
+  g.fillStyle = cor; g.fillText(n, 64, 70);
+  const tx = new THREE.CanvasTexture(cv); tx.anisotropy = 4; tx.colorSpace = THREE.SRGBColorSpace; return tx;
 }
 // nome nas costas (em cima do número)
 function textoNome(nome, cor) {
-  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 48;
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 112;
   const g = cv.getContext('2d'), t = String(nome).toUpperCase();
-  let tam = 34; g.font = '900 ' + tam + 'px Arial'; while (g.measureText(t).width > 244 && tam > 14) { tam -= 2; g.font = '900 ' + tam + 'px Arial'; }
+  let tam = 92; g.font = '900 ' + tam + 'px "Arial Black", Arial'; while (g.measureText(t).width > 490 && tam > 30) { tam -= 4; g.font = '900 ' + tam + 'px "Arial Black", Arial'; }
   g.textAlign = 'center'; g.textBaseline = 'middle';
-  const clara = cor === '#111111';
-  g.lineJoin = 'round'; g.lineWidth = clara ? 4 : 8; g.strokeStyle = clara ? 'rgba(255,255,255,.8)' : '#000000'; g.strokeText(t, 128, 26); g.fillStyle = cor; g.fillText(t, 128, 26);
-  const tx = new THREE.CanvasTexture(cv); tx.anisotropy = 4; return tx;
+  if (cor !== '#111111') { g.lineJoin = 'round'; g.lineWidth = 12; g.strokeStyle = '#000000'; g.strokeText(t, 256, 60); }
+  g.fillStyle = cor; g.fillText(t, 256, 60);
+  const tx = new THREE.CanvasTexture(cv); tx.anisotropy = 4; tx.colorSpace = THREE.SRGBColorSpace; return tx;
 }
 // Manequim moderno: corpo de gente (1,80 m), juntas nos joelhos e cotovelos, uniforme detalhado
 const MANEQUIM = new THREE.MeshStandardMaterial({ color: '#e6e1d8', roughness: 0.45, metalness: 0.05 });
@@ -504,10 +504,10 @@ function boneco(cor, cor2, pele, num = 0, o = {}) {
   peca(new THREE.CylinderGeometry(0.045, 0.05, 0.12, 12), MANEQUIM, 0, 1.55, 0);   // pescoço
   const cab = peca(bola(0.115), MANEQUIM, 0, 1.69, 0.01); cab.scale.set(0.88, 1.15, 0.98);
   if (num) {
-    const n = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.24), new THREE.MeshBasicMaterial({ map: textoNumero(num, corTexto(cor)), transparent: true }));
-    n.position.set(0, 1.3, -0.128); n.rotation.y = Math.PI; g.add(n);
-    if (o.nome) { const nm = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.056), new THREE.MeshBasicMaterial({ map: textoNome(o.nome, corTexto(cor)), transparent: true })); nm.position.set(0, 1.45, -0.118); nm.rotation.y = Math.PI; g.add(nm); }
-    const f = n.clone(); f.scale.setScalar(0.4); f.position.set(-0.09, 1.38, 0.126); f.rotation.y = 0; g.add(f);   // numerozinho na frente
+    const n = new THREE.Mesh(new THREE.PlaneGeometry(0.27, 0.27), new THREE.MeshBasicMaterial({ map: textoNumero(num, corTexto(cor)), transparent: true, toneMapped: false }));
+    n.position.set(0, 1.24, -0.131); n.rotation.y = Math.PI; g.add(n);
+    if (o.nome) { const nm = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.075), new THREE.MeshBasicMaterial({ map: textoNome(o.nome, corTexto(cor)), transparent: true, toneMapped: false })); nm.position.set(0, 1.41, -0.134); nm.rotation.y = Math.PI; g.add(nm); }
+    const f = n.clone(); f.scale.setScalar(0.4); f.position.set(-0.09, 1.38, 0.13); f.rotation.y = 0; g.add(f);   // numerozinho na frente
     if (o.kit) {   // escudinho no peito, do lado do coração
       const e = new THREE.Mesh(new THREE.PlaneGeometry(0.11, 0.13), new THREE.MeshBasicMaterial({ map: escudo(o.kit).tx, transparent: true }));
       e.position.set(0.09, 1.4, 0.127); g.add(e);
@@ -1512,7 +1512,7 @@ function loop() {
 }
 mostraCarreira(); aplicaLiga();
 loop();
-window.__juiz = { get M() { return M; }, get modo() { return modo; }, decide, novoJogo, boneco, ETAPAS, simula: n => { for (let i = 0; i < n; i++) atualiza(); } };   // simula: usado nos testes
+window.__juiz = { get M() { return M; }, get modo() { return modo; }, decide, novoJogo, boneco, ETAPAS, simula: n => { for (let i = 0; i < n; i++) atualiza(); }, foto: (w = 480, h = 300) => { if (M) olhos(); renderer.render(cena, camera); const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(renderer.domElement, 0, 0, w, h); return c.toDataURL("image/jpeg", 0.7); } };   // simula: usado nos testes
 })();
 </script>
 </body>
