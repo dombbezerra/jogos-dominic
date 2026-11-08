@@ -59,6 +59,21 @@
   #pausa { background: rgba(5,5,20,.8); z-index: 25; }
   #b-start { position: fixed; left: 50%; bottom: 24%; transform: translateX(-50%); z-index: 16; display: none; font-size: clamp(28px, 7vw, 44px); padding: 12px 50px 8px; }
   body.espera #b-start { display: block; }
+  #mira { position: fixed; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; z-index: 9; pointer-events: none; display: none; border: 2px solid rgba(255,255,255,.75); border-radius: 50%; }
+  #mira::after { content: ''; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: #fff; }
+  body.jogando #mira { display: block; }
+  #acoes { position: fixed; right: calc(env(safe-area-inset-right) + 14px); bottom: calc(env(safe-area-inset-bottom) + 18px); z-index: 13; display: none; flex-direction: column; align-items: flex-end; gap: 10px; }
+  body.jogando #acoes { display: flex; }
+  body.touch #acoes { bottom: calc(env(safe-area-inset-bottom) + 150px); }
+  #acoes .linha { display: flex; gap: 10px; }
+  .cart { width: 48px; height: 66px; border-radius: 8px; border: 3px solid var(--tinta); box-shadow: 0 4px 0 var(--tinta); cursor: pointer; }
+  .cart.amarelo { background: #ffd23f; } .cart.vermelho { background: #ff2a2a; }
+  .cart:active, #b-apitar:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
+  #b-apitar { font-family: var(--display); font-size: 20px; padding: 12px 18px 8px; border-radius: 16px; border: 3px solid var(--tinta); background: #fff; color: var(--tinta); box-shadow: 0 5px 0 var(--tinta); cursor: pointer; }
+  #acres { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 52px); transform: translateX(-50%); z-index: 13; display: none; background: rgba(14,12,51,.9); border: 3px solid var(--sol); border-radius: 14px; padding: 6px 10px; text-align: center; }
+  #acres.on { display: block; }
+  #acres .linha { display: flex; gap: 6px; margin-top: 4px; }
+  #acres button { font-family: var(--display); font-size: 16px; background: var(--sol); color: var(--tinta); border: 2px solid var(--tinta); border-radius: 10px; padding: 4px 9px 2px; cursor: pointer; }
   #jogada { position: fixed; z-index: 11; pointer-events: none; font-family: var(--display); font-size: clamp(16px, 4vw, 24px); color: var(--sol); text-shadow: 2px 2px 0 var(--tinta); transform: translate(-50%, -100%); white-space: nowrap; opacity: 0; transition: opacity .2s; }
   #jogada.on { opacity: 1; }
   #longe { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); z-index: 11; background: rgba(255,80,80,.85); color: #fff; font-weight: 800; padding: 3px 12px 1px; border-radius: 10px; display: none; }
@@ -94,7 +109,10 @@
 </head>
 <body>
 <a href="../index.html" id="back-link">← Menu</a>
-<div id="hud"><span class="placar"><img class="esc" id="da" alt=""> <small id="na"></small> <b id="ga">0</b> x <b id="gb">0</b> <small id="nb"></small> <img class="esc" id="db" alt=""></span><span class="pill">⏱ <b id="tempo">3:00</b></span><span class="pill">✅ <b id="acertos">0</b></span></div>
+<div id="hud"><span class="placar"><img class="esc" id="da" alt=""> <small id="na"></small> <b id="ga">0</b> x <b id="gb">0</b> <small id="nb"></small> <img class="esc" id="db" alt=""></span><span class="pill">⏱ <b id="tempo">0'</b></span><span class="pill">🟨 <b id="namar">0</b> 🟥 <b id="nverm">0</b></span></div>
+<div id="mira"></div>
+<div id="acoes"><div class="linha"><button class="cart amarelo" id="b-amarelo" aria-label="Cartão amarelo"></button><button class="cart vermelho" id="b-vermelho" aria-label="Cartão vermelho"></button></div><button id="b-apitar">📣 APITAR</button></div>
+<div id="acres"><b>⏱ Acréscimos?</b><div class="linha" id="acres-bt"></div></div>
 <canvas id="mapa" width="152" height="100"></canvas>
 <div id="aviso"></div>
 <div id="jogada"></div>
@@ -111,7 +129,7 @@
 
 <div class="tela" id="menu">
   <h1>JUIZ<span>DE FUTEBOL 3D</span></h1>
-  <p class="sub">Você é o juiz! Corra atrás do lance e decida: falta, cartão, pênalti... ou foi cai-cai? 🎭</p>
+  <p class="sub">Você é o juiz! Apite as faltas, dê cartões, escolha os acréscimos e apite o fim do jogo. Quem manda é você! 🧑‍⚖️</p>
   <button class="btn" id="b-ligas" style="margin-top:16px">🏆 LIGAS: <span id="liga-atual"></span></button>
   <button class="btn grande" id="b-jogar">APITAR! 📣</button>
   <p class="dica" id="dica"></p>
@@ -119,7 +137,7 @@
 <div class="tela hidden" id="ligas">
   <h1>LIGAS<span>onde você vai apitar?</span></h1>
   <div class="carreira" id="carreira"></div>
-  <p class="dica" id="dica-ligas">Tire nota boa pra liberar a próxima liga!</p>
+  <p class="dica" id="dica-ligas">Cada liga tem 6 times. Em cada jogo, 2 são sorteados!</p>
   <button class="btn" id="b-voltar" style="margin-top:14px">VOLTAR</button>
 </div>
 <div class="tela hidden" id="fim">
@@ -138,7 +156,7 @@ const sorteia = l => l[Math.floor(Math.random() * l.length)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 if (TOUCH) document.body.classList.add('touch');
-$('dica').textContent = TOUCH ? '👀 Você vê pelos olhos do juiz! Joystick pra andar, arraste o dedo na tela pra olhar em volta. Segure CORRER pra correr.' : '👀 Você vê pelos olhos do juiz! W A S D ou setas pra andar, arraste o mouse pra olhar em volta. Shift corre.';
+$('dica').textContent = TOUCH ? '👀 Joystick anda, arraste o dedo pra olhar. 📣 APITAR marca falta. Pra dar cartão, mire no jogador (ou dê logo depois da falta).' : '👀 W A S D anda, arraste o mouse pra olhar, Shift corre. Espaço = 📣 apitar · Y = 🟨 · V = 🟥 (mire no jogador ou dê logo depois da falta).';
 
 // ── Carreira (guardada por perfil) ──
 const PERFIL = new URLSearchParams(location.search).get('perfil');
@@ -250,7 +268,7 @@ function sorteiaJogo(E) {
   }
   return [a, b];
 }
-if (isAdm) save.liberado = ETAPAS.length - 1;   // ADM: todas as ligas liberadas
+save.liberado = ETAPAS.length - 1;   // simulador: todas as ligas liberadas
 save.escolhido = clamp(save.escolhido, 0, ETAPAS.length - 1);
 function mostraCarreira() {
   const E = ETAPAS[save.escolhido];
@@ -531,6 +549,7 @@ function som(tipo) {
     if (tipo === 'vaia') { ruido(1.4, 0.3, 300); nota(140, 1.2, 'sawtooth', 0.03); }
     if (tipo === 'gol') { ruido(2.2, 0.45, 1200); [523, 659, 784].forEach((f, i) => nota(f, 0.3, 'triangle', 0.06, i * 0.12)); }
     if (tipo === 'chute') nota(160, 0.08, 'square', 0.06);
+    if (tipo === 'uh') { ruido(0.9, 0.3, 500); nota(220, 0.6, 'sawtooth', 0.02); }
     if (tipo === 'ole') { ruido(1.0, 0.3, 700); nota(330, 0.5, 'triangle', 0.025); }
   } catch (e) { /* sem som */ }
 }
@@ -557,7 +576,7 @@ function novoJogo() {
       const b = boneco(gk ? (time ? '#a0ff3a' : '#ff7ad9') : U.camisa, gk ? '#222222' : U.calcao, '#e9e4da', num,
         { meia: gk ? '#222222' : U.meia, detalhe: gk ? '#111111' : U.detalhe, listra: gk ? null : U.listra, kit: gk ? null : U, luva: gk ? '#ff7a00' : null, manga: gk });
       const sx = time ? -1 : 1;
-      jogadores.push({ b, time, gk: i === 0, casa: { x: x * sx, z }, x: x * sx, z, vx: 0, vz: 0, vel: (0.16 + Math.random() * 0.03) * E.vel, caido: 0, fora: false, amarelo: false, t: Math.random() * 10 });
+      jogadores.push({ b, num, time, gk: i === 0, casa: { x: x * sx, z }, x: x * sx, z, vx: 0, vz: 0, vel: (0.16 + Math.random() * 0.03) * E.vel, caido: 0, fora: false, amarelo: false, t: Math.random() * 10 });
     });
   }
   const juiz = boneco('#111111', '#111111');
@@ -568,13 +587,14 @@ function novoJogo() {
   juiz.visible = false; anel.visible = false;   // você É o juiz (primeira pessoa)
   camera.fov = 72; camera.updateProjectionMatrix();
   M = { E, times, jogadores, juiz, anel, ref: { x: 0, z: 10 }, yaw: -Math.PI / 2, pitch: -0.12, olhou: 0, andando: 0, bola: { x: 0, z: 0, y: 0.22, vx: 0, vz: 0, vy: 0, dono: null, m: bolaM },
-    placar: [0, 0], tempo: 180 * 60, t: 0, pausa: 90, lances: 0, proximoLance: 240 + Math.random() * 200, proxTipo: null, esperaTipo: 0, var: false, acertos: 0, pontos: 0, max: 0, lance: null, lento: 1, replay: null, camAlvo: new THREE.Vector3() };
+    placar: [0, 0], min: 0, etapa: 1, acres: null, pediuAcres: false, avisouFim: false, ultimaFalta: null, proxFalta: 300 + Math.random() * 300, faltas: 0, amarelos: 0, vermelhos: 0, t: 0, pausa: 90, lances: 0, proximoLance: 240 + Math.random() * 200, proxTipo: null, esperaTipo: 0, var: false, acertos: 0, pontos: 0, max: 0, lance: null, lento: 1, replay: null, camAlvo: new THREE.Vector3() };
   for (const p of jogadores) p.b.position.set(p.x, 0, p.z);
   saidaDeBola(0);
   M.pausa = 0;
   modo = 'espera';   // todo mundo em posição esperando você apertar START
   document.body.classList.add('jogando', 'espera');
   $('menu').classList.add('hidden'); $('fim').classList.add('hidden');
+  $('b-start').textContent = '▶ START'; $('acres').classList.remove('on');
   hud(); posiciona();
   const classico = E.classico.every(i => M.times.some(t => t.nome === E.times[i].nome));
   aviso(classico ? '🔥 CLÁSSICO!' : E.ic + ' ' + E.nome, M.times[0].nome + ' x ' + M.times[1].nome + ' · aperte START!', 3500);
@@ -582,7 +602,7 @@ function novoJogo() {
 function comeca() {
   if (modo !== 'espera') return;
   modo = 'jogando'; document.body.classList.remove('espera');
-  aviso('APITA O JUIZ!', 'Bola rolando! ⚽', 1600);
+  aviso(M.etapa === 2 ? '2º TEMPO!' : 'APITA O JUIZ!', 'Bola rolando! ⚽', 1600);
   som('apito');
 }
 $('b-start').onclick = comeca;
@@ -603,7 +623,12 @@ $('b-continuar').onclick = continua;
 $('b-sair').onclick = () => { $('pausa').classList.add('hidden'); $('decisao').classList.remove('on'); document.body.classList.remove('jogando', 'espera'); $('b-menu').onclick(); };
 addEventListener('keydown', e => { const k = e.key.toLowerCase(); if (k === 'p' || k === 'escape') { if (modo === 'pausa') continua(); else pausa(); } });
 addEventListener('visibilitychange', () => { if (document.hidden && modo === 'jogando') pausa(); });   // saiu do app: pausa sozinho
-addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') comeca(); });
+addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (k === 'enter' || k === ' ') apitar();
+  if (k === 'y') cartao('amarelo');
+  if (k === 'v' || k === 'r') cartao('vermelho');
+});
 function limpa() {
   if (!M) return;
   for (const p of M.jogadores) cena.remove(p.b);
@@ -875,6 +900,92 @@ function decide(id) {
   M.proximoLance = (M.tempo / Math.max(1, M.E.lances - M.lances)) * (0.6 + Math.random() * 0.6);
   hud();
 }
+// ── Faltas: acontecem sozinhas, sem parar o jogo. Você decide se apita! ──
+function fazFalta(vit, aut) {
+  const tipo = sorteia(['empurrao', 'empurrao', 'puxao', 'carrinho', 'carrinho', 'voadora', 'caicai']);
+  const lado = Math.sign(vit.z - aut.z) || 1;
+  vit.caidoMax = vit.caido = tipo === 'voadora' ? 170 : tipo === 'caicai' ? 110 : 100;
+  vit.espera = vit.caido + 10;
+  if (tipo === 'caicai') { aut.x = vit.x - 2.5; aut.vacilo = 30; aut.vaciloLado = lado; }   // ninguém encostou: se jogou!
+  else { aut.faltaT = 40; aut.faltaTipo = tipo; aut.faltaLado = lado; aut.espera = 50; }
+  const b = M.bola; b.dono = null; b.vx = (Math.random() - 0.5) * 0.15; b.vz = (Math.random() - 0.5) * 0.15;
+  M.ultimaFalta = { aut, vit, tipo, x: vit.x, z: vit.z, quando: M.t, usada: false };
+  M.proxFalta = 420 + Math.random() * 480;
+  som(tipo === 'caicai' ? 'ole' : 'uh');
+}
+const recente = s => M.ultimaFalta && !M.ultimaFalta.usada && M.t - M.ultimaFalta.quando < s * 60;
+function minTempo() { return M.min - (M.etapa === 2 ? 45 : 0); }
+// 📣 Apitar: começa o jogo, marca falta, para o jogo ou termina o tempo
+function apitar() {
+  if (!M) return;
+  if (modo === 'espera') return comeca();
+  if (modo !== 'jogando') return;
+  if (minTempo() >= 45) {   // fim do tempo
+    som('apito3'); $('acres').classList.remove('on');
+    if (M.etapa === 1) {
+      M.etapa = 2; M.min = 45; M.acres = null; M.pediuAcres = false; M.avisouFim = false; M.ultimaFalta = null;
+      saidaDeBola(1); M.pausa = 0;
+      modo = 'espera'; document.body.classList.add('espera'); $('b-start').textContent = '▶ 2º TEMPO';
+      hud(); posiciona();
+      aviso('⏸ INTERVALO', M.times[0].sigla + ' ' + M.placar[0] + ' x ' + M.placar[1] + ' ' + M.times[1].sigla + ' · aperte pra começar o 2º tempo', 3500);
+    } else fimDeJogo();
+    return;
+  }
+  som('apito');
+  const b = M.bola;
+  if (recente(7)) {
+    const F = M.ultimaFalta; F.usada = true; M.faltas++;
+    F.vit.caido = Math.min(F.vit.caido, 20);
+    const dirVit = Math.sign(meta(F.vit.time));
+    if (naArea(F.x, F.z) && Math.sign(F.x) === dirVit) { aviso('⚽ PÊNALTI!', 'Falta dentro da área', 1800); penalti(F.vit.time); return; }
+    const cobra = M.jogadores.filter(p => p.time === F.vit.time && !p.fora && !p.gk && p !== F.vit).sort((p, q) => Math.hypot(p.x - F.x, p.z - F.z) - Math.hypot(q.x - F.x, q.z - F.z))[0] || F.vit;
+    b.x = clamp(F.x, -CW / 2 + 1, CW / 2 - 1); b.z = clamp(F.z, -CH / 2 + 1, CH / 2 - 1); b.vx = b.vz = b.vy = 0; b.y = 0.22;
+    cobra.x = b.x - dirVit * 0.6; cobra.z = b.z; cobra.caido = 0; b.dono = cobra; M.pausa = 100;
+    for (const p of M.jogadores) if (p.time !== F.vit.time && !p.gk && Math.hypot(p.x - b.x, p.z - b.z) < 8) { const dx = p.x - b.x, dz = p.z - b.z, l = Math.hypot(dx, dz) || 1; p.x = b.x + dx / l * 8; p.z = b.z + dz / l * 8; }
+    aviso('📣 FALTA!', 'Falta do ' + M.times[F.aut.time].nome, 1800);
+  } else {
+    if (!b.dono) { const perto = M.jogadores.filter(p => !p.fora && !p.gk && !(p.caido > 0)).sort((p, q) => Math.hypot(p.x - b.x, p.z - b.z) - Math.hypot(q.x - b.x, q.z - b.z))[0]; if (perto) { b.dono = perto; b.vx = b.vz = 0; } }
+    M.pausa = 80;
+    aviso('📣 PRIIII!', 'Jogo parado pelo juiz', 1500);
+  }
+}
+// 🟨🟥 Cartão: vai pra quem fez a última falta, ou pro jogador que você está mirando
+function cartao(cor) {
+  if (!M || modo !== 'jogando') return;
+  const F = M.ultimaFalta;
+  let alvo = F && !F.cartao && !F.aut.fora && M.t - F.quando < 15 * 60 ? F.aut : null;   // quem fez a falta agora há pouco
+  if (alvo) F.cartao = true;
+  const vx = Math.cos(M.yaw), vz = Math.sin(M.yaw);
+  let melhor = 0.22;
+  if (!alvo) for (const p of M.jogadores) {
+    if (p.fora) continue;
+    const dx = p.x - M.ref.x, dz = p.z - M.ref.z, d = Math.hypot(dx, dz);
+    if (d > 40 || d < 0.5) continue;
+    const ang = Math.acos(clamp((dx * vx + dz * vz) / d, -1, 1));
+    if (ang < melhor) { melhor = ang; alvo = p; }   // mirando alguém? ele leva o cartão
+  }
+  if (!alvo) { aviso('👀 Mire no jogador!', 'Coloque o círculo do meio da tela nele', 1800); return; }
+  som('apito');
+  let vermelho = cor === 'vermelho';
+  const nome = 'Nº ' + alvo.num + ' do ' + M.times[alvo.time].nome;
+  if (!vermelho && alvo.amarelo) vermelho = 'segundo';
+  cartaoNaMao(vermelho ? '#ff2a2a' : '#ffd23f'); mostraCartao(alvo.b, vermelho ? '#ff2a2a' : '#ffd23f');
+  if (vermelho) {
+    M.vermelhos++; if (vermelho === 'segundo') M.amarelos++;
+    aviso(vermelho === 'segundo' ? '🟨🟨 = 🟥 EXPULSO!' : '🟥 EXPULSO!', nome, 2200); som('vaia');
+    setTimeout(() => { if (!M) return; alvo.fora = true; alvo.b.visible = false; if (M.bola.dono === alvo) M.bola.dono = null; }, 1600);
+  } else { alvo.amarelo = true; M.amarelos++; aviso('🟨 AMARELO!', nome, 1800); }
+  M.pausa = Math.max(M.pausa, 100);
+  hud();
+}
+$('b-apitar').onclick = apitar;
+$('b-amarelo').onclick = () => cartao('amarelo');
+$('b-vermelho').onclick = () => cartao('vermelho');
+for (let n = 1; n <= 5; n++) {
+  const bt = document.createElement('button'); bt.textContent = '+' + n;
+  bt.onclick = () => { if (!M) return; M.acres = n; $('acres').classList.remove('on'); aviso('⏱ +' + n, 'minutos de acréscimo', 2000); hud(); };
+  $('acres-bt').appendChild(bt);
+}
 function penalti(time) {
   const b = M.bola, gx = meta(time), sx = Math.sign(gx);
   b.x = gx - sx * 11; b.z = 0; b.dono = null;
@@ -921,9 +1032,12 @@ function atualiza() {
     posiciona(); return;
   }
   if (M.pausa > 0) { M.pausa--; posiciona(); return; }
-  M.tempo--;
-  if (M.tempo <= 0) return fimDeJogo();
-  M.proximoLance--;
+  // relógio: 1 minuto do jogo = 4 segundos
+  M.min += 1 / 240; M.proxFalta--;
+  const mt = minTempo();
+  if (mt >= 45 && !M.pediuAcres) { M.pediuAcres = true; $('acres').classList.add('on'); som('apito'); }
+  if (mt >= 45 + (M.acres || 0) && M.acres != null && !M.avisouFim) { M.avisouFim = true; aviso('⏱ Acabou o acréscimo!', 'Aperte 📣 APITAR pra terminar o ' + (M.etapa === 1 ? '1º tempo' : 'jogo'), 2600); }
+  M.proximoLance = 1e9;
   // hora de um lance: falta, impedimento ou bola na linha?
   if (M.proximoLance <= 0 && M.lances < M.E.lances) {
     if (!M.proxTipo) { M.proxTipo = sorteia(['falta', 'falta', 'imped', 'linha']); M.esperaTipo = 0; }
@@ -975,6 +1089,8 @@ function atualiza() {
   for (const p of M.jogadores) {
     if (p.fora) continue;
     p.t += 1 / 60; if (p.espera > 0) p.espera--; if (p.cdDrible > 0) p.cdDrible--; if (p.truqueT > 0) p.truqueT--;
+    if (p.faltaT > 0) p.faltaT--;
+    if (p.caido > 0) { p.caido--; p.vx = p.vz = 0; continue; }   // caído no chão depois da falta
     let tx = p.casa.x, tz = p.casa.z, vel = p.vel;
     const bx = b.x, bz = b.z;
     // o time anda junto com a bola
@@ -989,7 +1105,7 @@ function atualiza() {
       // tem marcador chegando? dribla ou toca
       let marc = null, dm = 3.4;
       for (const q of M.jogadores) if (q.time !== p.time && !q.fora && !q.gk && (q.espera || 0) <= 0) { const dd = Math.hypot(q.x - p.x, q.z - p.z); if (dd < dm) { dm = dd; marc = q; } }
-      if (marc && !p.gk && (p.cdDrible || 0) <= 0 && !(M.proximoLance <= 0 && M.proxTipo === 'falta')) {
+      if (marc && !p.gk && (p.cdDrible || 0) <= 0 && M.proxFalta > 0) {
         p.cdDrible = 45;
         if (Math.random() < 0.62) drible(p, marc); else passe(p);
       } else if (dg < 18 && Math.random() < 0.035) chuta(p, meta(p.time) + Math.sign(meta(p.time)) * 2, (Math.random() - 0.5) * 7, 0.95, 0.1);
@@ -1007,7 +1123,7 @@ function atualiza() {
     p.x = clamp(p.x + p.vx, -CW / 2 - 1, CW / 2 + 1); p.z = clamp(p.z + p.vz, -CH / 2 - 1, CH / 2 + 1);
     // dividida: quem marca tenta tomar a bola (às vezes vira lance pro juiz!)
     if (dono && p.time !== dono.time && !p.gk && !dono.gk && Math.hypot(p.x - dono.x, p.z - dono.z) < 1.4 && (p.espera || 0) <= 0) {
-      if (M.proximoLance <= 0 && M.lances < M.E.lances && M.proxTipo === 'falta') { comecaLance(dono, p); break; }
+      if (M.proxFalta <= 0) { fazFalta(dono, p); break; }
       if (Math.random() < 0.025) { b.dono = p; dono.espera = 40; p.cdDrible = 40; }
     }
   }
@@ -1027,6 +1143,16 @@ function posiciona() {
       else if (p.abre > 0) { p.abre--; pe[0].rotation.z = -0.4; pe[1].rotation.z = 0.4; }   // abriu as pernas: caneta!
       else { pe[0].rotation.z = 0; pe[1].rotation.z = 0; }
       if (p.vacilo > 0) { p.vacilo--; p.b.rotation.z = p.vaciloLado * 0.4 * Math.sin(p.vacilo / 35 * Math.PI); } else p.b.rotation.z = 0;
+      // poses: caído, carrinho, voadora, empurrão, puxão
+      p.b.rotation.x = 0; p.b.position.y = 0;
+      p.b.userData.bracos.forEach((br, i) => { br.rotation.z = (i ? 1 : -1) * 0.1; });
+      if (p.caido > 0) { p.b.rotation.x = -Math.PI / 2 * Math.min(1, (p.caidoMax - p.caido) / 12); p.b.position.y = 0.25 * Math.min(1, (p.caidoMax - p.caido) / 12); if (p.caido < 25) { p.b.rotation.x *= p.caido / 25; } }
+      else if (p.faltaT > 0) {
+        const k = 1 - p.faltaT / 40;
+        if (p.faltaTipo === 'carrinho') { p.b.rotation.z = p.faltaLado * 1.3 * Math.sin(Math.min(1, k * 2) * Math.PI / 2); p.b.position.y = 0.3; }
+        if (p.faltaTipo === 'voadora') { p.b.rotation.x = -1.2; p.b.position.y = 0.9 * Math.sin(k * Math.PI); }
+        if (p.faltaTipo === 'empurrao' || p.faltaTipo === 'puxao') p.b.userData.bracos.forEach(br => { br.rotation.x = -Math.PI / 2; });
+      }
     }
   }
   const b = M.bola; b.m.position.set(b.x, b.y, b.z); b.m.rotation.x += b.vz * 0.5; b.m.rotation.z -= b.vx * 0.5;
@@ -1067,26 +1193,19 @@ renderer.domElement.addEventListener('touchmove', e => { for (const t of e.chang
 renderer.domElement.addEventListener('touchend', e => { for (const t of e.changedTouches) if (dedo && t.identifier === dedo.id) dedo = null; });
 function hud() {
   $('ga').textContent = M.placar[0]; $('gb').textContent = M.placar[1];
-  const s = Math.max(0, Math.ceil(M.tempo / 60));
-  $('tempo').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
-  $('acertos').textContent = M.acertos + '/' + M.max;
+  const mt = minTempo(), base = M.etapa === 2 ? 45 : 0;
+  $('tempo').textContent = mt < 45 ? Math.floor(M.min) + "'" : (base + 45) + '+' + (Math.floor(mt - 45) + 1) + "'" + (M.acres ? ' (+' + M.acres + ')' : '');
+  $('namar').textContent = M.amarelos; $('nverm').textContent = M.vermelhos;
 }
 setInterval(() => { if (M && modo === 'jogando') hud(); }, 500);
 function fimDeJogo() {
-  modo = 'fim'; som('apito3');
-  const nota = M.max ? Math.round(M.pontos / M.max * 100) / 10 : 10;
-  const e = save.escolhido, E = ETAPAS[e];
-  save.melhores[e] = Math.max(save.melhores[e] || 0, nota);
-  let msg = '';
-  if (nota >= E.precisa && e === save.liberado && e < ETAPAS.length - 1) { save.liberado = e + 1; msg = '🎉 Liga nova liberada: ' + ETAPAS[e + 1].ic + ' ' + ETAPAS[e + 1].nome; }
-  else if (nota >= E.precisa) msg = '👏 Grande arbitragem!';
-  else msg = 'Precisa de nota ' + E.precisa + ' pra subir. Tente chegar mais perto dos lances!';
-  grava();
-  $('fim-titulo').textContent = nota >= 9 ? '🏆 JUIZ LENDÁRIO!' : nota >= 7 ? '👏 MUITO BEM, JUIZ!' : nota >= 5 ? 'FIM DE JOGO' : '😅 A TORCIDA VAIOU...';
-  $('fim-nota').textContent = nota.toFixed(1);
-  $('fim-nota').style.color = nota >= 7 ? '#2fd15a' : nota >= 5 ? '#ffd23f' : '#ff5d5d';
-  $('fim-info').textContent = E.ic + ' ' + M.times[0].nome + ' ' + M.placar[0] + ' x ' + M.placar[1] + ' ' + M.times[1].nome + ' · Acertou ' + M.acertos + ' de ' + M.max + ' lances';
-  $('fim-msg').textContent = msg;
+  modo = 'fim'; $('acres').classList.remove('on');
+  const E = ETAPAS[save.escolhido];
+  $('fim-titulo').textContent = '🏁 FIM DE JOGO';
+  $('fim-nota').textContent = M.placar[0] + ' x ' + M.placar[1];
+  $('fim-nota').style.color = '#ffd23f';
+  $('fim-info').textContent = E.ic + ' ' + M.times[0].nome + ' ' + M.placar[0] + ' x ' + M.placar[1] + ' ' + M.times[1].nome;
+  $('fim-msg').textContent = '📣 ' + M.faltas + ' faltas apitadas · 🟨 ' + M.amarelos + ' amarelos · 🟥 ' + M.vermelhos + ' vermelhos';
   document.body.classList.remove('jogando', 'espera');
   $('fim').classList.remove('hidden');
 }
