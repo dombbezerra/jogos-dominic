@@ -99,20 +99,31 @@ const TANQUES = [
   { id: 'grande', nome: 'Aquário Grande', ic: '🌊', preco: 2500, cap: 30, nivel: 3, agua: ['#58c4ff', '#1560a8'] },
   { id: 'tubarao', nome: 'Tanque dos Tubarões', ic: '🦈', preco: 8000, cap: 15, nivel: 4, agua: ['#3fa8e8', '#0d3f7a'] },
   { id: 'gigante', nome: 'Oceano Gigante', ic: '🐋', preco: 25000, cap: 20, nivel: 5, agua: ['#2f8fd8', '#06264f'] },
+  { id: 'lendario', nome: 'Mar Lendário', ic: '✨', preco: 90000, cap: 12, nivel: 6, agua: ['#6a5cff', '#1a0a4a'] },
 ];
 const PEIXES = [
+  // iniciantes (cabem no aquário pequeno)
   { id: 'palhaco', e: '🐠', nome: 'Peixe-palhaço', preco: 50, atr: 2, nivel: 1 },
   { id: 'azul', e: '🐟', nome: 'Peixe-azul', preco: 80, atr: 3, nivel: 1 },
   { id: 'camarao', e: '🦐', nome: 'Camarão', preco: 120, atr: 4, nivel: 1, fundo: true },
   { id: 'baiacu', e: '🐡', nome: 'Baiacu', preco: 150, atr: 5, nivel: 1 },
   { id: 'caranguejo', e: '🦀', nome: 'Caranguejo', preco: 200, atr: 6, nivel: 1, fundo: true },
-  { id: 'lagosta', e: '🦞', nome: 'Lagosta', preco: 350, atr: 9, nivel: 2, fundo: true },
-  { id: 'polvo', e: '🐙', nome: 'Polvo', preco: 600, atr: 14, nivel: 2 },
-  { id: 'lula', e: '🦑', nome: 'Lula', preco: 750, atr: 17, nivel: 2 },
-  { id: 'tartaruga', e: '🐢', nome: 'Tartaruga', preco: 1200, atr: 26, nivel: 3 },
-  { id: 'tubarao', e: '🦈', nome: 'Tubarão', preco: 3500, atr: 70, nivel: 4, grande: true },
-  { id: 'golfinho', e: '🐬', nome: 'Golfinho', preco: 6000, atr: 120, nivel: 5, grande: true },
-  { id: 'baleia', e: '🐋', nome: 'Baleia', preco: 15000, atr: 300, nivel: 5, grande: true },
+  { id: 'lagosta', e: '🦞', nome: 'Lagosta', preco: 350, atr: 9, nivel: 1, fundo: true },
+  // do polvo pra cima: bichos grandes
+  { id: 'polvo', e: '🐙', nome: 'Polvo', preco: 600, atr: 14, nivel: 2, tam: 48 },
+  { id: 'lula', e: '🦑', nome: 'Lula', preco: 750, atr: 17, nivel: 2, tam: 50 },
+  { id: 'tartaruga', e: '🐢', nome: 'Tartaruga', preco: 1200, atr: 26, nivel: 3, tam: 54 },
+  { id: 'pinguim', e: '🐧', nome: 'Pinguim', preco: 2000, atr: 40, nivel: 3, tam: 52 },
+  { id: 'lontra', e: '🦦', nome: 'Lontra', preco: 2600, atr: 50, nivel: 3, tam: 54 },
+  { id: 'foca', e: '🦭', nome: 'Foca', preco: 3200, atr: 60, nivel: 3, tam: 58 },
+  { id: 'tubarao', e: '🦈', nome: 'Tubarão', preco: 3500, atr: 70, nivel: 4, tam: 66 },
+  { id: 'jacare', e: '🐊', nome: 'Jacaré', preco: 4500, atr: 85, nivel: 4, tam: 64, fundo: true },
+  { id: 'golfinho', e: '🐬', nome: 'Golfinho', preco: 6000, atr: 120, nivel: 5, tam: 70 },
+  { id: 'baleia', e: '🐋', nome: 'Baleia', preco: 15000, atr: 300, nivel: 5, tam: 86 },
+  { id: 'jubarte', e: '🐳', nome: 'Baleia-jubarte', preco: 22000, atr: 420, nivel: 5, tam: 86 },
+  // os mais top (aquário lendário)
+  { id: 'dino', e: '🦕', nome: 'Dinossauro-marinho', preco: 50000, atr: 900, nivel: 6, tam: 92 },
+  { id: 'dragao', e: '🐉', nome: 'Dragão-do-mar', preco: 120000, atr: 2200, nivel: 6, tam: 96 },
 ];
 const DECOR = [
   { id: 'planta', e: '🌿', nome: 'Planta', preco: 60, atr: 1 },
@@ -247,7 +258,7 @@ function desenha(agora) {
     // bichos
     t.peixes.forEach((id, k) => {
       const p = P(id), n = t.nado[k] || (t.nado[k] = { f: Math.random() * 6, v: 0.4 + Math.random() * 0.5, y: 0.15 + Math.random() * 0.55 });
-      const tam = p.grande ? 60 : 34;
+      const tam = p.tam || 34;
       g.font = tam + 'px serif'; g.textBaseline = 'middle';
       let x, y, dir;
       if (p.fundo) { const s = Math.sin(agora / 1000 * n.v * 0.6 + n.f); x = W / 2 + s * (W / 2 - 30); y = H - 36; dir = Math.cos(agora / 1000 * n.v * 0.6 + n.f) > 0 ? 1 : -1; }
