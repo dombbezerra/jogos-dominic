@@ -22,22 +22,27 @@
   .pill b { font-family: var(--display); font-weight: 400; color: var(--sol); }
   #dinheiro.pulo { animation: pulo .35s; }
   @keyframes pulo { 50% { transform: scale(1.15); } }
-  /* rua com visitantes */
-  .rua { position: relative; height: 56px; background: repeating-linear-gradient(90deg, #d9c48e 0 40px, #cfb980 40px 80px); border: 3px solid #b39a5a; border-radius: 14px; overflow: hidden; margin-bottom: 12px; }
-  .rua .portao { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); font-size: 30px; }
-  .vis { position: absolute; top: 8px; font-size: 32px; cursor: pointer; transition: transform .1s; }
-  .vis:active { transform: scale(1.3); }
+  /* parque tipo zoológico: fileiras de aquários com calçada na frente */
+  .parque { position: relative; }
+  .fileira { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .calcada { position: relative; height: 60px; margin: 8px 0 16px; border-radius: 14px; border: 3px solid #a89268;
+    background: radial-gradient(circle at 25% 30%, rgba(255,255,255,.18) 0 6px, transparent 7px) 0 0 / 34px 30px, radial-gradient(circle at 70% 70%, rgba(0,0,0,.08) 0 5px, transparent 6px) 0 0 / 30px 26px, #d8c79c; }
+  .calcada .placa { position: absolute; top: 50%; transform: translateY(-50%); font-weight: 800; font-size: 12px; color: var(--tinta); background: #fff6dc; border: 2px solid var(--tinta); border-radius: 8px; padding: 1px 6px 0; white-space: nowrap; }
+  .calcada .arvore { position: absolute; top: -22px; font-size: 26px; pointer-events: none; }
+  #gente { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+  .vis { position: absolute; font-size: 32px; line-height: 1; cursor: pointer; pointer-events: auto; }
+  .balao { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); font-size: 18px; background: #fff; border: 2px solid var(--tinta); border-radius: 12px; padding: 1px 4px; pointer-events: none; animation: pulo .6s; }
   .moeda { position: absolute; font-family: var(--display); color: var(--sol); text-shadow: 2px 2px 0 var(--tinta); pointer-events: none; animation: sobe 1s forwards; z-index: 50; }
   @keyframes sobe { to { transform: translateY(-40px); opacity: 0; } }
   /* terrenos */
-  .parque { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
-  .lote { position: relative; border: 4px solid var(--tinta); border-radius: 18px; overflow: hidden; background: #e8d6a0; min-height: 210px; box-shadow: 0 6px 0 var(--tinta); cursor: pointer; }
-  .lote canvas { display: block; width: 100%; height: 170px; }
+  .lote { position: relative; border: 4px solid var(--tinta); border-radius: 18px; overflow: hidden; background: #e8d6a0; box-shadow: 0 6px 0 var(--tinta); cursor: pointer; }
+  .lote canvas { display: block; width: 100%; height: clamp(96px, 22vw, 170px); }
   .lote .nome { background: var(--tinta); padding: 4px 10px 2px; font-weight: 800; font-size: 14px; display: flex; justify-content: space-between; gap: 6px; }
   .lote .alertas { position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; }
   .lote .alertas span { background: #fff; border: 2px solid var(--tinta); border-radius: 10px; padding: 0 5px; font-size: 16px; animation: pulo 1s infinite; }
-  .vazio { display: grid; place-items: center; text-align: center; color: var(--tinta); font-weight: 800; min-height: 210px; border-style: dashed; background: rgba(255,255,255,.4); }
-  .vazio b { font-size: 46px; display: block; }
+  .vazio { display: grid; place-items: center; text-align: center; color: var(--tinta); font-weight: 800; font-size: clamp(11px, 2.6vw, 15px); min-height: clamp(122px, 27vw, 200px); border-style: dashed; background: rgba(255,255,255,.4); }
+  .lote .nome { font-size: clamp(10px, 2.4vw, 14px) !important; }
+  .vazio b { font-size: clamp(28px, 7vw, 46px); display: block; }
   .travado { opacity: .75; background: repeating-linear-gradient(45deg, #cdb98a 0 14px, #c2ad7c 14px 28px); }
   /* painel (loja e aquário) */
   .fundo { position: fixed; inset: 0; z-index: 60; background: rgba(5,20,40,.6); display: none; align-items: flex-end; justify-content: center; }
@@ -76,7 +81,6 @@
     <span class="pill">⭐ <b id="atracao">0</b></span>
     <span class="pill">👥 <b id="vpm">0</b>/min</span>
   </div>
-  <div class="rua" id="rua"><span class="portao">🎪</span></div>
   <div class="parque" id="parque"></div>
 </div>
 <div class="rodape"><button class="btn verde" id="b-loja">🛒 Comprar aquário</button><button class="btn azul" id="b-tudo">🧽 Cuidar de tudo</button></div>
@@ -177,9 +181,12 @@ function atualizaBarra() {
   $('vpm').textContent = visitantesMin();
 }
 const canvases = [];
+const calcadas = [], lotesEl = [];
 function montaParque() {
-  const p = $('parque'); p.innerHTML = ''; canvases.length = 0;
+  const p = $('parque'); p.innerHTML = ''; canvases.length = 0; calcadas.length = 0; lotesEl.length = 0;
+  let fileira = null;
   for (let i = 0; i < 9; i++) {
+    if (i % 3 === 0) { fileira = document.createElement('div'); fileira.className = 'fileira'; p.appendChild(fileira); }
     const t = S.tanques[i];
     const div = document.createElement('div');
     if (i >= S.lotes) {
@@ -205,8 +212,17 @@ function montaParque() {
       canvases.push({ cv, t, i, al, nomeEl: nome.lastChild });
       if (!t.nado) t.nado = {};
     }
-    p.appendChild(div);
+    fileira.appendChild(div); lotesEl.push(div);
+    if (i % 3 === 2) {   // calçada na frente da fileira (por onde os visitantes passam)
+      const c = document.createElement('div'); c.className = 'calcada';
+      const r = calcadas.length;
+      if (r === 0) c.innerHTML = '<span class="placa" style="left:6px">🎪 ENTRADA</span>';
+      c.innerHTML += '<span class="arvore" style="left:-8px">🌳</span><span class="arvore" style="right:-8px">🌴</span>';
+      p.appendChild(c); calcadas.push(c);
+    }
   }
+  const g = document.createElement('div'); g.id = 'gente'; p.appendChild(g);
+  for (const v of visitas) g.appendChild(v.el);   // quem já estava andando continua
   atualizaBarra();
 }
 // peixes nadando (cada um com seu caminho)
@@ -324,19 +340,62 @@ $('b-tudo').onclick = () => {
   grava(); som('bolha'); montaParque(); toast('✨ Tudo limpo e todo mundo comeu!' + (preco && !isAdm ? ' (comida: ' + real(preco) + ')' : ''));
 };
 
-// ── Visitantes andando na rua ──
-const GENTE = ['🧍', '🧒', '👧', '👦', '🧑', '👩', '👨', '👵', '👴', '🧑‍🦱', '👩‍🦰', '🧔'];
+// ── Visitantes passeando pelo parque (zigue-zague pelas calçadas) ──
+const GENTE = ['🧍', '🧒', '👧', '👦', '🧑', '👩', '👨', '👵', '👴', '🧑‍🦱', '👩‍🦰', '🧔', '🚶', '🚶‍♀️'];
 const visitas = [];
+function rota() {
+  const base = $('parque').getBoundingClientRect(), pts = [];
+  let ult = 0; S.tanques.forEach((t, i) => { if (t) ult = Math.max(ult, Math.floor(i / 3)); });   // até a última fileira com aquário
+  for (let r = 0; r <= ult; r++) {
+    const c = calcadas[r].getBoundingClientRect(), y = c.top - base.top + c.height / 2 - 17;
+    const esq = c.left - base.left + 4, dir = c.right - base.left - 36, ida = r % 2 === 0;
+    if (r === 0) pts.push({ x: esq - 50, y });
+    pts.push({ x: ida ? esq : dir, y });
+    for (const k of ida ? [0, 1, 2] : [2, 1, 0]) {
+      const i = r * 3 + k, t = S.tanques[i]; if (!t || !t.peixes.length || Math.random() < 0.15) continue;
+      const l = lotesEl[i].getBoundingClientRect();
+      pts.push({ x: l.left - base.left + l.width / 2 - 16 + (Math.random() - 0.5) * 20, y, olha: i, tempo: 1.5 + Math.random() * 2.5 });
+    }
+    pts.push({ x: ida ? dir : esq, y });
+    if (r === ult) pts.push({ x: (ida ? dir : esq) + (ida ? 60 : -60), y });
+  }
+  return pts;
+}
 function novoVisitante() {
+  if (!calcadas.length) return;
+  const pts = rota(); if (pts.length < 2) return;
   const el = document.createElement('span'); el.className = 'vis'; el.textContent = GENTE[Math.floor(Math.random() * GENTE.length)];
-  const v = { el, x: -40, vel: 30 + Math.random() * 30 };
-  el.style.left = '-40px';
+  const v = { el, pts, k: 0, x: pts[0].x, y: pts[0].y, vel: 45 + Math.random() * 30, espera: 0 };
+  el.style.transform = `translate(${v.x}px, ${v.y}px)`;
   el.onclick = e => {   // toque no visitante: ele dá uma gorjeta!
     e.stopPropagation(); ganha(5); som('moeda'); atualizaBarra();
-    const m = document.createElement('span'); m.className = 'moeda'; m.textContent = '+R$5'; m.style.left = v.x + 'px'; m.style.top = '4px'; $('rua').appendChild(m); setTimeout(() => m.remove(), 1000);
+    const m = document.createElement('span'); m.className = 'moeda'; m.textContent = '+R$5'; m.style.left = v.x + 'px'; m.style.top = (v.y - 10) + 'px'; $('gente').appendChild(m); setTimeout(() => m.remove(), 1000);
     el.remove(); visitas.splice(visitas.indexOf(v), 1);
   };
-  $('rua').appendChild(el); visitas.push(v);
+  $('gente').appendChild(el); visitas.push(v);
+}
+function reacao(i) {
+  const t = S.tanques[i]; if (!t) return '👀';
+  if (t.sujeira > 60) return '🤢';
+  if (t.fome > 70) return '😢';
+  const a = atracaoTanque(t);
+  return a > 100 ? '🤩' : a > 30 ? '😍' : ['😮', '🙂', '👀', '😃'][Math.floor(Math.random() * 4)];
+}
+function andaVisitantes(dt) {
+  for (const v of visitas.slice()) {
+    if (v.espera > 0) { v.espera -= dt; if (v.espera <= 0 && v.balao) { v.balao.remove(); v.balao = null; } continue; }
+    const alvo = v.pts[v.k + 1];
+    if (!alvo) { v.el.remove(); visitas.splice(visitas.indexOf(v), 1); continue; }
+    const dx = alvo.x - v.x, dy = alvo.y - v.y, d = Math.hypot(dx, dy), passo = v.vel * dt;
+    if (d <= passo) {
+      v.x = alvo.x; v.y = alvo.y; v.k++;
+      if (alvo.olha != null) {   // parou na frente do aquário pra olhar
+        v.espera = alvo.tempo;
+        v.balao = document.createElement('span'); v.balao.className = 'balao'; v.balao.textContent = reacao(alvo.olha); v.el.appendChild(v.balao);
+      }
+    } else { v.x += dx / d * passo; v.y += dy / d * passo; }
+    v.el.style.transform = `translate(${v.x}px, ${v.y - Math.abs(Math.sin(performance.now() / 120 + v.vel)) * 3}px)`;
+  }
 }
 let ultimo = performance.now(), acumulaVis = 0, acumulaSalva = 0;
 function tick(agora) {
@@ -348,11 +407,10 @@ function tick(agora) {
   if (Math.floor(S.dinheiro) !== antes) { atualizaBarra(); }
   // os aquários sujam e os bichos ficam com fome devagarinho
   for (const t of S.tanques) if (t && t.peixes.length) { t.sujeira = Math.min(100, t.sujeira + dt / 6); t.fome = Math.min(100, t.fome + dt / 4); }
-  // gente chegando
-  acumulaVis += dt * Math.min(vpm, 40) / 60 * 3;
-  while (acumulaVis >= 1 && visitas.length < 12) { acumulaVis -= 1; novoVisitante(); }
-  const larg = $('rua').clientWidth;
-  for (const v of visitas.slice()) { v.x += v.vel * dt; v.el.style.left = v.x + 'px'; if (v.x > larg) { v.el.remove(); visitas.splice(visitas.indexOf(v), 1); } }
+  // gente chegando no parque e passeando
+  acumulaVis += dt * Math.min(vpm, 40) / 60 * 2;
+  while (acumulaVis >= 1) { acumulaVis -= 1; if (visitas.length < 14) novoVisitante(); }
+  andaVisitantes(dt);
   if ((acumulaSalva += dt) > 5) { acumulaSalva = 0; grava(); }
   requestAnimationFrame(tick);
 }
