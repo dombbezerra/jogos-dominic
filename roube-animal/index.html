@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2e7d32">
+<title>Roube um Animal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --tinta: #0e0c33; --creme: #fff6dc; --sol: #ffd23f; --verde: #2fd15a; --display: 'Bungee', 'Arial Black', Impact, sans-serif; --texto: 'Baloo 2', 'Segoe UI', Arial, sans-serif; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; background: #3d8b3d; font-family: var(--texto); color: var(--creme); -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; touch-action: none; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  #back-link { position: fixed; top: calc(env(safe-area-inset-top) + 10px); left: 10px; z-index: 40; text-decoration: none; font-weight: 800; background: var(--sol); color: var(--tinta); border: 3px solid var(--tinta); border-radius: 12px; padding: 4px 12px 2px; box-shadow: 0 4px 0 var(--tinta); }
+  .barra { position: fixed; top: calc(env(safe-area-inset-top) + 10px); left: 0; right: 0; z-index: 30; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; pointer-events: none; padding: 0 60px 0 100px; }
+  .pill { background: var(--tinta); border: 3px solid #fff; border-radius: 999px; padding: 4px 14px 2px; font-weight: 800; font-size: 16px; white-space: nowrap; }
+  .pill b { font-family: var(--display); font-weight: 400; color: var(--sol); }
+  .botoes { position: fixed; right: 14px; bottom: calc(env(safe-area-inset-bottom) + 16px); z-index: 30; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+  .btn { font-family: var(--texto); font-weight: 800; font-size: 17px; cursor: pointer; border: 3px solid var(--tinta); border-radius: 16px; padding: 10px 16px 7px; color: var(--tinta); background: var(--sol); box-shadow: 0 4px 0 var(--tinta); max-width: 70vw; }
+  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
+  #acao { font-size: 20px; padding: 14px 20px 10px; background: var(--verde); color: #fff; display: none; }
+  #acao.roubar { background: #ff4d6d; }
+  #acao.vender { background: #ff9f1c; }
+  #tranca.on { background: #ff6b6b; color: #fff; }
+  #toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 60px); transform: translateX(-50%); z-index: 70; background: var(--tinta); color: #fff; border: 3px solid #fff; border-radius: 14px; padding: 8px 16px 5px; font-weight: 800; opacity: 0; transition: opacity .25s; pointer-events: none; max-width: 92vw; text-align: center; }
+  #toast.on { opacity: 1; }
+  #toast.alarme { background: #d62839; }
+  .dica { position: fixed; left: 14px; bottom: calc(env(safe-area-inset-bottom) + 16px); z-index: 20; font-weight: 800; font-size: 13px; color: #fff; text-shadow: 1px 1px 0 #000; pointer-events: none; opacity: .85; }
+</style>
+</head>
+<body>
+<a href="../index.html" id="back-link">← Menu</a>
+<div class="barra">
+  <span class="pill" id="dinheiro">💰 <b>R$ 0</b></span>
+  <span class="pill">📈 <b id="renda">R$ 0</b>/s</span>
+</div>
+<canvas id="cv"></canvas>
+<div class="botoes">
+  <button class="btn" id="acao"></button>
+  <button class="btn" id="tranca">🔒 Trancar base</button>
+</div>
+<div class="dica" id="dica">Arraste o dedo pra andar 👆</div>
+<div id="toast"></div>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const real = v => 'R$ ' + Math.floor(v).toLocaleString('pt-BR');
+
+// ── Bichos (raridades) ──
+const RAR = {
+  comum:    { nome: 'Comum',    cor: '#cfd8dc', peso: 60 },
+  raro:     { nome: 'Raro',     cor: '#5ee06b', peso: 25 },
+  epico:    { nome: 'Épico',    cor: '#b37bff', peso: 10 },
+  lendario: { nome: 'Lendário', cor: '#ffd23f', peso: 4 },
+  mitico:   { nome: 'Mítico',   cor: '#ff5d5d', peso: 0.9 },
+  secreto:  { nome: 'SECRETO',  cor: 'arco',    peso: 0.12 },
+};
+const BICHOS = [
+  { id: 'rato', e: '🐭', nome: 'Ratinho', r: 'comum', preco: 25, renda: 1 },
+  { id: 'galinha', e: '🐔', nome: 'Galinha', r: 'comum', preco: 50, renda: 2 },
+  { id: 'coelho', e: '🐰', nome: 'Coelho', r: 'comum', preco: 100, renda: 4 },
+  { id: 'sapo', e: '🐸', nome: 'Sapo', r: 'comum', preco: 150, renda: 6 },
+  { id: 'porco', e: '🐷', nome: 'Porquinho', r: 'raro', preco: 400, renda: 12 },
+  { id: 'ovelha', e: '🐑', nome: 'Ovelha', r: 'raro', preco: 700, renda: 20 },
+  { id: 'cachorro', e: '🐶', nome: 'Cachorro', r: 'raro', preco: 1000, renda: 28 },
+  { id: 'gato', e: '🐱', nome: 'Gato', r: 'raro', preco: 1300, renda: 35 },
+  { id: 'panda', e: '🐼', nome: 'Panda', r: 'epico', preco: 3000, renda: 70 },
+  { id: 'raposa', e: '🦊', nome: 'Raposa', r: 'epico', preco: 5000, renda: 110 },
+  { id: 'pinguim', e: '🐧', nome: 'Pinguim', r: 'epico', preco: 7500, renda: 150 },
+  { id: 'leao', e: '🦁', nome: 'Leão', r: 'lendario', preco: 15000, renda: 300 },
+  { id: 'tigre', e: '🐯', nome: 'Tigre', r: 'lendario', preco: 25000, renda: 450 },
+  { id: 'girafa', e: '🦒', nome: 'Girafa', r: 'lendario', preco: 40000, renda: 650 },
+  { id: 'elefante', e: '🐘', nome: 'Elefante', r: 'mitico', preco: 80000, renda: 1200 },
+  { id: 'unicornio', e: '🦄', nome: 'Unicórnio', r: 'mitico', preco: 150000, renda: 2000 },
+  { id: 'dragao', e: '🐉', nome: 'Dragão', r: 'secreto', preco: 500000, renda: 6000 },
+  { id: 'trex', e: '🦖', nome: 'T-Rex', r: 'secreto', preco: 1000000, renda: 10000 },
+];
+const B = id => BICHOS.find(b => b.id === id);
+const rendaDe = a => B(a.id).renda * (a.ouro ? 2 : 1);
+const precoDe = a => B(a.id).preco * (a.ouro ? 2 : 1);
+// sorteia um bicho: primeiro a raridade, depois o bicho dela (de vez em quando vem DOURADO, que vale o dobro)
+function sorteia(sorte = 1) {
+  const pesos = Object.entries(RAR).map(([k, v], i) => [k, v.peso * (i ? sorte : 1)]);
+  let n = Math.random() * pesos.reduce((s, p) => s + p[1], 0), r = 'comum';
+  for (const [k, p] of pesos) { if ((n -= p) < 0) { r = k; break; } }
+  const lista = BICHOS.filter(b => b.r === r);
+  return { id: lista[Math.floor(Math.random() * lista.length)].id, ouro: Math.random() < 0.06 };
+}
+
+// ── Save ──
+const PERFIL = new URLSearchParams(location.search).get('perfil');
+const KEY = 'roubeAnimal' + (PERFIL ? ':' + PERFIL : '');
+const VAGAS = 10;
+let S; try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) { S = null; }
+S = Object.assign({ dinheiro: 100, caixa: 0, slots: Array(VAGAS).fill(null), trancaAte: 0, trancaPode: 0, salvo: Date.now() }, S || {});
+const grava = () => { S.salvo = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ok */ } };
+
+// ── Mapa: 4 bases (a sua embaixo à esquerda) e a esteira de bichos no meio ──
+const MW = 1800, MH = 1400, T = 18, PORTA = 130;
+const bases = [];
+function criaBase(i, x, y, cima, dono) {
+  const w = 640, h = 400, px = x + w / 2 - PORTA / 2, py = cima ? y + h - T : y;
+  const b = { i, x, y, w, h, cima, dono, slots: Array(VAGAS).fill(null), trancaAte: 0, caixaFlut: 0 };
+  b.paredes = [[x, y, w, T], [x, y + h - T, w, T], [x, y, T, h], [x + w - T, y, T, h]];
+  b.paredes[cima ? 1 : 0] = [x, py, px - x, T];
+  b.paredes.push([px + PORTA, py, x + w - px - PORTA, T]);
+  b.porta = [px, py, PORTA, T];
+  b.dIn = { x: x + w / 2, y: cima ? y + h - 60 : y + 60 };
+  b.dOut = { x: x + w / 2, y: cima ? y + h + 50 : y - 50 };
+  b.pos = [];
+  for (let k = 0; k < VAGAS; k++) {
+    const c = k % 5, r = Math.floor(k / 5);
+    b.pos.push({ x: x + 80 + c * (w - 160) / 4, y: cima ? y + 80 + r * 100 : y + h - 80 - r * 100 });
+  }
+  bases.push(b); return b;
+}
+const minha = criaBase(0, 80, 920, false, 'voce');
+criaBase(1, 1080, 920, false, 'bot');
+criaBase(2, 80, 80, true, 'bot');
+criaBase(3, 1080, 80, true, 'bot');
+minha.slots = S.slots;
+const ESTEIRA = { y1: 650, y2: 750 };
+const trancada = b => (b === minha ? S.trancaAte : b.trancaAte) > Date.now();
+const dentro = (p, b) => p.x > b.x + T && p.x < b.x + b.w - T && p.y > b.y + T && p.y < b.y + b.h - T;
+const baseDe = p => bases.find(b => dentro(p, b)) || null;
+const livre = b => b.slots.findIndex((s, k) => !s && !b.reserva?.[k]);
+
+// ── Gente: você e os 3 jogadores (bots) ──
+const eu = { x: minha.dIn.x, y: minha.dIn.y - 40, r: 20, e: '🧒', nome: 'Você', base: minha, vel: 230, carrega: null, tonto: 0 };
+const BOTS = [['Lucas', '👦'], ['Bia', '👧'], ['Theo', '🧑']];
+const bots = BOTS.map(([nome, e], k) => {
+  const b = bases[k + 1];
+  // cada base de bot começa com uns bichos (alguns bons, pra valer a pena roubar!)
+  const n = 4 + Math.floor(Math.random() * 3);
+  for (let j = 0; j < n; j++) b.slots[j] = sorteia(3 + j);
+  return { x: b.dIn.x, y: b.dIn.y, r: 20, e, nome, base: b, vel: 165, carrega: null, rota: [], estado: 'casa', espera: 1 + Math.random() * 3, tonto: 0 };
+});
+
+// ── Esteira: os bichos passam e você compra ──
+const esteira = [], andando = [];
+let proxBicho = 0;
+function novoNaEsteira() {
+  const a = sorteia();
+  esteira.push({ ...a, x: -40, y: (ESTEIRA.y1 + ESTEIRA.y2) / 2 });
+}
+
+// caminho entre dois pontos passando pelas portas das bases
+function rota(de, para) {
+  const A = baseDe(de), Bb = baseDe(para), pts = [];
+  if (A !== Bb) { if (A) pts.push(A.dIn, A.dOut); if (Bb) pts.push(Bb.dOut, Bb.dIn); }
+  pts.push(para); return pts.map(p => ({ x: p.x, y: p.y }));
+}
+
+// ── Colisão com paredes (porta trancada também é parede, menos pro dono) ──
+function empurra(ent) {
+  for (const b of bases) {
+    const rects = b.paredes.slice();
+    if (trancada(b) && ent.base !== b) rects.push(b.porta);
+    for (const [rx, ry, rw, rh] of rects) {
+      const cx = Math.max(rx, Math.min(ent.x, rx + rw)), cy = Math.max(ry, Math.min(ent.y, ry + rh));
+      const dx = ent.x - cx, dy = ent.y - cy, d = Math.hypot(dx, dy);
+      if (d < ent.r) {
+        if (d < 0.01) { ent.y += (ent.y < ry + rh / 2 ? -1 : 1) * ent.r; continue; }
+        ent.x = cx + dx / d * ent.r; ent.y = cy + dy / d * ent.r;
+      }
+    }
+  }
+  ent.x = Math.max(ent.r, Math.min(MW - ent.r, ent.x)); ent.y = Math.max(ent.r, Math.min(MH - ent.r, ent.y));
+}
+function anda(ent, alvo, vel, dt) {
+  const dx = alvo.x - ent.x, dy = alvo.y - ent.y, d = Math.hypot(dx, dy), p = vel * dt;
+  if (d <= p) { ent.x = alvo.x; ent.y = alvo.y; return true; }
+  ent.x += dx / d * p; ent.y += dy / d * p; ent.dir = dx < 0 ? -1 : 1; return false;
+}
+function segueRota(ent, vel, dt) {
+  if (!ent.rota.length) return true;
+  const ax = ent.x, ay = ent.y;
+  if (anda(ent, ent.rota[0], vel, dt)) ent.rota.shift();
+  empurra(ent);
+  // ficou preso na porta trancada? desiste
+  if (Math.hypot(ent.x - ax, ent.y - ay) < vel * dt * 0.1) ent.preso = (ent.preso || 0) + dt; else ent.preso = 0;
+  return !ent.rota.length;
+}
+
+// ── Sons ──
+let ac = null;
+function som(tipo) {
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume();
+    const t = ac.currentTime;
+    const nota = (f, d, tp = 'triangle', v = 0.07, at = 0) => { const o = ac.createOscillator(), g = ac.createGain(); o.type = tp; o.frequency.value = f; g.gain.setValueAtTime(v, t + at); g.gain.exponentialRampToValueAtTime(0.0008, t + at + d); o.connect(g); g.connect(ac.destination); o.start(t + at); o.stop(t + at + d + 0.02); };
+    if (tipo === 'compra') [660, 880].forEach((f, i) => nota(f, 0.12, 'triangle', 0.07, i * 0.07));
+    if (tipo === 'moeda') [988, 1318].forEach((f, i) => nota(f, 0.1, 'square', 0.04, i * 0.06));
+    if (tipo === 'rouba') [300, 450, 600].forEach((f, i) => nota(f, 0.1, 'square', 0.05, i * 0.06));
+    if (tipo === 'alarme') [880, 660, 880, 660].forEach((f, i) => nota(f, 0.14, 'sawtooth', 0.05, i * 0.15));
+    if (tipo === 'erro') nota(160, 0.25, 'sawtooth', 0.05);
+    if (tipo === 'pow') nota(120, 0.2, 'square', 0.08);
+  } catch (e) { /* sem som */ }
+}
+function toast(txt, ms = 1800, alarme = false) { const t = $('toast'); t.textContent = txt; t.classList.toggle('alarme', alarme); t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), ms); }
+
+// ── O que dá pra fazer perto de você (um botão só que muda) ──
+let alvoAcao = null;
+function procuraAcao() {
+  if (eu.tonto > 0) return null;
+  // ladrão carregando bicho seu? empurra ele!
+  for (const b of bots) if (b.carrega && b.carrega.de.base === minha && Math.hypot(b.x - eu.x, b.y - eu.y) < 75) return { tipo: 'empurrar', bot: b };
+  if (eu.carrega) return null;
+  // comprar da esteira
+  let melhor = null, md = 80;
+  for (const a of esteira) { const d = Math.hypot(a.x - eu.x, a.y - eu.y); if (!a.dono && d < md) { md = d; melhor = a; } }
+  if (melhor) return { tipo: 'comprar', a: melhor };
+  const b = baseDe(eu);
+  if (b) for (let k = 0; k < VAGAS; k++) {
+    const s = b.slots[k]; if (!s) continue;
+    if (Math.hypot(b.pos[k].x - eu.x, b.pos[k].y - eu.y) < 55) return { tipo: b === minha ? 'vender' : 'roubar', b, k };
+  }
+  return null;
+}
+function mostraAcao() {
+  const a = procuraAcao(), bt = $('acao');
+  const chave = a ? a.tipo + (a.a ? esteira.indexOf(a.a) : '') + (a.k ?? '') + (a.b ? a.b.i : '') : '';
+  if (chave === mostraAcao.chave) { alvoAcao = a; return; }
+  mostraAcao.chave = chave; alvoAcao = a; delete bt.dataset.certeza;
+  if (!a) { bt.style.display = 'none'; return; }
+  bt.style.display = 'block'; bt.className = 'btn ' + (a.tipo === 'roubar' || a.tipo === 'empurrar' ? 'roubar' : a.tipo === 'vender' ? 'vender' : '');
+  if (a.tipo === 'comprar') bt.textContent = '🛒 Comprar ' + B(a.a.id).e + ' ' + real(precoDe(a.a));
+  if (a.tipo === 'roubar') bt.textContent = '🦹 Roubar ' + B(a.b.slots[a.k].id).e;
+  if (a.tipo === 'vender') bt.textContent = '💲 Vender ' + B(a.b.slots[a.k].id).e + ' ' + real(precoDe(a.b.slots[a.k]) / 2);
+  if (a.tipo === 'empurrar') bt.textContent = '👊 Empurrar ' + a.bot.nome + '!';
+}
+function fazAcao() {
+  const a = alvoAcao; if (!a) return;
+  if (a.tipo === 'comprar') {
+    const preco = precoDe(a.a), k = livre(minha);
+    if (k < 0) { toast('🏠 Sua base tá cheia! Venda um bicho.'); som('erro'); return; }
+    if (S.dinheiro < preco) { toast('💸 Falta dinheiro! Precisa de ' + real(preco)); som('erro'); return; }
+    S.dinheiro -= preco; a.a.dono = 'voce'; vaiPraBase(a.a, minha, k); som('compra'); toast('🎉 Comprou ' + B(a.a.id).nome + (a.a.ouro ? ' DOURADO' : '') + '!'); grava();
+  }
+  if (a.tipo === 'roubar') {
+    if (livre(minha) < 0) { toast('🏠 Sua base tá cheia! Venda um bicho primeiro.'); som('erro'); return; }
+    eu.carrega = { ...a.b.slots[a.k], de: { base: a.b, k: a.k } }; a.b.slots[a.k] = null; som('rouba');
+    const dono = bots.find(b => b.base === a.b);
+    toast('🦹 Corre pra sua base! ' + dono.nome + ' vai atrás de você!', 2200);
+    if (dono && !dono.carrega) setTimeout(() => { if (eu.carrega && eu.carrega.de.base === a.b) { dono.estado = 'persegue'; dono.rota = []; } }, 700);
+  }
+  if (a.tipo === 'vender') {
+    const bt = $('acao');
+    if (!bt.dataset.certeza) { bt.dataset.certeza = '1'; bt.textContent = '⚠️ Tem certeza? Toque de novo'; return; }
+    const s = minha.slots[a.k]; S.dinheiro += precoDe(s) / 2; minha.slots[a.k] = null; som('moeda'); toast('💲 Vendeu ' + B(s.id).nome + '!'); grava();
+  }
+  if (a.tipo === 'empurrar') {
+    const b = a.bot, c = b.carrega; b.carrega = null; som('pow');
+    minha.slots[c.de.k] ? (minha.slots[livre(minha)] = { id: c.id, ouro: c.ouro }) : (minha.slots[c.de.k] = { id: c.id, ouro: c.ouro });
+    b.tonto = 2.5; b.estado = 'volta'; b.rota = rota(b, b.base.dIn); toast('👊 POW! Você pegou seu ' + B(c.id).nome + ' de volta!'); grava();
+  }
+  mostraAcao.chave = null; atualizaHud();
+}
+// bicho comprado anda até a vaga
+function vaiPraBase(a, base, k) {
+  const i = esteira.indexOf(a); if (i >= 0) esteira.splice(i, 1);
+  base.reserva = base.reserva || {}; base.reserva[k] = true;
+  andando.push({ id: a.id, ouro: a.ouro, x: a.x, y: a.y, r: 14, base, k, rota: rota(a, base.pos[k]) });
+}
+
+// ── Cabeça dos bots ──
+let proxRoubo = 25 + Math.random() * 20, proxCompraBot = 5;
+function pensaBots(dt) {
+  // de vez em quando um bot compra da esteira
+  if ((proxCompraBot -= dt) <= 0) {
+    proxCompraBot = 6 + Math.random() * 8;
+    const b = bots[Math.floor(Math.random() * 3)], k = livre(b.base);
+    const a = esteira.filter(x => !x.dono && x.x > 200 && x.x < MW - 200);
+    if (k >= 0 && b.base.slots.filter(Boolean).length < 8 && a.length) { const esc = a[Math.floor(Math.random() * a.length)]; esc.dono = b.nome; vaiPraBase(esc, b.base, k); }
+  }
+  // de vez em quando um bot tenta roubar a SUA base
+  if ((proxRoubo -= dt) <= 0) {
+    proxRoubo = 35 + Math.random() * 40;
+    const tem = minha.slots.map((s, k) => s ? k : -1).filter(k => k >= 0);
+    const b = bots.filter(x => x.estado === 'casa' && !x.carrega)[0];
+    if (tem.length && b && !trancada(minha)) {
+      // vai no bicho mais caro
+      const k = tem.sort((x, y) => precoDe(minha.slots[y]) - precoDe(minha.slots[x]))[0];
+      b.estado = 'roubar'; b.alvoK = k; b.rota = rota(b, minha.pos[k]); b.avisou = false;
+    }
+  }
+  for (const b of bots) {
+    if (b.tonto > 0) { b.tonto -= dt; continue; }
+    if (b.estado === 'casa') {
+      if ((b.espera -= dt) <= 0) { b.espera = 2 + Math.random() * 3; const bb = b.base; b.rota = [{ x: bb.x + 60 + Math.random() * (bb.w - 120), y: bb.cima ? bb.y + bb.h - 80 - Math.random() * 80 : bb.y + 80 + Math.random() * 80 }]; }
+      segueRota(b, 70, dt);
+    } else if (b.estado === 'roubar') {
+      if (!b.avisou && dentro(b, minha)) { b.avisou = true; som('alarme'); toast('🚨 ' + b.nome + ' entrou na sua base pra roubar!', 2500, true); }
+      const chegou = segueRota(b, b.vel, dt);
+      if (b.preso > 1.2) { b.estado = 'volta'; b.rota = rota(b, b.base.dIn); }   // base trancada: desiste
+      else if (chegou) {
+        const s = minha.slots[b.alvoK];
+        if (s) { b.carrega = { ...s, de: { base: minha, k: b.alvoK } }; minha.slots[b.alvoK] = null; som('alarme'); toast('🚨 ' + b.nome + ' pegou seu ' + B(s.id).nome + '! Corre e empurra ele!', 3000, true); grava(); }
+        b.estado = 'volta'; b.rota = rota(b, b.base.pos[Math.max(0, livre(b.base))]);
+      }
+    } else if (b.estado === 'volta') {
+      if (segueRota(b, b.carrega ? 125 : b.vel, dt)) {
+        if (b.carrega) { const k = livre(b.base); if (k >= 0) b.base.slots[k] = { id: b.carrega.id, ouro: b.carrega.ouro }; toast('😭 ' + b.nome + ' levou seu ' + B(b.carrega.id).nome + '... Vai lá roubar de volta!', 3000, true); b.carrega = null; }
+        b.estado = 'casa'; b.espera = 1;
+      }
+    } else if (b.estado === 'persegue') {
+      if (!eu.carrega || eu.carrega.de.base !== b.base) { b.estado = 'volta'; b.rota = rota(b, b.base.dIn); continue; }
+      b.recalc = (b.recalc || 0) - dt;
+      if (b.recalc <= 0) { b.recalc = 0.3; b.rota = rota(b, eu); }
+      segueRota(b, 175, dt);
+      if (Math.hypot(b.x - eu.x, b.y - eu.y) < eu.r + b.r + 4) {   // te pegou!
+        const c = eu.carrega; eu.carrega = null; c.de.base.slots[c.de.k] = { id: c.id, ouro: c.ouro };
+        eu.tonto = 1.2; som('pow'); toast('😵 ' + b.nome + ' te pegou e levou o bicho de volta!', 2200, true);
+        b.estado = 'volta'; b.rota = rota(b, b.base.dIn);
+      }
+    }
+  }
+  // as bases dos bots trancam de vez em quando
+  for (const bb of bases) if (bb !== minha && !trancada(bb) && Math.random() < dt / 70) bb.trancaAte = Date.now() + 25000 + Math.random() * 20000;
+}
+
+// ── Controles: arrastar o dedo (joystick) ou teclado ──
+const joy = { on: false, ox: 0, oy: 0, x: 0, y: 0 }, teclas = {};
+const cv = $('cv');
+cv.addEventListener('pointerdown', e => { joy.on = true; joy.id = e.pointerId; joy.ox = joy.x = e.clientX; joy.oy = joy.y = e.clientY; $('dica').style.display = 'none'; });
+addEventListener('pointermove', e => { if (joy.on && e.pointerId === joy.id) { joy.x = e.clientX; joy.y = e.clientY; } });
+addEventListener('pointerup', e => { if (e.pointerId === joy.id) joy.on = false; });
+addEventListener('pointercancel', e => { if (e.pointerId === joy.id) joy.on = false; });
+addEventListener('keydown', e => { teclas[e.key.toLowerCase()] = true; if (e.key === ' ' || e.key.toLowerCase() === 'e') { e.preventDefault(); fazAcao(); } if (e.key.toLowerCase() === 'l') tranca(); $('dica').style.display = 'none'; });
+addEventListener('keyup', e => { teclas[e.key.toLowerCase()] = false; });
+$('acao').onclick = fazAcao;
+function tranca() {
+  if (Date.now() < S.trancaPode) { toast('⏳ Espera ' + Math.ceil((S.trancaPode - Date.now()) / 1000) + 's pra trancar de novo'); return; }
+  S.trancaAte = Date.now() + 60000; S.trancaPode = Date.now() + 90000; som('compra'); toast('🔒 Base trancada por 60 segundos!'); grava();
+}
+$('tranca').onclick = tranca;
+
+// ── HUD ──
+const rendaTotal = () => minha.slots.reduce((s, a) => s + (a ? rendaDe(a) : 0), 0);
+function atualizaHud() {
+  $('dinheiro').innerHTML = '💰 <b>' + real(S.dinheiro) + '</b>';
+  $('renda').textContent = real(rendaTotal());
+  const bt = $('tranca'), ag = Date.now();
+  if (S.trancaAte > ag) { bt.className = 'btn on'; bt.textContent = '🔒 Trancada ' + Math.ceil((S.trancaAte - ag) / 1000) + 's'; }
+  else if (S.trancaPode > ag) { bt.className = 'btn'; bt.textContent = '⏳ ' + Math.ceil((S.trancaPode - ag) / 1000) + 's'; }
+  else { bt.className = 'btn'; bt.textContent = '🔒 Trancar base'; }
+}
+
+// dinheiro de quando você estava fora (até 30 minutos, pela metade)
+(() => {
+  const fora = Math.min((Date.now() - S.salvo) / 1000, 1800), g = Math.floor(rendaTotal() * fora * 0.5);
+  if (g > 0) { S.caixa += g; setTimeout(() => toast('💤 Enquanto você estava fora, seus bichos fizeram ' + real(g) + '! Pegue na sua base.', 3500), 500); }
+})();
+
+// ── Loop ──
+function passo(dt) {
+  // você anda
+  let mx = 0, my = 0;
+  if (joy.on) { const dx = joy.x - joy.ox, dy = joy.y - joy.oy, d = Math.hypot(dx, dy); if (d > 8) { mx = dx / Math.max(d, 50); my = dy / Math.max(d, 50); } }
+  if (teclas['arrowleft'] || teclas['a']) mx = -1; if (teclas['arrowright'] || teclas['d']) mx = 1;
+  if (teclas['arrowup'] || teclas['w']) my = -1; if (teclas['arrowdown'] || teclas['s']) my = 1;
+  const m = Math.hypot(mx, my); if (m > 1) { mx /= m; my /= m; }
+  if (eu.tonto > 0) { eu.tonto -= dt; mx = my = 0; }
+  const vel = eu.carrega ? 160 : eu.vel;
+  eu.x += mx * vel * dt; eu.y += my * vel * dt; if (mx) eu.dir = mx < 0 ? -1 : 1; eu.mexe = m > 0.1;
+  empurra(eu);
+  // chegou em casa com bicho roubado
+  if (eu.carrega && dentro(eu, minha)) {
+    const k = livre(minha), c = eu.carrega; eu.carrega = null;
+    if (k >= 0) { minha.slots[k] = { id: c.id, ouro: c.ouro }; som('moeda'); toast('😎 ROUBOU! ' + B(c.id).nome + ' agora é seu!', 2500); grava(); }
+    else c.de.base.slots[c.de.k] = { id: c.id, ouro: c.ouro };
+  }
+  // dinheiro dos bichos vai pro caixa da base; entrando na base você pega
+  S.caixa += rendaTotal() * dt;
+  if (dentro(eu, minha) && S.caixa >= 1) { S.dinheiro += S.caixa; minha.caixaFlut = Math.floor(S.caixa); minha.caixaT = 1; S.caixa = 0; if (minha.caixaFlut >= 1) som('moeda'); }
+  if (minha.caixaT > 0) minha.caixaT -= dt;
+  // esteira
+  if ((proxBicho -= dt) <= 0) { proxBicho = 2.2; novoNaEsteira(); }
+  for (let i = esteira.length - 1; i >= 0; i--) { esteira[i].x += 70 * dt; if (esteira[i].x > MW + 40) esteira.splice(i, 1); }
+  // bichos comprados andando até a vaga
+  for (let i = andando.length - 1; i >= 0; i--) {
+    const a = andando[i];
+    if (!a.rota.length || anda(a, a.rota[0], 150, dt) && (a.rota.shift(), !a.rota.length)) { a.base.slots[a.k] = { id: a.id, ouro: a.ouro }; delete a.base.reserva[a.k]; andando.splice(i, 1); }
+  }
+  pensaBots(dt);
+  if ((passo.salva = (passo.salva || 0) + dt) > 5) { passo.salva = 0; grava(); }
+}
+
+// ── Desenho ──
+const ctx = cv.getContext('2d');
+let VW = 0, VH = 0, esc = 1;
+function redim() { const dpr = Math.min(2, devicePixelRatio || 1); VW = innerWidth; VH = innerHeight; cv.width = VW * dpr; cv.height = VH * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); esc = Math.max(0.55, Math.min(1.1, Math.min(VW / 760, VH / 600))); }
+addEventListener('resize', redim); redim();
+const arco = (g, x, y) => { const gr = g.createLinearGradient(x - 40, y, x + 40, y); ['#ff5d5d', '#ffd23f', '#5ee06b', '#5cb8ff', '#b37bff'].forEach((c, i) => gr.addColorStop(i / 4, c)); return gr; };
+function emoji(e, x, y, tam, dir = 1) { ctx.save(); ctx.translate(x, y); ctx.scale(-dir, 1); ctx.fillStyle = '#000'; ctx.font = tam + 'px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(e, 0, 0); ctx.restore(); }
+function etiqueta(a, x, y, mostraPreco) {
+  const b = B(a.id), r = RAR[b.r];
+  ctx.font = '800 12px "Baloo 2", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const l1 = (a.ouro ? '✨' : '') + b.nome, l2 = mostraPreco ? real(precoDe(a)) : '+' + real(rendaDe(a)) + '/s';
+  const w = Math.max(ctx.measureText(l1).width, ctx.measureText(l2).width) + 12;
+  ctx.fillStyle = 'rgba(14,12,51,.85)'; ctx.beginPath(); ctx.roundRect(x - w / 2, y, w, 30, 7); ctx.fill();
+  ctx.fillStyle = r.cor === 'arco' ? arco(ctx, x, y) : r.cor; ctx.fillText(l1, x, y + 9);
+  ctx.fillStyle = mostraPreco ? '#fff' : '#7dff8a'; ctx.fillText(l2, x, y + 22);
+}
+function bicho(a, x, y, t, mostraPreco) {
+  if (a.ouro) { ctx.save(); ctx.shadowColor = '#ffd23f'; ctx.shadowBlur = 18; }
+  emoji(B(a.id).e, x, y + Math.sin(t / 300 + x) * 2, 38);
+  if (a.ouro) ctx.restore();
+  etiqueta(a, x, y + 22, mostraPreco);
+}
+function pessoa(p, t) {
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + 18, 18, 7, 0, 0, 7); ctx.fill();
+  const pulo = p.mexe || p.rota?.length ? Math.abs(Math.sin(t / 110)) * 4 : 0;
+  emoji(p.e, p.x, p.y - pulo, 40, p.dir || 1);
+  if (p.carrega) { emoji(B(p.carrega.id).e, p.x, p.y - 42 - pulo, 30); }
+  if (p.tonto > 0) emoji('💫', p.x, p.y - 34, 20);
+  ctx.font = '800 13px "Baloo 2", sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+  const ny = p.y - (p.carrega ? 64 : 30);
+  ctx.strokeText(p.nome, p.x, ny); ctx.fillText(p.nome, p.x, ny);
+}
+const CORES = ['#4fc3f7', '#ff8a65', '#ba68c8', '#ffd54f'];
+function desenha(t) {
+  ctx.fillStyle = '#3d8b3d'; ctx.fillRect(0, 0, VW, VH);
+  const cx = Math.max(VW / 2 / esc, Math.min(MW - VW / 2 / esc, eu.x)), cy = Math.max(VH / 2 / esc, Math.min(MH - VH / 2 / esc, eu.y));
+  ctx.save(); ctx.translate(VW / 2, VH / 2); ctx.scale(esc, esc); ctx.translate(-cx, -cy);
+  // grama
+  ctx.fillStyle = '#4a9c3f'; ctx.fillRect(0, 0, MW, MH);
+  ctx.fillStyle = 'rgba(255,255,255,.06)'; for (let x = 0; x < MW; x += 60) for (let y = (x / 60 % 2) * 30; y < MH; y += 60) ctx.fillRect(x, y, 6, 6);
+  // rua no meio
+  ctx.fillStyle = '#d8c79c'; ctx.fillRect(0, 540, MW, 320);
+  // esteira
+  ctx.fillStyle = '#37474f'; ctx.fillRect(0, ESTEIRA.y1, MW, ESTEIRA.y2 - ESTEIRA.y1);
+  ctx.fillStyle = '#546e7a'; for (let x = (t / 1000 * 70) % 60 - 60; x < MW; x += 60) ctx.fillRect(x, ESTEIRA.y1 + 6, 30, ESTEIRA.y2 - ESTEIRA.y1 - 12);
+  ctx.fillStyle = '#ffd23f'; ctx.fillRect(0, ESTEIRA.y1 - 6, MW, 6); ctx.fillRect(0, ESTEIRA.y2, MW, 6);
+  // bases
+  for (const b of bases) {
+    ctx.fillStyle = b === minha ? '#a5d6a7' : '#e0d6c2'; ctx.fillRect(b.x, b.y, b.w, b.h);
+    ctx.fillStyle = CORES[b.i]; for (const [x, y, w, h] of b.paredes) ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#0e0c33'; ctx.lineWidth = 3; for (const [x, y, w, h] of b.paredes) ctx.strokeRect(x, y, w, h);
+    if (trancada(b)) {   // laser vermelho na porta
+      const [x, y, w, h] = b.porta; ctx.save(); ctx.shadowColor = '#ff1744'; ctx.shadowBlur = 20; ctx.fillStyle = 'rgba(255,23,68,' + (0.6 + Math.sin(t / 120) * 0.3) + ')'; ctx.fillRect(x, y + 3, w, h - 6); ctx.restore();
+      emoji('🔒', x + w / 2, b.cima ? y + 34 : y - 16, 22);
+    }
+    for (let k = 0; k < VAGAS; k++) { const p = b.pos[k]; ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.beginPath(); ctx.arc(p.x, p.y + 6, 30, 0, 7); ctx.fill(); }
+    // placa com o nome do dono
+    const dono = b === minha ? 'SUA BASE' : 'Base: ' + bots.find(x => x.base === b).nome;
+    ctx.font = '400 18px Bungee, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const py = b.cima ? b.y - 22 : b.y + b.h + 22, pw = ctx.measureText(dono).width + 24;
+    ctx.fillStyle = '#0e0c33'; ctx.beginPath(); ctx.roundRect(b.x + b.w / 2 - pw / 2, py - 16, pw, 32, 10); ctx.fill();
+    ctx.fillStyle = b === minha ? '#7dff8a' : '#fff'; ctx.fillText(dono, b.x + b.w / 2, py + 1);
+  }
+  // caixa de dinheiro da sua base
+  ctx.font = '400 16px Bungee, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffd23f'; ctx.strokeStyle = '#0e0c33'; ctx.lineWidth = 4;
+  const txt = minha.caixaT > 0 ? '+' + real(minha.caixaFlut) : S.caixa >= 1 ? '💰 ' + real(S.caixa) : '';
+  if (txt) { const y = minha.y + minha.h / 2 + 40 - (minha.caixaT > 0 ? (1 - minha.caixaT) * 30 : 0); ctx.strokeText(txt, minha.x + minha.w / 2, y); ctx.fillText(txt, minha.x + minha.w / 2, y); }
+  // bichos
+  for (const b of bases) b.slots.forEach((a, k) => a && bicho(a, b.pos[k].x, b.pos[k].y, t, false));
+  for (const a of esteira) bicho(a, a.x, a.y - 8, t, !a.dono);
+  for (const a of andando) { emoji(B(a.id).e, a.x, a.y, 34); }
+  // gente (de cima pra baixo)
+  for (const p of [eu, ...bots].sort((a, b) => a.y - b.y)) pessoa(p, t);
+  // setinha em cima do que dá pra fazer
+  if (alvoAcao) {
+    const p = alvoAcao.a || (alvoAcao.bot) || (alvoAcao.b && alvoAcao.b.pos[alvoAcao.k]);
+    if (p) emoji('⬇️', p.x, p.y - 50 + Math.sin(t / 150) * 5, 24);
+  }
+  ctx.restore();
+  // joystick
+  if (joy.on) {
+    ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(joy.ox, joy.oy, 50, 0, 7); ctx.stroke();
+    const dx = joy.x - joy.ox, dy = joy.y - joy.oy, d = Math.hypot(dx, dy), k = d > 50 ? 50 / d : 1;
+    ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.arc(joy.ox + dx * k, joy.oy + dy * k, 22, 0, 7); ctx.fill();
+  }
+}
+let ultimo = performance.now(), hudT = 0;
+function loop(agora) {
+  const dt = Math.min(0.05, (agora - ultimo) / 1000); ultimo = agora;
+  passo(dt); mostraAcao();
+  if ((hudT += dt) > 0.2) { hudT = 0; atualizaHud(); }
+  desenha(agora);
+  requestAnimationFrame(loop);
+}
+for (let i = 0; i < 14; i++) { novoNaEsteira(); esteira[esteira.length - 1].x = MW - i * 130; }
+addEventListener('visibilitychange', () => { if (document.hidden) grava(); else ultimo = performance.now(); });
+addEventListener('pagehide', grava);
+atualizaHud();
+if (!minha.slots.some(Boolean)) setTimeout(() => toast('👋 Vá até a esteira e compre seu primeiro bicho!', 3500), 600);
+requestAnimationFrame(loop);
+// usado nos testes
+window.__ra = { get S() { return S; }, eu, bots, bases, esteira, passo: (n, dt = 1 / 30) => { for (let i = 0; i < n; i++) { passo(dt); mostraAcao(); } desenha(performance.now()); atualizaHud(); }, fazAcao, get alvo() { return alvoAcao; },
+  foto: () => fetch('http://127.0.0.1:8767/', { method: 'POST', body: cv.toDataURL('image/jpeg', 0.7) }) };
+})();
+</script>
+</body>
+</html>
