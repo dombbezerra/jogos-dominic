@@ -93,6 +93,7 @@ const RAR = {
   lendario: { nome: 'Lendário', cor: '#ffd23f', peso: 4 },
   mitico:   { nome: 'Mítico',   cor: '#ff5d5d', peso: 0.9 },
   secreto:  { nome: 'SECRETO',  cor: 'arco',    peso: 0.12 },
+  natal:    { nome: 'Natal',    cor: '#ff4d4d', peso: 0 },      // só aparece no evento de Natal
 };
 // os 100 bichos, em grupos (o Índice). Cada um é um pouco mais caro que o anterior: de R$ 1 até R$ 2 trilhões!
 // [nome, emoji, filtro de cor (pra bichos que não têm emoji próprio)]
@@ -114,6 +115,9 @@ BICHOS.forEach((b, i) => {
   b.renda = Math.max(1, Math.round(b.preco / (12 + i * 0.6)));
   b.r = i < 30 ? 'comum' : i < 55 ? 'raro' : i < 75 ? 'epico' : i < 90 ? 'lendario' : i < 97 ? 'mitico' : 'secreto';
 });
+// bicho especial do Natal: só passa na esteira durante o evento
+GRUPOS.push({ id: 'natal', nome: 'Natal', e: '🎄', bichos: [] });
+BICHOS.push({ id: 'rena-natalina', nome: 'Rena Natalina', e: '🦌', f: 'saturate(1.6) hue-rotate(-20deg) brightness(1.1)', grupo: 'natal', preco: 200e9, renda: 3e9, r: 'natal' });
 const B = id => BICHOS.find(b => b.id === id);
 // dourado vale 2x; com a mutação de Natal (presente que caiu nele) vale 3x
 const mult = a => (a.ouro ? 2 : 1) * (a.natal ? 3 : 1);
@@ -225,7 +229,12 @@ let difRelogio = 0, online = false;
 const agoraServ = () => Date.now() + difRelogio;
 const PASSO_E = 2200, VEL_E = 0.07;   // um bicho a cada 2,2s, andando 70 por segundo
 const esteira = [], andando = [], cacheE = {}, compras = {};   // compras: n → { id, nome }
-const itemDaEsteira = n => cacheE[n] || (cacheE[n] = { n, ...sorteia(1, rng(n * 7919 + sala * 104729)), y: (ESTEIRA.y1 + ESTEIRA.y2) / 2 });
+function itemDaEsteira(n) {
+  if (cacheE[n]) return cacheE[n];
+  const r = rng(n * 7919 + sala * 104729);
+  const a = NATAL && r() < 0.03 ? { id: 'rena-natalina', ouro: false } : sorteia(1, r);   // no Natal, de vez em quando passa a Rena Natalina
+  return cacheE[n] = { n, ...a, y: (ESTEIRA.y1 + ESTEIRA.y2) / 2 };
+}
 function atualizaEsteira() {
   const t = agoraServ(), n1 = Math.ceil((t - (MW + 80) / VEL_E) / PASSO_E), n2 = Math.floor(t / PASSO_E);
   esteira.length = 0;
@@ -618,7 +627,7 @@ function sprite(t, x, y, h, sx, sy = sx) {
 }
 function bicho3d(a, x, y, t, mostraPreco, dir = 1) {
   const b = B(a.id), r = RAR[b.r], h = 0.85 + Math.sin(t / 300 + x) * 0.06;
-  if (a.natal) sprite(texNatal, x, y, h, 2.4);
+  if (a.natal || b.r === 'natal') sprite(texNatal, x, y, h, 2.4);   // a Rena Natalina já brilha de Natal
   if (a.ouro) sprite(texBrilho, x, y, h, 2.2);
   sprite(texEmoji(b.e, b.f), x, y, h, 1.4).scale.x = 1.4 * dir;
   sprite(texPlaca((a.natal ? '🎄' : '') + (a.ouro ? '✨' : '') + b.nome, mostraPreco ? real(precoDe(a)) : '+' + real(rendaDe(a)) + '/s', r.cor), x, y, 1.95, 1.7, 1.7 * 96 / 256);
@@ -699,7 +708,7 @@ else if (!S.slots.some(Boolean)) setTimeout(() => toast('👋 Vá até a esteira
 requestAnimationFrame(loop);
 // usado nos testes
 window.__ra = { get S() { return S; }, eu, bots, bases, esteira, remotos, compras, get minha() { return minha; }, get sala() { return sala; }, get online() { return online; }, sincroniza,
-  passo: (n, dt = 1 / 30) => { for (let i = 0; i < n; i++) { passo(dt); mostraAcao(); } desenha(performance.now()); atualizaHud(); }, fazAcao, get alvo() { return alvoAcao; }, presentes, NATAL, abreIndice, BICHOS,
+  passo: (n, dt = 1 / 30) => { for (let i = 0; i < n; i++) { passo(dt); mostraAcao(); } desenha(performance.now()); atualizaHud(); }, fazAcao, get alvo() { return alvoAcao; }, presentes, NATAL, cacheE, itemDaEsteira, abreIndice, BICHOS,
   foto: () => fetch('http://127.0.0.1:8767/', { method: 'POST', body: cv.toDataURL('image/jpeg', 0.7) }) };
 })();
 </script>
