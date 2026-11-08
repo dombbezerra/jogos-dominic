@@ -258,7 +258,48 @@ const ETAPAS = [
       T('Alemanha', 'ALE', '#f4f4f4', '#111111', '#f4f4f4', '#111111'), T('Portugal', 'POR', '#c8102e', '#0a6a3a', '#c8102e', '#ffd400')] },
 ];
 // elencos de verdade (temporada 2026/27): goleiro, 2 zagueiros, 2 meias e o atacante
-const ELENCOS = {};
+const ELENCOS = {
+  // Brasileirão (temporada 2026)
+  'Corinthians': [['Hugo Souza', 1], ['Gabriel Paulista', 3], ['André Ramalho', 5], ['Garro', 8], ['Memphis', 10], ['Yuri Alberto', 9]],
+  'Palmeiras': [['Carlos Miguel', 1], ['Gustavo Gómez', 15], ['Murilo', 26], ['Andreas Pereira', 8], ['Felipe Anderson', 7], ['Vitor Roque', 9]],
+  'São Paulo': [['Rafael', 23], ['Arboleda', 5], ['Tolói', 2], ['Marcos Antônio', 8], ['Lucas Moura', 7], ['Calleri', 9]],
+  'Coritiba': [['Pedro Morisco', 1], ['Maicon', 3], ['Moledo', 4], ['Sebastián Gómez', 19], ['Josué', 10], ['Pedro Rocha', 32]],
+  'Dominic FC': [['Muralha', 1], ['Paredão', 3], ['Zagueirão', 4], ['Maestro', 8], ['Dominic', 10], ['Foguete', 9]],   // time inventado
+  'Goiás': [['Tadeu', 23], ['Rodrigo Soares', 2], ['Luiz Felipe', 3], ['Juninho', 8], ['Lucas Lima', 10], ['Anselmo Ramon', 9]],
+  // Arábia Saudita (2026/27)
+  'Al-Hilal': [['Bounou', 37], ['Koulibaly', 3], ['Théo Hernandez', 19], ['Rúben Neves', 8], ['Milinković-Savić', 22], ['Watkins', 11]],
+  'Al-Nassr': [['Bento', 24], ['Simakan', 3], ['Iñigo Martínez', 26], ['João Félix', 79], ['Mané', 10], ['Cristiano', 7]],
+  'Al-Ittihad': [['Rajković', 1], ['Simić', 4], ['Kadesh', 15], ['Aouar', 10], ['Wijnaldum', 23], ['En-Nesyri', 21]],
+  'Al-Ahli': [['Mendy', 16], ['Ibañez', 3], ['Demiral', 28], ['Atangana', 6], ['Trincão', 7], ['Toney', 17]],
+  'Al-Shabab': [['Diaw', 1], ['Jedvaj', 4], ['Al-Bulaihi', 55], ['Partey', 18], ['Brownhill', 8], ['Carrasco', 10]],
+  'Al-Ettifaq': [['Rodák', 1], ['Hendry', 4], ['Pedro Henrique', 5], ['Medrán', 10], ['Duda', 11], ['Dembélé', 9]],
+  // La Liga (2026/27)
+  'Real Madrid': [['Courtois', 1], ['Militão', 3], ['Huijsen', 4], ['Bellingham', 5], ['Valverde', 8], ['Mbappé', 10]],
+  'Barcelona': [['Joan García', 1], ['Cubarsí', 5], ['Koundé', 23], ['Pedri', 8], ['Gavi', 6], ['Yamal', 10]],
+  'Atlético de Madrid': [['Oblak', 13], ['Romero', 21], ['Le Normand', 24], ['Koke', 6], ['Barrios', 8], ['Julián Álvarez', 19]],
+  'Sevilla': [['Vlachodimos', 1], ['Kike Salas', 4], ['Suazo', 17], ['Agoumé', 6], ['Peque', 10], ['Isaac Romero', 16]],
+  'Valencia': [['Dimitrievski', 1], ['Gayà', 14], ['Tárrega', 5], ['Javi Guerra', 8], ['Pepelu', 18], ['Hugo Duro', 9]],
+  'Villarreal': [['Luiz Júnior', 1], ['Foyth', 8], ['Renato Veiga', 12], ['Comesaña', 14], ['Moleiro', 10], ['Gerard Moreno', 7]],
+  // Grupo Europa League (2026/27)
+  'Milan': [['Maignan', 16], ['Tomori', 23], ['Gabbia', 46], ['Modrić', 14], ['Pulisic', 11], ['Gonçalo Ramos', 9]],
+  'Inter de Milão': [['Josep Martínez', 1], ['Bastoni', 95], ['Akanji', 25], ['Barella', 23], ['Çalhanoğlu', 20], ['Lautaro', 10]],
+  'Roma': [['Svilar', 99], ['Ndicka', 5], ['Mancini', 23], ['Pellegrini', 7], ['Koné', 17], ['Dybala', 21]],
+  'Lazio': [['Mandas', 35], ['Marušić', 77], ['Nuno Tavares', 17], ['Rovella', 6], ['Frattesi', 16], ['Zaccagni', 10]],
+  'Porto': [['Diogo Costa', 99], ['Kiwior', 4], ['Bednarek', 5], ['Varela', 22], ['Gabri Veiga', 10], ['Samu', 9]],
+  'Ajax': [['Ter Stegen', 1], ['Blind', 17], ['Baas', 15], ['Klaassen', 18], ['Brandt', 8], ['Dolberg', 9]],
+  // Champions (2026/27)
+  'PSG': [['Chevalier', 30], ['Marquinhos', 5], ['Hakimi', 2], ['Vitinha', 17], ['João Neves', 87], ['Dembélé', 10]],
+  'Manchester City': [['Donnarumma', 1], ['Rúben Dias', 3], ['Guéhi', 6], ['Foden', 47], ['Cherki', 10], ['Haaland', 9]],
+  'Bayern': [['Neuer', 1], ['Upamecano', 2], ['Kim Min-jae', 3], ['Kimmich', 6], ['Musiala', 10], ['Kane', 9]],
+  'Liverpool': [['Alisson', 1], ['Van Dijk', 4], ['Frimpong', 30], ['Szoboszlai', 8], ['Wirtz', 7], ['Isak', 9]],
+  // Seleções (números da Copa do Mundo 2026)
+  'Brasil': [['Alisson', 1], ['Marquinhos', 4], ['Gabriel Magalhães', 3], ['Casemiro', 5], ['Bruno Guimarães', 8], ['Vini Jr.', 7]],
+  'Espanha': [['Unai Simón', 23], ['Cubarsí', 22], ['Laporte', 14], ['Pedri', 20], ['Rodri', 16], ['Yamal', 19]],
+  'Argentina': [['Dibu Martínez', 23], ['Romero', 13], ['Lisandro Martínez', 6], ['Mac Allister', 20], ['Enzo Fernández', 24], ['Messi', 10]],
+  'França': [['Maignan', 16], ['Upamecano', 4], ['Saliba', 17], ['Tchouaméni', 8], ['Rabiot', 14], ['Mbappé', 10]],
+  'Alemanha': [['Neuer', 1], ['Tah', 4], ['Schlotterbeck', 15], ['Kimmich', 6], ['Musiala', 10], ['Havertz', 7]],
+  'Portugal': [['Diogo Costa', 1], ['Rúben Dias', 3], ['Nuno Mendes', 25], ['Bruno Fernandes', 8], ['Vitinha', 23], ['Cristiano', 7]],
+};
 // sorteio do jogo: 45% de chance de ser o clássico
 function sorteiaJogo(E) {
   let i, j;
