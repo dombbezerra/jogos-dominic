@@ -189,7 +189,7 @@ const eu = { x: minha.dIn.x, y: minha.dIn.y - 40, r: 20, e: '🧒', nome: 'Você
 const BOTS = [['Lucas', '👦'], ['Bia', '👧'], ['Theo', '🧑']];
 const bots = BOTS.map(([nome, e], k) => {
   const b = bases[k + 1];
-  // cada base de bot começa com uns bichos (alguns bons, pra valer a pena roubar!)
+  // cada base de bot começa com uns bichos
   const n = 4 + Math.floor(Math.random() * 3);
   for (let j = 0; j < n; j++) b.slots[j] = sorteia(1 + j * 0.6);
   return { x: b.dIn.x, y: b.dIn.y, r: 20, e, nome, base: b, vel: 165, carrega: null, rota: [], estado: 'casa', espera: 1 + Math.random() * 3, tonto: 0 };
@@ -270,9 +270,9 @@ function procuraAcao() {
   for (const a of esteira) { const d = Math.hypot(a.x - eu.x, a.y - eu.y); if (!a.dono && d < md) { md = d; melhor = a; } }
   if (melhor) return { tipo: 'comprar', a: melhor };
   const b = baseDe(eu);
-  if (b) for (let k = 0; k < VAGAS; k++) {
+  if (b === minha) for (let k = 0; k < VAGAS; k++) {   // ninguém rouba ninguém: só dá pra vender os seus
     const s = b.slots[k]; if (!s) continue;
-    const st = solto(b, k); if (Math.hypot(st.x - eu.x, st.y - eu.y) < 60) return { tipo: b === minha ? 'vender' : 'roubar', b, k };
+    const st = solto(b, k); if (Math.hypot(st.x - eu.x, st.y - eu.y) < 60) return { tipo: 'vender', b, k };
   }
   return null;
 }
@@ -323,7 +323,7 @@ function vaiPraBase(a, base, k) {
 }
 
 // ── Cabeça dos bots ──
-let proxCompraBot = 5;   // os bots NÃO roubam você: só você rouba deles!
+let proxCompraBot = 5;   // ninguém rouba ninguém: os bots só compram da esteira
 function pensaBots(dt) {
   // de vez em quando um bot compra da esteira
   if ((proxCompraBot -= dt) <= 0) {
@@ -363,8 +363,6 @@ function pensaBots(dt) {
       }
     }
   }
-  // as bases dos bots trancam de vez em quando
-  for (const bb of bases) if (bb !== minha && !trancada(bb) && Math.random() < dt / 70) bb.trancaAte = Date.now() + 25000 + Math.random() * 20000;
 }
 
 // ── Controles: arrastar o dedo (joystick) ou teclado ──
