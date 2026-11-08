@@ -86,7 +86,8 @@
   .op { font-family: var(--texto); font-weight: 800; font-size: 17px; cursor: pointer; border: 3px solid var(--tinta); border-radius: 14px; padding: 9px 14px 6px; box-shadow: 0 5px 0 var(--tinta); min-width: 104px; }
   .op:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--tinta); }
   .op.siga { background: #e6edf5; color: var(--tinta); } .op.falta { background: #5cb8ff; color: var(--tinta); }
-  .op.amarelo { background: #ffd23f; color: var(--tinta); } .op.vermelho { background: #ff3b3b; color: #fff; } .op.penalti, .op.gol { background: #2fd15a; color: #fff; } .op.impedimento { background: #ff8a3d; color: #fff; } .op.naogol { background: #e6edf5; color: var(--tinta); }
+  .op.amarelo { background: #ffd23f; color: var(--tinta); } .op.vermelho { background: #ff3b3b; color: #fff; } .op.var { background: #7a3cff; color: #fff; } .op.fim { background: #111; color: #fff; } .op.prorroga { background: #ff8a3d; color: #fff; }
+  .op.penalti, .op.gol { background: #2fd15a; color: #fff; } .op.impedimento { background: #ff8a3d; color: #fff; } .op.naogol { background: #e6edf5; color: var(--tinta); }
   #var { margin-top: 8px; font-weight: 800; font-size: 14px; background: #7a3cff; border: 2px solid #fff; color: #fff; border-radius: 10px; padding: 3px 12px 1px; cursor: pointer; font-family: inherit; }
   #bandeira { position: fixed; right: 10px; top: calc(env(safe-area-inset-top) + 156px); z-index: 12; background: #ff8a3d; color: #fff; font-weight: 800; padding: 3px 10px 1px; border-radius: 10px; border: 2px solid #fff; display: none; animation: pisca .5s infinite alternate; }
   #bandeira.on { display: block; }
@@ -256,6 +257,8 @@ const ETAPAS = [
       T('Argentina', 'ARG', '#f4f4f4', '#111111', '#f4f4f4', '#1a2a6a', '#75aadb'), T('França', 'FRA', '#1a2a6a', '#ffffff', '#c8102e', '#ffffff'),
       T('Alemanha', 'ALE', '#f4f4f4', '#111111', '#f4f4f4', '#111111'), T('Portugal', 'POR', '#c8102e', '#0a6a3a', '#c8102e', '#ffd400')] },
 ];
+// elencos de verdade (temporada 2026/27): goleiro, 2 zagueiros, 2 meias e o atacante
+const ELENCOS = {};
 // sorteio do jogo: 45% de chance de ser o clássico
 function sorteiaJogo(E) {
   let i, j;
@@ -384,6 +387,15 @@ function textoNumero(n, cor) {
   g.lineWidth = 6; g.strokeStyle = 'rgba(0,0,0,.5)'; g.strokeText(n, 32, 34); g.fillStyle = cor; g.fillText(n, 32, 34);
   return new THREE.CanvasTexture(cv);
 }
+// nome nas costas (em cima do número)
+function textoNome(nome, cor) {
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 48;
+  const g = cv.getContext('2d'), t = String(nome).toUpperCase();
+  let tam = 34; g.font = '900 ' + tam + 'px Arial'; while (g.measureText(t).width > 244 && tam > 14) { tam -= 2; g.font = '900 ' + tam + 'px Arial'; }
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.lineWidth = 5; g.strokeStyle = 'rgba(0,0,0,.5)'; g.strokeText(t, 128, 26); g.fillStyle = cor; g.fillText(t, 128, 26);
+  const tx = new THREE.CanvasTexture(cv); tx.anisotropy = 4; return tx;
+}
 // Manequim moderno: corpo de gente (1,80 m), juntas nos joelhos e cotovelos, uniforme detalhado
 const MANEQUIM = new THREE.MeshStandardMaterial({ color: '#e6e1d8', roughness: 0.45, metalness: 0.05 });
 const JUNTA = new THREE.MeshStandardMaterial({ color: '#b9b2a6', roughness: 0.35, metalness: 0.1 });
@@ -449,6 +461,7 @@ function boneco(cor, cor2, pele, num = 0, o = {}) {
   if (num) {
     const n = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.24), new THREE.MeshBasicMaterial({ map: textoNumero(num, o.detalhe || '#ffffff'), transparent: true }));
     n.position.set(0, 1.3, -0.128); n.rotation.y = Math.PI; g.add(n);
+    if (o.nome) { const nm = new THREE.Mesh(new THREE.PlaneGeometry(0.27, 0.05), new THREE.MeshBasicMaterial({ map: textoNome(o.nome, o.detalhe || '#ffffff'), transparent: true })); nm.position.set(0, 1.45, -0.118); nm.rotation.y = Math.PI; g.add(nm); }
     const f = n.clone(); f.scale.setScalar(0.4); f.position.set(-0.09, 1.38, 0.126); f.rotation.y = 0; g.add(f);   // numerozinho na frente
     if (o.kit) {   // escudinho no peito, do lado do coração
       const e = new THREE.Mesh(new THREE.PlaneGeometry(0.11, 0.13), new THREE.MeshBasicMaterial({ map: escudo(o.kit).tx, transparent: true }));
@@ -576,12 +589,12 @@ function novoJogo() {
   const jogadores = [];
   for (let time = 0; time < 2; time++) {
     FORMACAO.forEach(([x, z], i) => {
-      const gk = i === 0, num = gk ? 1 : [0, 3, 4, 8, 10, 9][i];
-      const U = times[time];
+      const U = times[time], el = (ELENCOS[U.nome] || [])[i];
+      const gk = i === 0, num = el ? el[1] : gk ? 1 : [0, 3, 4, 8, 10, 9][i], nome = el ? el[0] : '';
       const b = boneco(gk ? (time ? '#a0ff3a' : '#ff7ad9') : U.camisa, gk ? '#222222' : U.calcao, '#e9e4da', num,
-        { meia: gk ? '#222222' : U.meia, detalhe: gk ? '#111111' : U.detalhe, listra: gk ? null : U.listra, kit: gk ? null : U, luva: gk ? '#ff7a00' : null, manga: gk });
+        { meia: gk ? '#222222' : U.meia, detalhe: gk ? '#111111' : U.detalhe, listra: gk ? null : U.listra, kit: gk ? null : U, luva: gk ? '#ff7a00' : null, manga: gk, nome });
       const sx = time ? -1 : 1;
-      jogadores.push({ b, num, time, gk: i === 0, casa: { x: x * sx, z }, x: x * sx, z, vx: 0, vz: 0, vel: (0.16 + Math.random() * 0.03) * E.vel, caido: 0, fora: false, amarelo: false, t: Math.random() * 10 });
+      jogadores.push({ b, num, nome, funcao: ['gk', 'zag', 'zag', 'mei', 'mei', 'ata'][i], time, gk: i === 0, casa: { x: x * sx, z }, x: x * sx, z, vx: 0, vz: 0, vel: (0.16 + Math.random() * 0.03) * E.vel, caido: 0, fora: false, amarelo: false, t: Math.random() * 10 });
     });
   }
   const juiz = boneco('#111111', '#111111');
@@ -607,14 +620,14 @@ function novoJogo() {
 function comeca() {
   if (modo !== 'espera') return;
   modo = 'jogando'; document.body.classList.remove('espera');
-  aviso(M.etapa === 2 ? '2º TEMPO!' : 'APITA O JUIZ!', 'Bola rolando! ⚽', 1600);
+  aviso({ 1: 'APITA O JUIZ!', 2: '2º TEMPO!', 3: 'PRORROGAÇÃO!', 4: '2º TEMPO DA PRORROGAÇÃO!' }[M.etapa], 'Bola rolando! ⚽', 1600);
   som('apito');
 }
 $('b-start').onclick = comeca;
 // ── Pausar ──
 let antesDaPausa = null;
 function pausa() {
-  if (!M || !['jogando', 'espera', 'decisao', 'pedevar', 'var'].includes(modo)) return;
+  if (!M || !['jogando', 'espera', 'decisao', 'pedevar', 'var', 'apito'].includes(modo)) return;
   antesDaPausa = modo; modo = 'pausa';
   teclas.shift = false; joy.x = joy.y = 0; correndo = false;
   $('pausa').classList.remove('hidden');
@@ -672,7 +685,7 @@ function passe(p, forcado) {
   const dir = Math.sign(meta(p.time));
   const amigos = M.jogadores.filter(q => q.time === p.time && q !== p && !q.fora && !q.gk && (q.x - p.x) * dir > -4);
   if (!amigos.length) return;
-  const nove = amigos.find(a => a.num === 9);
+  const nove = amigos.find(a => a.funcao === 'ata');
   const q = forcado || (nove && (nove.x - p.x) * dir > 4 && Math.random() < 0.55 ? nove : sorteia(amigos)), b = M.bola;   // lançamento pro centroavante
   // 🚩 na hora do passe: o recebedor está na frente do penúltimo defensor?
   const defs = M.jogadores.filter(o => o.time !== p.time && !o.fora).map(o => o.x * dir).sort((a, c) => c - a);
@@ -928,54 +941,108 @@ function fazFalta(vit, aut) {
   som(tipo === 'caicai' ? 'ole' : 'uh');
 }
 const recente = s => M.ultimaFalta && !M.ultimaFalta.usada && M.t - M.ultimaFalta.quando < s * 60;
-function minTempo() { return M.min - (M.etapa === 2 ? 45 : 0); }
+function quem(p) { return (p.nome ? p.nome + ' (' + p.num + ')' : 'Nº ' + p.num) + ' do ' + M.times[p.time].nome; }
+function minTempo() { return M.min - BASE[M.etapa]; }
 // 📣 Apitar: começa o jogo, marca falta, para o jogo ou termina o tempo
+// tempos: 1º e 2º (45 min) e prorrogação: 3º e 4º (15 min)
+const BASE = [0, 0, 45, 90, 105], DUR = [0, 45, 45, 15, 15];
+// 📣 Apitar: no meio do jogo abre as opções do juiz
 function apitar() {
   if (!M) return;
   if (modo === 'espera') return comeca();
+  if (modo === 'apito') return voltaJogo();
   if (modo !== 'jogando') return;
-  if (minTempo() >= 45) {   // fim do tempo
-    som('apito3'); $('acres').classList.remove('on');
-    if (M.etapa === 1) {
-      M.etapa = 2; M.min = 45; M.acres = null; M.pediuAcres = false; M.avisouFim = false; M.ultimaFalta = null;
-      saidaDeBola(1); M.pausa = 0;
-      modo = 'espera'; document.body.classList.add('espera'); $('b-start').textContent = '▶ 2º TEMPO';
-      hud(); posiciona();
-      aviso('⏸ INTERVALO', M.times[0].sigla + ' ' + M.placar[0] + ' x ' + M.placar[1] + ' ' + M.times[1].sigla + ' · aperte pra começar o 2º tempo', 3500);
-    } else fimDeJogo();
-    return;
-  }
   som('apito');
-  const b = M.bola;
-  const I = M.imped;
-  if (I && !I.usada && M.t - I.quando < 6 * 60 && (!recente(7) || I.quando > M.ultimaFalta.quando)) {
-    I.usada = true; $('bandeira').classList.remove('on');
-    const defe = 1 - I.team, cob = M.jogadores.filter(p => p.time === defe && !p.fora && !p.gk).sort((p, q) => Math.hypot(p.x - I.recX, p.z - I.recZ) - Math.hypot(q.x - I.recX, q.z - I.recZ))[0];
-    b.x = clamp(I.recX, -CW / 2 + 1, CW / 2 - 1); b.z = I.recZ; b.vx = b.vz = b.vy = 0; b.y = 0.22;
-    if (cob) { cob.x = b.x + I.dir * 0.6; cob.z = b.z; b.dono = cob; }
-    M.pausa = 100;
-    aviso('🚩 IMPEDIMENTO!', 'O Nº ' + I.rec.num + ' do ' + M.times[I.team].nome + ' estava impedido', 1900);
-    return;
+  modo = 'apito';
+  painel('📣 O QUE VOCÊ MARCA?', opcoesApito(), false);
+}
+function opcoesApito() {
+  const ops = [['falta', '📣 FALTA', () => decideApito(marcaFalta)], ['impedimento', '🚩 IMPEDIMENTO', () => decideApito(marcaImped)],
+    ['penalti', '⚽ PÊNALTI', () => decideApito(marcaPenalti)]];
+  if (!M.vp) ops.push(['var', '📺 VER VAR', varLivre]);
+  ops.push(['siga', '✋ SIGA O JOGO', () => decideApito(null)]);
+  if (minTempo() >= DUR[M.etapa]) {
+    if (M.etapa === 1) ops.unshift(['fim', '⏸ FIM DO 1º TEMPO', () => decideApito(fimDoTempo)]);
+    else if (M.etapa === 2) { ops.unshift(['prorroga', '⏱ PRORROGAÇÃO', () => decideApito(() => fimDoTempo(true))]); ops.unshift(['fim', '🏁 FIM DE JOGO', () => decideApito(fimDeJogo)]); }
+    else if (M.etapa === 3) ops.unshift(['fim', '⏸ FIM DO 1º TEMPO DA PRORROGAÇÃO', () => decideApito(fimDoTempo)]);
+    else ops.unshift(['fim', '🏁 FIM DE JOGO', () => decideApito(fimDeJogo)]);
   }
-  if (recente(7)) {
-    const F = M.ultimaFalta; F.usada = true; M.faltas++;
-    F.vit.caido = Math.min(F.vit.caido, 20);
+  return ops;
+}
+function decideApito(fn) {
+  if (M.vp) saiVar();
+  $('decisao').classList.remove('on');
+  modo = 'jogando';
+  if (fn) fn(); else aviso('✋ SIGA!', 'O jogo continua', 1200);
+  hud();
+}
+function voltaJogo() { decideApito(null); }
+// 📺 VAR na hora que quiser: vê os últimos segundos
+function varLivre() {
+  M.pede = { tipo: 'livre', hist: M.hist.length - 1 };
+  iniciaVar();
+}
+function fimDoTempo(prorrogacao) {
+  som('apito3'); $('acres').classList.remove('on');
+  M.etapa = prorrogacao ? 3 : M.etapa + 1;
+  M.min = BASE[M.etapa]; M.acres = null; M.pediuAcres = false; M.avisouFim = false; M.ultimaFalta = null; M.imped = null;
+  saidaDeBola(M.etapa % 2 ? 0 : 1); M.pausa = 0;
+  const nomes = { 2: '▶ 2º TEMPO', 3: '▶ PRORROGAÇÃO', 4: '▶ 2º TEMPO DA PRORROGAÇÃO' };
+  modo = 'espera'; document.body.classList.add('espera'); $('b-start').textContent = nomes[M.etapa];
+  hud(); posiciona();
+  aviso(prorrogacao ? '⏱ PRORROGAÇÃO!' : '⏸ INTERVALO', M.times[0].sigla + ' ' + M.placar[0] + ' x ' + M.placar[1] + ' ' + M.times[1].sigla + ' · apite pra começar', 3500);
+}
+// depois do gol: todo mundo volta pro meio e espera o seu apito
+function recomeco(timeQueSai) {
+  saidaDeBola(timeQueSai); M.pausa = 0;
+  modo = 'espera'; document.body.classList.add('espera'); $('b-start').textContent = '📣 SAÍDA DE BOLA';
+  posiciona();
+}
+function cobranca(time, x, z) {   // tiro livre: a bola fica no lugar e o adversário se afasta
+  const b = M.bola, dir = Math.sign(meta(time));
+  b.x = clamp(x, -CW / 2 + 1, CW / 2 - 1); b.z = clamp(z, -CH / 2 + 1, CH / 2 - 1); b.vx = b.vz = b.vy = 0; b.y = 0.22;
+  const cobra = M.jogadores.filter(p => p.time === time && !p.fora && !p.gk).sort((p, q) => Math.hypot(p.x - b.x, p.z - b.z) - Math.hypot(q.x - b.x, q.z - b.z))[0];
+  if (cobra) { cobra.x = b.x - dir * 0.6; cobra.z = b.z; cobra.caido = 0; b.dono = cobra; }
+  for (const p of M.jogadores) if (p.time !== time && !p.gk && Math.hypot(p.x - b.x, p.z - b.z) < 8) { const dx = p.x - b.x, dz = p.z - b.z, l = Math.hypot(dx, dz) || 1; p.x = b.x + dx / l * 8; p.z = b.z + dz / l * 8; }
+  M.pausa = 100;
+}
+const timeComBola = () => M.bola.dono ? M.bola.dono.time : (M.bola.x > 0 ? 0 : 1);
+function marcaFalta() {
+  const F = M.ultimaFalta;
+  if (F && !F.usada && M.t - F.quando < 12 * 60) {
+    F.usada = true; M.faltas++; F.vit.caido = Math.min(F.vit.caido, 20);
     const dirVit = Math.sign(meta(F.vit.time));
     if (naArea(F.x, F.z) && Math.sign(F.x) === dirVit) { aviso('⚽ PÊNALTI!', 'Falta dentro da área', 1800); penalti(F.vit.time); return; }
-    const cobra = M.jogadores.filter(p => p.time === F.vit.time && !p.fora && !p.gk && p !== F.vit).sort((p, q) => Math.hypot(p.x - F.x, p.z - F.z) - Math.hypot(q.x - F.x, q.z - F.z))[0] || F.vit;
-    b.x = clamp(F.x, -CW / 2 + 1, CW / 2 - 1); b.z = clamp(F.z, -CH / 2 + 1, CH / 2 - 1); b.vx = b.vz = b.vy = 0; b.y = 0.22;
-    cobra.x = b.x - dirVit * 0.6; cobra.z = b.z; cobra.caido = 0; b.dono = cobra; M.pausa = 100;
-    for (const p of M.jogadores) if (p.time !== F.vit.time && !p.gk && Math.hypot(p.x - b.x, p.z - b.z) < 8) { const dx = p.x - b.x, dz = p.z - b.z, l = Math.hypot(dx, dz) || 1; p.x = b.x + dx / l * 8; p.z = b.z + dz / l * 8; }
-    aviso('📣 FALTA!', 'Falta do ' + M.times[F.aut.time].nome, 1800);
+    cobranca(F.vit.time, F.x, F.z);
+    aviso('📣 FALTA!', 'Falta de ' + quem(F.aut), 1800);
   } else {
-    if (!b.dono) { const perto = M.jogadores.filter(p => !p.fora && !p.gk && !(p.caido > 0)).sort((p, q) => Math.hypot(p.x - b.x, p.z - b.z) - Math.hypot(q.x - b.x, q.z - b.z))[0]; if (perto) { b.dono = perto; b.vx = b.vz = 0; } }
-    M.pausa = 80;
-    aviso('📣 PRIIII!', 'Jogo parado pelo juiz', 1500);
+    const t = timeComBola(); M.faltas++;
+    cobranca(t, M.bola.x, M.bola.z);
+    aviso('📣 FALTA!', 'Falta a favor do ' + M.times[t].nome, 1800);
   }
+}
+function marcaImped() {
+  const I = M.imped; $('bandeira').classList.remove('on');
+  if (I && !I.usada && M.t - I.quando < 10 * 60) {
+    I.usada = true;
+    cobranca(1 - I.team, I.recX, I.recZ);
+    aviso('🚩 IMPEDIMENTO!', quem(I.rec) + ' estava impedido', 1900);
+  } else {
+    const t = timeComBola();
+    cobranca(1 - t, M.bola.x, M.bola.z);
+    aviso('🚩 IMPEDIMENTO!', 'Bola pro ' + M.times[1 - t].nome, 1800);
+  }
+}
+function marcaPenalti() {
+  const F = M.ultimaFalta;
+  const t = F && !F.usada && M.t - F.quando < 12 * 60 ? F.vit.time : timeComBola();
+  if (F) F.usada = true;
+  aviso('⚽ PÊNALTI!', 'para o ' + M.times[t].nome, 1800);
+  penalti(t);
 }
 // 🟨🟥 Cartão: vai pra quem fez a última falta, ou pro jogador que você está mirando
 function cartao(cor) {
-  if (!M || modo !== 'jogando') return;
+  if (!M || (modo !== 'jogando' && modo !== 'apito')) return;
   const F = M.ultimaFalta;
   let alvo = F && !F.cartao && !F.aut.fora && M.t - F.quando < 15 * 60 ? F.aut : null;   // quem fez a falta agora há pouco
   if (alvo) F.cartao = true;
@@ -991,7 +1058,7 @@ function cartao(cor) {
   if (!alvo) { aviso('👀 Mire no jogador!', 'Coloque o círculo do meio da tela nele', 1800); return; }
   som('apito');
   let vermelho = cor === 'vermelho';
-  const nome = 'Nº ' + alvo.num + ' do ' + M.times[alvo.time].nome;
+  const nome = quem(alvo);
   if (!vermelho && alvo.amarelo) vermelho = 'segundo';
   cartaoNaMao(vermelho ? '#ff2a2a' : '#ffd23f'); mostraCartao(alvo.b, vermelho ? '#ff2a2a' : '#ffd23f');
   if (vermelho) {
@@ -1081,34 +1148,39 @@ function atualizaVar() {
         const I = mot.I, k = M.jogadores.indexOf(I.rec), rx = fr2 && fr2.p[k] ? fr2.p[k][0] : I.recX, rz = fr2 && fr2.p[k] ? fr2.p[k][1] : I.recZ;
         linhaDef.position.x = I.linhaX; linhaAtq.position.x = rx; linhaDef.visible = linhaAtq.visible = true;
         camera.position.set(I.linhaX, 6, rz + (rz > 0 ? -14 : 14)); camera.lookAt(I.linhaX, 0.5, rz);
-        txt = '🟡 atacante Nº ' + I.rec.num + ' · 🟣 penúltimo defensor (na hora do passe)';
+        txt = '🟡 ' + (I.rec.nome || 'atacante Nº ' + I.rec.num) + ' · 🟣 penúltimo defensor (na hora do passe)';
       } else if (mot && mot.tipo === 'falta') {
         const F = mot.F;
         camera.position.set(F.x - 5, 3.5, F.z + 6); camera.lookAt(F.x, 0.6, F.z);
-        txt = '🤕 Lance do Nº ' + F.aut.num + ' do ' + M.times[F.aut.time].nome + ' antes do gol';
+        txt = '🤕 Lance de ' + quem(F.aut) + ' antes do gol';
       } else if (fr2) { camera.position.set(fr2.b[0], 9, fr2.b[2] + 14); camera.lookAt(fr2.b[0], 0, fr2.b[2]); }
       $('var-tag').innerHTML = '📺 VAR <small>' + txt + '</small>';
+      if (P.tipo === 'livre') { painel('📺 O QUE VOCÊ MARCA?', opcoesApito(), true); return; }
       painel(P.tipo === 'gol' ? '📺 E AGORA, JUIZ?' : '📺 FOI GOL?', P.tipo === 'gol'
         ? [['vermelho', '❌ ANULAR GOL', () => fechaVar('anula')], ['penalti', '✅ GOL VALE', () => fechaVar('vale')]]
         : [['penalti', '⚽ FOI GOL', () => fechaVar('gol')], ['siga', '✋ NÃO FOI GOL', () => fechaVar('nao')]], true);
     }
   }
 }
-function fechaVar(dec) {
-  const P = M.pede; M.pede = null; M.vp = null;
-  document.body.classList.remove('var'); $('decisao').classList.remove('on');
+function saiVar() {
+  M.pede = null; M.vp = null;
+  document.body.classList.remove('var');
   linhaDef.visible = linhaAtq.visible = linhaGol.visible = false; gols.forEach(g => { g.visible = true; });
+  posiciona();
+}
+function fechaVar(dec) {
+  const P = M.pede; saiVar(); $('decisao').classList.remove('on');
   modo = 'jogando';
   if (P.motivo) { if (P.motivo.I) P.motivo.I.usada = true; if (P.motivo.F) P.motivo.F.usada = true; }
   const b = M.bola;
-  if (dec === 'vale') { aviso('✅ GOL CONFIRMADO!', 'do ' + M.times[P.time].nome, 1800); som('aplauso'); saidaDeBola(1 - P.time); }
+  if (dec === 'vale') { aviso('✅ GOL CONFIRMADO!', 'do ' + M.times[P.time].nome + ' · apite a saída de bola', 2200); som('aplauso'); recomeco(1 - P.time); }
   if (dec === 'anula') {
     M.placar[P.time]--; hud(); som('vaia');
     aviso('❌ GOL ANULADO!', P.motivo && P.motivo.tipo === 'imped' ? 'Impedimento! 🚩' : P.motivo && P.motivo.tipo === 'falta' ? 'Teve falta no lance' : 'Decisão do juiz', 2200);
     const gk = M.jogadores.find(p => p.time !== P.time && p.gk && !p.fora) || M.jogadores.find(p => p.time !== P.time && !p.fora);
     const lado = Math.sign(meta(P.time)); gk.x = lado * (CW / 2 - 3); gk.z = 0; b.x = gk.x; b.z = 0; b.y = 0.22; b.vx = b.vz = b.vy = 0; b.dono = gk; M.pausa = 90;
   }
-  if (dec === 'gol') { M.placar[P.time]++; hud(); som('gol'); aviso('⚽ GOL!', 'A bola entrou inteira! do ' + M.times[P.time].nome, 2000); M.pausa = 140; M.depois = { f: 90, fn: () => saidaDeBola(1 - P.time) }; }
+  if (dec === 'gol') { M.placar[P.time]++; hud(); som('gol'); aviso('⚽ GOL!', 'A bola entrou inteira! do ' + M.times[P.time].nome, 2000); M.pausa = 140; M.depois = { f: 90, fn: () => recomeco(1 - P.time) }; }
   if (dec === 'nao') { aviso('✋ NÃO FOI GOL!', 'O goleiro salvou em cima da linha', 1800); b.x = P.dir * (CW / 2 - 1.2); b.dono = P.gk; P.gk.x = b.x; M.pausa = 60; }
   posiciona();
 }
@@ -1166,8 +1238,8 @@ function atualiza() {
   // relógio: 1 minuto do jogo = 4 segundos
   M.min += 1 / 240; M.proxFalta--; M.proxImped--;
   const mt = minTempo();
-  if (mt >= 45 && !M.pediuAcres) { M.pediuAcres = true; $('acres').classList.add('on'); som('apito'); }
-  if (mt >= 45 + (M.acres || 0) && M.acres != null && !M.avisouFim) { M.avisouFim = true; aviso('⏱ Acabou o acréscimo!', 'Aperte 📣 APITAR pra terminar o ' + (M.etapa === 1 ? '1º tempo' : 'jogo'), 2600); }
+  if (mt >= DUR[M.etapa] && !M.pediuAcres) { M.pediuAcres = true; $('acres').classList.add('on'); som('apito'); }
+  if (mt >= DUR[M.etapa] + (M.acres || 0) && M.acres != null && !M.avisouFim) { M.avisouFim = true; aviso('⏱ Acabou o acréscimo!', 'Aperte 📣 APITAR pra terminar o tempo', 2600); }
   M.proximoLance = 1e9;
   // hora de um lance: falta, impedimento ou bola na linha?
   if (M.proximoLance <= 0 && M.lances < M.E.lances) {
@@ -1202,7 +1274,7 @@ function atualiza() {
       M.pausa = 140;
       const motivo = motivoVar(time);
       gravaQuadro();
-      M.depois = { f: 90, fn: motivo || Math.random() < 0.25 ? () => pedeVar({ tipo: 'gol', time, motivo, hist: M.hist.length - 1 }) : () => saidaDeBola(1 - time) };
+      M.depois = { f: 90, fn: motivo || Math.random() < 0.25 ? () => pedeVar({ tipo: 'gol', time, motivo, hist: M.hist.length - 1 }) : () => recomeco(1 - time) };
       posiciona(); return;
     }
     // saiu: o jogo volta sozinho (lateral, escanteio ou tiro de meta)
@@ -1244,7 +1316,7 @@ function atualiza() {
     const bx = b.x, bz = b.z;
     // o time anda junto com a bola
     tx = p.casa.x + bx * 0.45; tz = p.casa.z + (bz - p.casa.z) * 0.25;
-    if (p.num === 9 && dono && dono.time === p.time && dono !== p) {
+    if (p.funcao === 'ata' && dono && dono.time === p.time && dono !== p) {
       // o centroavante tenta sair na cara do gol: às vezes se adianta demais (impedimento!)
       const dir = Math.sign(meta(p.time));
       const defs = M.jogadores.filter(o => o.time !== p.time && !o.fora).map(o => o.x * dir).sort((a, c) => c - a);
@@ -1252,7 +1324,7 @@ function atualiza() {
       if (M.proxImped <= 0) p.adiantado = true;   // hora de um lance de impedimento
       tx = dir * clamp((defs[1] || 0) + (p.adiantado ? 2 : -1.5), 2, CW / 2 - 6);
     }
-    if ((p.num === 3 || p.num === 4) && dono && dono.time !== p.time) tx = p.casa.x * 0.6 + bx * 0.6;   // a defesa sobe a linha
+    if (p.funcao === 'zag' && dono && dono.time !== p.time) tx = p.casa.x * 0.6 + bx * 0.6;   // a defesa sobe a linha
     if (p.gk) { tx = Math.sign(p.casa.x) * (CW / 2 - 2); tz = clamp(bz * 0.15, -3, 3); }
     if (p === dono) {
       // com a bola: corre pro gol, passa ou chuta
@@ -1260,8 +1332,8 @@ function atualiza() {
       if (p.corte > 0) { p.corte--; tx = p.x + Math.sign(meta(p.time)) * 3; tz = p.z + p.corteLado * 4; vel *= 1.45; }
       if (p.arranque > 0) { p.arranque--; vel *= 1.4; }
       const dg = Math.abs(meta(p.time) - p.x);
-      if (M.proxImped <= 0 && p.num !== 9 && !p.gk) {   // lançamento pro centroavante que está adiantado
-        const nove = M.jogadores.find(q => q.time === p.time && q.num === 9 && !q.fora), dir = Math.sign(meta(p.time));
+      if (M.proxImped <= 0 && p.funcao !== 'ata' && !p.gk) {   // lançamento pro centroavante que está adiantado
+        const nove = M.jogadores.find(q => q.time === p.time && q.funcao === 'ata' && !q.fora), dir = Math.sign(meta(p.time));
         const defs = M.jogadores.filter(o => o.time !== p.time && !o.fora).map(o => o.x * dir).sort((a, c) => c - a);
         if (nove && nove.x * dir > (defs[1] || 0) + 0.5 && nove.x * dir > p.x * dir + 3 && Math.random() < 0.06) { passe(p, nove); posiciona(); return; }
       }
@@ -1362,8 +1434,8 @@ renderer.domElement.addEventListener('touchmove', e => { for (const t of e.chang
 renderer.domElement.addEventListener('touchend', e => { for (const t of e.changedTouches) if (dedo && t.identifier === dedo.id) dedo = null; });
 function hud() {
   $('ga').textContent = M.placar[0]; $('gb').textContent = M.placar[1];
-  const mt = minTempo(), base = M.etapa === 2 ? 45 : 0;
-  $('tempo').textContent = mt < 45 ? Math.floor(M.min) + "'" : (base + 45) + '+' + (Math.floor(mt - 45) + 1) + "'" + (M.acres ? ' (+' + M.acres + ')' : '');
+  const mt = minTempo(), fimT = BASE[M.etapa] + DUR[M.etapa];
+  $('tempo').textContent = (M.etapa > 2 ? '🔁 ' : '') + (mt < DUR[M.etapa] ? Math.floor(M.min) + "'" : fimT + '+' + (Math.floor(mt - DUR[M.etapa]) + 1) + "'" + (M.acres ? ' (+' + M.acres + ')' : ''));
   $('namar').textContent = M.amarelos; $('nverm').textContent = M.vermelhos;
 }
 setInterval(() => { if (M && modo === 'jogando') hud(); }, 500);
@@ -1388,7 +1460,7 @@ $('b-menu').onclick = () => { limpa(); modo = 'menu'; camera.fov = 48; camera.up
 let ang = 0;
 function loop() {
   animaMao();
-  if (M) { atualiza(); if (modo === 'decisao' || modo === 'espera') olhos(); if (modo === 'pedevar') posiciona(); if (modo === 'var') atualizaVar(); }
+  if (M) { atualiza(); if (modo === 'decisao' || modo === 'espera' || modo === 'apito') olhos(); if (modo === 'pedevar') posiciona(); if (modo === 'var') atualizaVar(); }
   else { ang += 0.002; camera.position.set(Math.cos(ang) * 70, 35, Math.sin(ang) * 50); camera.lookAt(0, 0, 0); }
   renderer.render(cena, camera);
   requestAnimationFrame(loop);
