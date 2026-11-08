@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0a0a1a">
+<meta name="theme-color" content="#8fd3ff">
 <title>Fuga do Labirinto</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,9 +18,9 @@
   body.jogando #back-link { display: none; }
   .tela { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 16px 20px; text-align: center; overflow-y: auto; }
   .tela.hidden { display: none; }
-  #menu { background: radial-gradient(circle at 50% 35%, #3a1a6a 0%, #150a2e 55%, #050510 100%); }
+  #menu { background: linear-gradient(#8fd3ff 0%, #bfe6ff 45%, #5cae4a 46%, #2e7d32 100%); }
   h1 { font-family: var(--display); font-weight: 400; font-size: clamp(36px, 9vw, 72px); line-height: .95; text-shadow: 4px 4px 0 #000; transform: rotate(-3deg); }
-  h1 span { color: var(--roxo); display: block; font-size: .6em; }
+  h1 span { color: var(--sol); display: block; font-size: .6em; }
   .sub { font-weight: 700; margin-top: 12px; max-width: 520px; opacity: .92; }
   .btn { font-family: var(--texto); font-weight: 800; font-size: 18px; cursor: pointer; border: 3px solid var(--tinta); border-radius: 16px; padding: 10px 24px 7px; color: var(--tinta); background: var(--creme); box-shadow: 0 5px 0 var(--tinta); }
   .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--tinta); }
@@ -72,7 +72,7 @@
 
 <div class="tela" id="menu">
   <h1>FUGA DO<span>LABIRINTO</span></h1>
-  <p class="sub">Pegue todas as chaves 🔑 e fuja pela porta 🚪 antes que o monstro 👾 te pegue!</p>
+  <p class="sub">Um labirinto de jardim bem difícil! Pegue todas as chaves 🔑 e saia pela porta 🚪 o mais rápido que conseguir ⏱</p>
   <button class="btn grande" id="b-jogar">ENTRAR 🌀</button>
   <p class="dica" id="dica"></p>
   <p class="dica" id="recorde"></p>
@@ -112,33 +112,35 @@ const renderer = new THREE.WebGLRenderer({ antialias: !TOUCH });
 renderer.setPixelRatio(Math.min(TOUCH ? 1.5 : 2, devicePixelRatio || 1));
 document.body.appendChild(renderer.domElement);
 const cena = new THREE.Scene();
-cena.background = new THREE.Color('#07071a');
-cena.fog = new THREE.Fog('#07071a', 2, 24);
+cena.background = new THREE.Color('#8fd3ff');
+cena.fog = new THREE.Fog('#bfe6ff', 30, 110);
 const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 200);
 cena.add(camera);
 function ajusta() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 addEventListener('resize', ajusta); ajusta();
-cena.add(new THREE.HemisphereLight('#8a8aff', '#302040', 0.65));
-const lanterna = new THREE.PointLight('#ffe8b0', 24, 20, 1.3); camera.add(lanterna);   // a luz anda com você
+cena.add(new THREE.HemisphereLight('#ffffff', '#6a8a4a', 1.5));
+const sol = new THREE.DirectionalLight('#fff4d6', 2.2); sol.position.set(40, 80, 25); cena.add(sol);   // dia de sol
 
-function texParede() {
+function texParede() {   // arbusto cheio de folhinhas
   const cv = document.createElement('canvas'); cv.width = cv.height = 128;
-  const g = cv.getContext('2d'); g.fillStyle = '#4a3a6a'; g.fillRect(0, 0, 128, 128);
-  for (let y = 0; y < 8; y++) for (let x = 0; x < 4; x++) {
-    const o = y % 2 ? 16 : 0, v = 60 + Math.random() * 30;
-    g.fillStyle = `rgb(${v},${v * 0.8},${v * 1.25})`; g.fillRect(x * 32 + o + 1, y * 16 + 1, 30, 14);
+  const g = cv.getContext('2d'); g.fillStyle = '#2e7d32'; g.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 900; i++) {
+    const v = Math.random();
+    g.fillStyle = v < 0.33 ? '#1b5e20' : v < 0.66 ? '#43a047' : '#66bb6a';
+    g.beginPath(); g.ellipse(Math.random() * 128, Math.random() * 128, 2 + Math.random() * 3, 1.5 + Math.random() * 2, Math.random() * 3, 0, 7); g.fill();
   }
-  for (let i = 0; i < 30; i++) { g.fillStyle = 'rgba(80,255,160,.18)'; g.fillRect(Math.random() * 128, Math.random() * 128, 3, 3); }   // musguinho brilhante
   const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t;
 }
-function texChao() {
+function texChao() {   // grama com caminho de terra batida
   const cv = document.createElement('canvas'); cv.width = cv.height = 64;
-  const g = cv.getContext('2d'); g.fillStyle = '#2a2236'; g.fillRect(0, 0, 64, 64);
-  g.strokeStyle = '#1a1424'; g.lineWidth = 2; g.strokeRect(1, 1, 62, 62);
-  for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(255,255,255,.04)'; g.fillRect(Math.random() * 64, Math.random() * 64, 2, 2); }
+  const g = cv.getContext('2d'); g.fillStyle = '#c8a46a'; g.fillRect(0, 0, 64, 64);
+  for (let i = 0; i < 160; i++) { g.fillStyle = Math.random() < 0.5 ? 'rgba(120,80,40,.25)' : 'rgba(255,240,200,.25)'; g.fillRect(Math.random() * 64, Math.random() * 64, 2, 2); }
   const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 const MAT_PAREDE = new THREE.MeshLambertMaterial({ map: texParede() });
+// grama fora do labirinto
+const GRAMA = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.MeshLambertMaterial({ color: '#5cae4a' }));
+GRAMA.rotation.x = -Math.PI / 2; GRAMA.position.y = -0.02; cena.add(GRAMA);
 const TEX_CHAO = texChao();
 
 // ── Labirinto ──
@@ -158,8 +160,8 @@ function geraLabirinto(w, h) {
     const [x, y, p, q] = viz[Math.floor(Math.random() * viz.length)];
     a[p] = false; c(x, y)[q] = false; c(x, y).vis = true; pilha.push(c(x, y));
   }
-  // abre algumas paredes a mais pra ter mais de um caminho (dá pra fugir do monstro)
-  for (let i = 0; i < Math.floor(w * h * 0.08); i++) {
+  // abre poucas paredes a mais (quase todo caminho errado é beco sem saída)
+  for (let i = 0; i < Math.floor(w * h * 0.025); i++) {
     const x = 1 + Math.floor(Math.random() * (w - 2)), y = 1 + Math.floor(Math.random() * (h - 2));
     if (Math.random() < 0.5) { c(x, y).l = false; c(x + 1, y).o = false; } else { c(x, y).s = false; c(x, y + 1).n = false; }
   }
@@ -183,7 +185,7 @@ let mundo = null;
 function montaFase(fase) {
   if (mundo) cena.remove(mundo);
   mundo = new THREE.Group(); cena.add(mundo);
-  const w = 6 + fase * 2, h = 6 + fase * 2;
+  const w = 8 + fase * 2, h = 8 + fase * 2;
   L = geraLabirinto(w, h);
   // começo em (0,0); a saída é a casinha da borda mais longe
   const inicio = L.c(0, 0), dIni = distancias(inicio);
@@ -203,6 +205,17 @@ function montaFase(fase) {
   const inst = new THREE.InstancedMesh(geo, MAT_PAREDE, lista.length), m4 = new THREE.Matrix4();
   lista.forEach(([x0, z0, x1, z1], i) => { m4.makeScale(x1 - x0, ALT, z1 - z0); m4.setPosition((x0 + x1) / 2, ALT / 2, (z0 + z1) / 2); inst.setMatrixAt(i, m4); });
   mundo.add(inst);
+  // florzinhas coloridas no pé dos arbustos
+  const nFlores = lista.length * 7, flores = new THREE.InstancedMesh(new THREE.SphereGeometry(0.11, 8, 6), new THREE.MeshLambertMaterial(), nFlores);
+  const corF = new THREE.Color(), CORES_F = ['#ff5d8f', '#ffd23f', '#ffffff', '#b06cff', '#ff8a3d', '#5cb8ff'];
+  for (let i = 0; i < nFlores; i++) {
+    const [x0, z0, x1, z1] = lista[i % lista.length], deitada = x1 - x0 > z1 - z0, lado = Math.random() < 0.5 ? -1 : 1, t = Math.random();
+    const x = deitada ? x0 + (x1 - x0) * t : (x0 + x1) / 2 + lado * (ESP / 2 + 0.12);
+    const z = deitada ? (z0 + z1) / 2 + lado * (ESP / 2 + 0.12) : z0 + (z1 - z0) * t;
+    m4.makeScale(1, 1, 1); m4.setPosition(x, 0.12 + Math.random() * 0.5, z); flores.setMatrixAt(i, m4);
+    flores.setColorAt(i, corF.set(CORES_F[i % CORES_F.length]));
+  }
+  mundo.add(flores);
   const tc = TEX_CHAO.clone(); tc.needsUpdate = true; tc.repeat.set(w * 2, h * 2);
   const chao = new THREE.Mesh(new THREE.PlaneGeometry(w * CS, h * CS), new THREE.MeshLambertMaterial({ map: tc }));
   chao.rotation.x = -Math.PI / 2; chao.position.set(w * CS / 2, 0, h * CS / 2); mundo.add(chao);
@@ -229,7 +242,7 @@ function montaFase(fase) {
   for (const a of becos) { if (escolhidas.length >= nChaves) break; if (!escolhidas.includes(a)) escolhidas.push(a); }
   L.chaves = escolhidas.map(a => {
     const g = fazChave(), c = centro(a); g.position.set(c.x, 1.2, c.z); mundo.add(g);
-    const luz = new THREE.PointLight('#ffd23f', 8, 7, 1.3); luz.position.set(c.x, 1.6, c.z); mundo.add(luz);
+    const luz = new THREE.PointLight('#ffd23f', 3, 5, 1.3); luz.position.set(c.x, 1.6, c.z); mundo.add(luz);
     return { a, g, luz, pegou: false };
   });
   L.visto = new Set();
@@ -247,23 +260,6 @@ function fazChave() {
   for (const y of [-0.35, -0.2]) { const d = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.08, 0.1), ouro); d.position.set(0.12, y, 0); g.add(d); }
   return g;
 }
-// ── Monstro: uma bolha roxa de olhos grandes ──
-function fazMonstro() {
-  const g = new THREE.Group();
-  const pele = new THREE.MeshStandardMaterial({ color: '#7a2cff', emissive: '#2a0060', roughness: 0.5 });
-  const corpo = new THREE.Mesh(new THREE.SphereGeometry(0.9, 20, 16), pele); corpo.scale.set(1, 1.25, 1); corpo.position.y = 1.15; g.add(corpo);
-  for (let i = 0; i < 6; i++) { const t = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.6, 8), pele); const a = i / 6 * Math.PI * 2; t.position.set(Math.cos(a) * 0.6, 0.25, Math.sin(a) * 0.6); t.rotation.x = Math.PI; g.add(t); }
-  const olhos = [];
-  for (const s of [-1, 1]) {
-    const b = new THREE.Mesh(new THREE.SphereGeometry(0.26, 14, 12), new THREE.MeshBasicMaterial({ color: '#ffffff' })); b.position.set(s * 0.32, 1.55, 0.72); g.add(b);
-    const p = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8), new THREE.MeshBasicMaterial({ color: '#ff1a4a' })); p.position.set(s * 0.32, 1.55, 0.95); g.add(p); olhos.push(p);
-  }
-  const boca = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.06, 8, 16, Math.PI), new THREE.MeshBasicMaterial({ color: '#1a0030' })); boca.position.set(0, 1.0, 0.86); boca.rotation.z = Math.PI; g.add(boca);
-  for (const s of [-1, 1]) { const br = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.6, 4, 8), pele); br.position.set(s * 0.95, 1.1, 0.1); br.rotation.z = s * 0.9; br.rotation.x = -0.6; g.add(br); }
-  const luz = new THREE.PointLight('#a040ff', 10, 8, 1.3); luz.position.y = 1.5; g.add(luz);
-  return g;
-}
-
 // ══════════════ JOGO ══════════════
 let J = null, modo = 'menu';
 const tecla = {};
@@ -303,9 +299,6 @@ function som(tipo) {
     const nota = (f, d, tp = 'sine', v = 0.08, at = 0, f2) => { const o = ac.createOscillator(), g = ac.createGain(); o.type = tp; o.frequency.setValueAtTime(f, t + at); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + at + d); g.gain.setValueAtTime(v, t + at); g.gain.exponentialRampToValueAtTime(0.0008, t + at + d); o.connect(g); g.connect(ac.destination); o.start(t + at); o.stop(t + at + d + 0.02); };
     if (tipo === 'chave') [784, 988, 1318].forEach((f, i) => nota(f, 0.25, 'triangle', 0.07, i * 0.08));
     if (tipo === 'porta') [392, 523, 659, 784].forEach((f, i) => nota(f, 0.3, 'triangle', 0.07, i * 0.1));
-    if (tipo === 'coracao') { nota(60, 0.12, 'sine', 0.25); nota(55, 0.12, 'sine', 0.2, 0.16); }
-    if (tipo === 'rugido') { nota(110, 0.8, 'sawtooth', 0.06, 0, 60); nota(165, 0.6, 'square', 0.03, 0.05, 80); }
-    if (tipo === 'pegou') { nota(900, 0.5, 'sawtooth', 0.07, 0, 120); nota(140, 0.8, 'square', 0.05, 0.1); }
     if (tipo === 'fase') [523, 659, 784, 1046, 1318].forEach((f, i) => nota(f, 0.22, 'triangle', 0.07, i * 0.1));
     if (tipo === 'passo') nota(90 + Math.random() * 20, 0.05, 'triangle', 0.03);
   } catch (e) { /* sem som */ }
@@ -316,17 +309,12 @@ function aviso(txt, sub, ms = 1800) {
   a.classList.add('on'); clearTimeout(aviso.t); aviso.t = setTimeout(() => a.classList.remove('on'), ms);
 }
 
-function novoJogo() { J = { fase: 1, vidas: 3, bussolas: 3 }; comecaFase(); }
+function novoJogo() { J = { fase: 1, bussolas: 2, total: 0 }; comecaFase(); }
 function comecaFase() {
   montaFase(J.fase);
   const c = centro(L.inicio);
   Object.assign(J, { x: c.x, z: c.z, yaw: 0, pitch: 0, chaves: 0, folego: 1, t: 0, passo: 0, pertoT: 0, aberta: false, setaT: 0 });
   J.yaw = !L.inicio.l ? -Math.PI / 2 : Math.PI;   // olha pro lado aberto
-  // monstro nasce longe
-  if (J.monstro) cena.remove(J.monstro.g);
-  const d = distancias(L.inicio), longe = L.cel.filter(a => d.get(a) > d.get(L.saida) * 0.5).sort(() => Math.random() - 0.5)[0] || L.saida;
-  const mc = centro(longe), mg = fazMonstro(); mg.position.set(mc.x, 0, mc.z); cena.add(mg);
-  J.monstro = { g: mg, x: mc.x, z: mc.z, cel: longe, alvo: null, caminho: [], recalc: 0, cacando: false, vel: 1.9 + J.fase * 0.22, espera: 2 };
   modo = 'jogando';
   document.body.classList.add('jogando');
   for (const id of ['menu', 'fim', 'pausa']) $(id).classList.add('hidden');
@@ -334,8 +322,10 @@ function comecaFase() {
   aviso('FASE ' + J.fase, 'Ache ' + L.chaves.length + ' chaves 🔑', 2200);
   hud();
 }
+function fmt(t) { const m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ':' + String(s).padStart(2, '0'); }
+setInterval(() => { if (J && modo === 'jogando') hud(); }, 250);
 function hud() {
-  $('info').textContent = '🔑 ' + J.chaves + '/' + L.chaves.length + ' · ' + '❤️'.repeat(J.vidas) + '🖤'.repeat(Math.max(0, 3 - J.vidas)) + ' · Fase ' + J.fase;
+  $('info').textContent = '🔑 ' + J.chaves + '/' + L.chaves.length + ' · ⏱ ' + fmt(J.t) + ' · Fase ' + J.fase;
 }
 // bater nas paredes: empurra o círculo do jogador pra fora dos retângulos
 function anda(o, dx, dz, raio) {
@@ -381,7 +371,6 @@ function atualiza(dt) {
     L.porta.position.y = Math.min(ALT, L.porta.position.y + dt * 3);   // a porta sobe
     if (fora) return passouFase();
   }
-  atualizaMonstro(dt);
   // bússola: seta pra próxima chave (ou pra porta)
   if (J.setaT > 0) {
     J.setaT -= dt;
@@ -406,59 +395,18 @@ function bussola() {
   J.bussolas--; J.setaT = 4; $('b-bussola').textContent = '🧭 x' + J.bussolas; som('chave');
 }
 $('b-bussola').onclick = bussola;
-function atualizaMonstro(dt) {
-  const m = J.monstro;
-  if (m.espera > 0) { m.espera -= dt; return; }
-  const minha = celDe(J.x, J.z), dele = celDe(m.x, m.z);
-  if ((m.recalc -= dt) <= 0) {
-    m.recalc = 0.4;
-    const d = distancias(minha), passos = d.get(dele);
-    const sente = 5 + J.fase;   // até quantas casinhas ele te sente
-    const antes = m.cacando; m.cacando = passos <= sente;
-    if (m.cacando && !antes) { som('rugido'); aviso('👾 ELE TE VIU!', 'CORRE!', 1300); }
-    if (m.cacando) {
-      m.caminho = []; let a = dele;
-      for (let i = 0; i < 3 && d.get(a) > 0; i++) { a = vizinhos(a).find(b => d.get(b) === d.get(a) - 1); m.caminho.push(a); }
-      if (dele === minha) m.caminho = [];
-    } else if (!m.caminho.length) {
-      // passeia pelo labirinto
-      let a = dele, ant = null;
-      for (let i = 0; i < 6; i++) { const v = vizinhos(a).filter(b => b !== ant); const b = v.length ? v[Math.floor(Math.random() * v.length)] : vizinhos(a)[0]; ant = a; a = b; m.caminho.push(b); }
-    }
-  }
-  let tx, tz;
-  if (m.cacando && (!m.caminho.length || dele === minha)) { tx = J.x; tz = J.z; }
-  else if (m.caminho.length) { const c = centro(m.caminho[0]); tx = c.x; tz = c.z; if (Math.hypot(tx - m.x, tz - m.z) < 0.3) m.caminho.shift(); }
-  if (tx != null) {
-    const dx = tx - m.x, dz = tz - m.z, dd = Math.hypot(dx, dz) || 1, v = m.vel * (m.cacando ? 1.25 : 0.7);
-    m.x += dx / dd * Math.min(v * dt, dd); m.z += dz / dd * Math.min(v * dt, dd);
-    m.g.rotation.y = Math.atan2(dx, dz);
-  }
-  m.g.position.set(m.x, Math.abs(Math.sin(J.t * 6)) * 0.15, m.z);
-  // perto: coração bate e a tela fica vermelha
-  const dist = Math.hypot(m.x - J.x, m.z - J.z);
-  if (dist < 14 && (J.pertoT -= dt) <= 0) { J.pertoT = 0.35 + dist * 0.07; som('coracao'); }
-  $('susto').style.boxShadow = dist < 10 ? `inset 0 0 ${Math.round(140 - dist * 12)}px ${Math.round(40 - dist * 3)}px rgba(255,0,60,.55)` : 'none';
-  if (dist < 1.0) pegou();
-}
-function pegou() {
-  J.vidas--; som('pegou'); hud();
-  $('susto').style.boxShadow = 'inset 0 0 200px 120px rgba(255,0,60,.8)';
-  if (J.vidas <= 0) { fimDeJogo(); return; }
-  aviso('👾 TE PEGOU!', 'Sobrou ' + J.vidas + ' ' + (J.vidas > 1 ? 'vidas' : 'vida'), 2000);
-  // você volta pro começo e o monstro vai pra longe
-  const c = centro(L.inicio); J.x = c.x; J.z = c.z;
-  const d = distancias(L.inicio), longe = L.cel.filter(a => d.get(a) > 6).sort(() => Math.random() - 0.5)[0] || L.saida, mc = centro(longe);
-  Object.assign(J.monstro, { x: mc.x, z: mc.z, caminho: [], cacando: false, espera: 2.5 });
-}
 function passouFase() {
   som('fase');
-  if (J.fase > save.melhor) { save.melhor = J.fase; grava(); }
+  save.tempos = save.tempos || {};
+  const rec = save.tempos[J.fase], novo = !rec || J.t < rec;
+  if (novo) save.tempos[J.fase] = J.t;
+  if (J.fase > save.melhor) save.melhor = J.fase;
+  grava();
+  aviso('🎉 SAIU EM ' + fmt(J.t) + '!', novo ? '⭐ Recorde da fase ' + J.fase + '!' : 'Recorde da fase: ' + fmt(rec), 2200);
   J.fase++;
-  J.bussolas = Math.min(J.bussolas + 1, 5);
-  aviso('🎉 ESCAPOU!', 'Indo pra fase ' + J.fase + '...', 1800);
+  J.bussolas = Math.min(J.bussolas + 1, 4);
   modo = 'troca';
-  setTimeout(() => { if (J) comecaFase(); }, 1600);
+  setTimeout(() => { if (J) comecaFase(); }, 2300);
 }
 function fimDeJogo() {
   modo = 'fim';
@@ -472,7 +420,7 @@ function pausa() { if (modo !== 'jogando') return; modo = 'pausa'; $('pausa').cl
 function continua() { if (modo !== 'pausa') return; modo = 'jogando'; $('pausa').classList.add('hidden'); ultimo = performance.now(); }
 $('b-pausa').onclick = pausa; $('b-continuar').onclick = continua;
 addEventListener('visibilitychange', () => { if (document.hidden) pausa(); });
-function menu() { modo = 'menu'; if (J && J.monstro) cena.remove(J.monstro.g); J = null; document.body.classList.remove('jogando'); for (const id of ['fim', 'pausa']) $(id).classList.add('hidden'); $('menu').classList.remove('hidden'); $('susto').style.boxShadow = 'none'; mostraRecorde(); }
+function menu() { modo = 'menu'; J = null; document.body.classList.remove('jogando'); for (const id of ['fim', 'pausa']) $(id).classList.add('hidden'); $('menu').classList.remove('hidden'); $('susto').style.boxShadow = 'none'; mostraRecorde(); }
 $('b-sair').onclick = menu; $('b-menu').onclick = menu;
 $('b-jogar').onclick = () => { som('passo'); novoJogo(); };
 $('b-denovo').onclick = novoJogo;
@@ -493,9 +441,6 @@ function mapa() {
   mg.stroke();
   for (const k of L.chaves) if (!k.pegou && L.visto.has(k.a)) { mg.fillStyle = '#ffd23f'; mg.font = (s + 2) + 'px Arial'; mg.fillText('🔑', ox + k.a.x * s - 1, oy + (k.a.y + 1) * s); }
   if (L.visto.has(L.saida)) { mg.fillStyle = J.aberta ? '#2fd15a' : '#ff3b3b'; mg.fillRect(ox + L.saida.x * s + s * 0.25, oy + L.saida.y * s + s * 0.25, s * 0.5, s * 0.5); }
-  // monstro aparece no radar quando está perto
-  const m = J.monstro;
-  if (Math.hypot(m.x - J.x, m.z - J.z) < 16) { mg.fillStyle = '#ff1a4a'; mg.beginPath(); mg.arc(ox + m.x / CS * s, oy + m.z / CS * s, Math.max(2.5, s * 0.35), 0, 7); mg.fill(); }
   // você (com a direção)
   const px = ox + J.x / CS * s, py = oy + J.z / CS * s;
   mg.fillStyle = '#fff'; mg.beginPath(); mg.arc(px, py, Math.max(2.5, s * 0.3), 0, 7); mg.fill();
