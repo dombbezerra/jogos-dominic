@@ -27,6 +27,8 @@
   #toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 60px); transform: translateX(-50%); z-index: 70; background: var(--tinta); color: #fff; border: 3px solid #fff; border-radius: 14px; padding: 8px 16px 5px; font-weight: 800; opacity: 0; transition: opacity .25s; pointer-events: none; max-width: 92vw; text-align: center; }
   #toast.on { opacity: 1; }
   #toast.alarme { background: #d62839; }
+  #joy { position: fixed; z-index: 25; width: 100px; height: 100px; margin: -50px 0 0 -50px; border: 4px solid rgba(255,255,255,.6); border-radius: 50%; display: none; pointer-events: none; }
+  #joy i { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: rgba(255,255,255,.75); }
   .dica { position: fixed; left: 14px; bottom: calc(env(safe-area-inset-bottom) + 16px); z-index: 20; font-weight: 800; font-size: 13px; color: #fff; text-shadow: 1px 1px 0 #000; pointer-events: none; opacity: .85; }
 </style>
 </head>
@@ -43,6 +45,8 @@
 </div>
 <div class="dica" id="dica">Arraste o dedo pra andar 👆</div>
 <div id="toast"></div>
+<div id="joy"><i></i></div>
+<script src="../mundo-blocos/three.min.js"></script>
 <script>
 (() => {
 const $ = id => document.getElementById(id);
@@ -324,10 +328,11 @@ function pensaBots(dt) {
 // ── Controles: arrastar o dedo (joystick) ou teclado ──
 const joy = { on: false, ox: 0, oy: 0, x: 0, y: 0 }, teclas = {};
 const cv = $('cv');
-cv.addEventListener('pointerdown', e => { joy.on = true; joy.id = e.pointerId; joy.ox = joy.x = e.clientX; joy.oy = joy.y = e.clientY; $('dica').style.display = 'none'; });
-addEventListener('pointermove', e => { if (joy.on && e.pointerId === joy.id) { joy.x = e.clientX; joy.y = e.clientY; } });
-addEventListener('pointerup', e => { if (e.pointerId === joy.id) joy.on = false; });
-addEventListener('pointercancel', e => { if (e.pointerId === joy.id) joy.on = false; });
+function mostraJoy() { const j = $('joy'); j.style.display = joy.on ? 'block' : 'none'; if (!joy.on) return; j.style.left = joy.ox + 'px'; j.style.top = joy.oy + 'px'; const dx = joy.x - joy.ox, dy = joy.y - joy.oy, d = Math.hypot(dx, dy), k = d > 50 ? 50 / d : 1; j.firstChild.style.transform = 'translate(' + dx * k + 'px,' + dy * k + 'px)'; }
+cv.addEventListener('pointerdown', e => { joy.on = true; joy.id = e.pointerId; joy.ox = joy.x = e.clientX; joy.oy = joy.y = e.clientY; $('dica').style.display = 'none'; mostraJoy(); });
+addEventListener('pointermove', e => { if (joy.on && e.pointerId === joy.id) { joy.x = e.clientX; joy.y = e.clientY; mostraJoy(); } });
+addEventListener('pointerup', e => { if (e.pointerId === joy.id) { joy.on = false; mostraJoy(); } });
+addEventListener('pointercancel', e => { if (e.pointerId === joy.id) { joy.on = false; mostraJoy(); } });
 addEventListener('keydown', e => { teclas[e.key.toLowerCase()] = true; if (e.key === ' ' || e.key.toLowerCase() === 'e') { e.preventDefault(); fazAcao(); } if (e.key.toLowerCase() === 'l') tranca(); $('dica').style.display = 'none'; });
 addEventListener('keyup', e => { teclas[e.key.toLowerCase()] = false; });
 $('acao').onclick = fazAcao;
@@ -388,91 +393,150 @@ function passo(dt) {
   if ((passo.salva = (passo.salva || 0) + dt) > 5) { passo.salva = 0; grava(); }
 }
 
-// ── Desenho ──
-const ctx = cv.getContext('2d');
-let VW = 0, VH = 0, esc = 1;
-function redim() { const dpr = Math.min(2, devicePixelRatio || 1); VW = innerWidth; VH = innerHeight; cv.width = VW * dpr; cv.height = VH * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); esc = Math.max(0.55, Math.min(1.1, Math.min(VW / 760, VH / 600))); }
+// ── Desenho em 3D (three.js) ──
+const SC = 1 / 40;   // 40 pixels do mapa = 1 metro
+const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping;
+const cena = new THREE.Scene();
+cena.background = new THREE.Color('#8fd3ff'); cena.fog = new THREE.Fog('#8fd3ff', 30, 70);
+const cam = new THREE.PerspectiveCamera(50, 1, 0.1, 200);
+cena.add(new THREE.HemisphereLight(0xffffff, 0x5a8f3a, 1.2));
+const sol = new THREE.DirectionalLight(0xffffff, 1.7);
+sol.castShadow = true; sol.shadow.mapSize.set(2048, 2048);
+Object.assign(sol.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22, near: 1, far: 80 });
+cena.add(sol, sol.target);
+function redim() { renderer.setSize(innerWidth, innerHeight, false); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); }
 addEventListener('resize', redim); redim();
-const arco = (g, x, y) => { const gr = g.createLinearGradient(x - 40, y, x + 40, y); ['#ff5d5d', '#ffd23f', '#5ee06b', '#5cb8ff', '#b37bff'].forEach((c, i) => gr.addColorStop(i / 4, c)); return gr; };
-function emoji(e, x, y, tam, dir = 1) { ctx.save(); ctx.translate(x, y); ctx.scale(-dir, 1); ctx.fillStyle = '#000'; ctx.font = tam + 'px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(e, 0, 0); ctx.restore(); }
-function etiqueta(a, x, y, mostraPreco) {
-  const b = B(a.id), r = RAR[b.r];
-  ctx.font = '800 12px "Baloo 2", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  const l1 = (a.ouro ? '✨' : '') + b.nome, l2 = mostraPreco ? real(precoDe(a)) : '+' + real(rendaDe(a)) + '/s';
-  const w = Math.max(ctx.measureText(l1).width, ctx.measureText(l2).width) + 12;
-  ctx.fillStyle = 'rgba(14,12,51,.85)'; ctx.beginPath(); ctx.roundRect(x - w / 2, y, w, 30, 7); ctx.fill();
-  ctx.fillStyle = r.cor === 'arco' ? arco(ctx, x, y) : r.cor; ctx.fillText(l1, x, y + 9);
-  ctx.fillStyle = mostraPreco ? '#fff' : '#7dff8a'; ctx.fillText(l2, x, y + 22);
+const mat = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, ...o });
+function caixa(w, h, d, m, x, y, z, sombra = true) { const ms = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); ms.position.set(x, y, z); ms.castShadow = sombra; ms.receiveShadow = true; cena.add(ms); return ms; }
+// chão, rua e esteira
+const chao = new THREE.Mesh(new THREE.PlaneGeometry(MW * SC + 60, MH * SC + 60), mat('#4a9c3f'));
+chao.rotation.x = -Math.PI / 2; chao.position.set(MW * SC / 2, 0, MH * SC / 2); chao.receiveShadow = true; cena.add(chao);
+const rua = new THREE.Mesh(new THREE.PlaneGeometry(MW * SC + 60, 320 * SC), mat('#d8c79c'));
+rua.rotation.x = -Math.PI / 2; rua.position.set(MW * SC / 2, 0.01, 700 * SC); rua.receiveShadow = true; cena.add(rua);
+const listra = document.createElement('canvas'); listra.width = 64; listra.height = 16;
+{ const g = listra.getContext('2d'); g.fillStyle = '#37474f'; g.fillRect(0, 0, 64, 16); g.fillStyle = '#607d8b'; g.fillRect(0, 0, 32, 16); }
+const texEsteira = new THREE.CanvasTexture(listra); texEsteira.wrapS = THREE.RepeatWrapping; texEsteira.repeat.set(MW / 60, 1); texEsteira.colorSpace = THREE.SRGBColorSpace;
+caixa(MW * SC + 60, 0.3, (ESTEIRA.y2 - ESTEIRA.y1) * SC, mat('#fff', { map: texEsteira }), MW * SC / 2, 0.15, 700 * SC, false);
+for (const y of [ESTEIRA.y1, ESTEIRA.y2]) caixa(MW * SC + 60, 0.5, 0.2, mat('#ffd23f'), MW * SC / 2, 0.25, y * SC);
+// árvores em volta
+const tronco = mat('#7a4a22'), folha = mat('#2e7d32');
+for (let i = 0; i < 40; i++) {
+  const ang = i / 40 * Math.PI * 2, x = MW * SC / 2 + Math.cos(ang) * (MW * SC / 2 + 6 + (i % 3) * 2), z = MH * SC / 2 + Math.sin(ang) * (MH * SC / 2 + 6 + (i % 2) * 2);
+  caixa(0.5, 2, 0.5, tronco, x, 1, z);
+  const cp = new THREE.Mesh(new THREE.ConeGeometry(1.6, 3.2, 7), folha); cp.position.set(x, 3.4, z); cp.castShadow = true; cena.add(cp);
 }
-function bicho(a, x, y, t, mostraPreco) {
-  if (a.ouro) { ctx.save(); ctx.shadowColor = '#ffd23f'; ctx.shadowBlur = 18; }
-  emoji(B(a.id).e, x, y + Math.sin(t / 300 + x) * 2, 38);
-  if (a.ouro) ctx.restore();
-  etiqueta(a, x, y + 22, mostraPreco);
-}
-function pessoa(p, t) {
-  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + 18, 18, 7, 0, 0, 7); ctx.fill();
-  const pulo = p.mexe || p.rota?.length ? Math.abs(Math.sin(t / 110)) * 4 : 0;
-  emoji(p.e, p.x, p.y - pulo, 40, p.dir || 1);
-  if (p.carrega) { emoji(B(p.carrega.id).e, p.x, p.y - 42 - pulo, 30); }
-  if (p.tonto > 0) emoji('💫', p.x, p.y - 34, 20);
-  ctx.font = '800 13px "Baloo 2", sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
-  const ny = p.y - (p.carrega ? 64 : 30);
-  ctx.strokeText(p.nome, p.x, ny); ctx.fillText(p.nome, p.x, ny);
-}
+// bases
 const CORES = ['#4fc3f7', '#ff8a65', '#ba68c8', '#ffd54f'];
+const ALT = 1.6;
+const laserMat = new THREE.MeshBasicMaterial({ color: '#ff1744', transparent: true, opacity: 0.7 });
+for (const b of bases) {
+  caixa(b.w * SC, 0.1, b.h * SC, mat(b === minha ? '#a5d6a7' : '#e8dcc4'), (b.x + b.w / 2) * SC, 0.05, (b.y + b.h / 2) * SC, false);
+  const mp = mat(CORES[b.i]);
+  for (const [x, y, w, h] of b.paredes) caixa(w * SC, ALT, h * SC, mp, (x + w / 2) * SC, ALT / 2, (y + h / 2) * SC);
+  const [px, py, pw, ph] = b.porta;
+  b.laser = caixa(pw * SC, ALT, ph * SC * 0.6, laserMat, (px + pw / 2) * SC, ALT / 2, (py + ph / 2) * SC, false);
+  for (const p of b.pos) { const d = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.08, 24), mat('#000', { transparent: true, opacity: 0.15 })); d.position.set(p.x * SC, 0.12, p.y * SC); cena.add(d); }
+}
+// texturas de emoji e etiquetas (guardadas pra não refazer)
+const cache = {};
+function tex(chave, w, h, pinta) {
+  if (cache[chave]) return cache[chave];
+  const c = document.createElement('canvas'); c.width = w; c.height = h; pinta(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return cache[chave] = t;
+}
+const texEmoji = e => tex('e' + e, 128, 128, (g) => { g.font = '100px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(e, 64, 70); });
+function texPlaca(l1, l2, cor, fundo = 'rgba(14,12,51,.88)') {
+  return tex('p' + l1 + '|' + l2 + '|' + cor, 256, l2 ? 96 : 60, (g, w, h) => {
+    g.fillStyle = fundo; g.beginPath(); g.roundRect(4, 4, w - 8, h - 8, 18); g.fill();
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '800 34px "Baloo 2", Arial, sans-serif';
+    if (cor === 'arco') { const gr = g.createLinearGradient(40, 0, 216, 0); ['#ff5d5d', '#ffd23f', '#5ee06b', '#5cb8ff', '#b37bff'].forEach((c, i) => gr.addColorStop(i / 4, c)); g.fillStyle = gr; } else g.fillStyle = cor;
+    g.fillText(l1, w / 2, l2 ? 32 : h / 2 + 2);
+    if (l2) { g.fillStyle = l2[0] === '+' ? '#7dff8a' : '#fff'; g.fillText(l2, w / 2, 68); }
+  });
+}
+const texBrilho = tex('brilho', 128, 128, (g) => { const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,215,64,.9)'); gr.addColorStop(1, 'rgba(255,215,64,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); });
+// placas com o nome de cada base
+for (const b of bases) {
+  const nome = b === minha ? 'SUA BASE' : 'Base: ' + bots.find(x => x.base === b).nome;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texPlaca(nome, '', b === minha ? '#7dff8a' : '#fff') }));
+  s.scale.set(5, 5 * 60 / 256, 1); s.position.set((b.x + b.w / 2) * SC, 3.2, (b.cima ? b.y + 30 : b.y + b.h - 30) * SC); cena.add(s);
+  b.cadeado = new THREE.Sprite(new THREE.SpriteMaterial({ map: texEmoji('🔒') })); b.cadeado.scale.set(1, 1, 1);
+  b.cadeado.position.set((b.porta[0] + PORTA / 2) * SC, ALT + 0.7, (b.porta[1] + T / 2) * SC); cena.add(b.cadeado);
+}
+// sprites reaproveitados a cada quadro
+const pool = []; let usados = 0;
+function sprite(t, x, y, h, sx, sy = sx) {
+  let s = pool[usados];
+  if (!s) { s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, fog: false })); pool.push(s); cena.add(s); }
+  if (s.material.map !== t) s.material.map = t;
+  s.position.set(x * SC, h, y * SC); s.scale.set(sx, sy, 1); s.visible = true; usados++; return s;
+}
+function bicho3d(a, x, y, t, mostraPreco) {
+  const b = B(a.id), r = RAR[b.r], h = 0.85 + Math.sin(t / 300 + x) * 0.06;
+  if (a.ouro) sprite(texBrilho, x, y, h, 2.2);
+  sprite(texEmoji(b.e), x, y, h, 1.4);
+  sprite(texPlaca((a.ouro ? '✨' : '') + b.nome, mostraPreco ? real(precoDe(a)) : '+' + real(rendaDe(a)) + '/s', r.cor), x, y, 1.95, 1.7, 1.7 * 96 / 256);
+}
+// bonecos de bloquinho
+function boneco(camisa, calca, cabelo) {
+  const g = new THREE.Group(), pele = mat('#ffcc99');
+  const parte = (w, h, d, m, x, y, z) => { const ms = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); ms.position.set(x, y, z); ms.castShadow = true; g.add(ms); return ms; };
+  const perna = (x) => { const p = new THREE.Group(); p.position.set(x, 0.75, 0); const m = parte(0.28, 0.75, 0.3, mat(calca), 0, 0, 0); g.remove(m); m.position.y = -0.375; p.add(m); g.add(p); return p; };
+  const braco = (x) => { const p = new THREE.Group(); p.position.set(x, 1.45, 0); const m = parte(0.24, 0.7, 0.26, pele, 0, 0, 0); g.remove(m); m.position.y = -0.33; p.add(m); g.add(p); return p; };
+  g.pE = perna(-0.16); g.pD = perna(0.16);
+  parte(0.62, 0.72, 0.36, mat(camisa), 0, 1.12, 0);
+  g.bE = braco(-0.44); g.bD = braco(0.44);
+  parte(0.5, 0.5, 0.48, pele, 0, 1.75, 0);
+  parte(0.54, 0.14, 0.52, mat(cabelo), 0, 2.03, 0);
+  const olho = mat('#111'); parte(0.08, 0.1, 0.02, olho, -0.11, 1.8, 0.25); parte(0.08, 0.1, 0.02, olho, 0.11, 1.8, 0.25);
+  cena.add(g); return g;
+}
+eu.g = boneco('#2f8fe0', '#1e3a5f', '#3b2314');
+const ROUPAS = [['#ff6b35', '#333', '#111'], ['#e91e63', '#4a148c', '#f4c542'], ['#43a047', '#5d4037', '#6d4c41']];
+bots.forEach((b, k) => b.g = boneco(...ROUPAS[k]));
+function pessoa3d(p, t, dt) {
+  const g = p.g, dx = p.x - (p.ax ?? p.x), dy = p.y - (p.ay ?? p.y), anda = Math.hypot(dx, dy) > 0.3;
+  p.ax = p.x; p.ay = p.y;
+  if (anda) g.rotation.y = Math.atan2(dx, dy);
+  const bal = anda ? Math.sin(t / 110) * 0.7 : 0;
+  g.pE.rotation.x = bal; g.pD.rotation.x = -bal;
+  g.bE.rotation.x = p.carrega ? -2.6 : -bal; g.bD.rotation.x = p.carrega ? -2.6 : bal;
+  g.position.set(p.x * SC, 0.1 + (anda ? Math.abs(Math.sin(t / 110)) * 0.08 : 0), p.y * SC);
+  if (p.carrega) sprite(texEmoji(B(p.carrega.id).e), p.x, p.y, 3.0, 1.3);
+  if (p.tonto > 0) sprite(texEmoji('💫'), p.x, p.y, 2.5, 0.8);
+  sprite(texPlaca(p.nome, '', p === eu ? '#7dff8a' : '#fff'), p.x, p.y, p.carrega ? 3.9 : 2.75, 1.4, 1.4 * 60 / 256);
+}
+// dinheiro em cima da sua base (canvas próprio, só redesenha quando muda)
+const cvCaixa = document.createElement('canvas'); cvCaixa.width = 256; cvCaixa.height = 64;
+const texCaixa = new THREE.CanvasTexture(cvCaixa); texCaixa.colorSpace = THREE.SRGBColorSpace;
+const spCaixa = new THREE.Sprite(new THREE.SpriteMaterial({ map: texCaixa })); spCaixa.scale.set(4, 1, 1); cena.add(spCaixa);
+function desenhaCaixa(txt) {
+  if (desenhaCaixa.ult === txt) return; desenhaCaixa.ult = txt;
+  const g = cvCaixa.getContext('2d'); g.clearRect(0, 0, 256, 64);
+  g.font = '400 34px Bungee, Arial Black, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 8; g.strokeStyle = '#0e0c33'; g.fillStyle = '#ffd23f';
+  g.strokeText(txt, 128, 34); g.fillText(txt, 128, 34); texCaixa.needsUpdate = true;
+}
+let tAnt = performance.now();
 function desenha(t) {
-  ctx.fillStyle = '#3d8b3d'; ctx.fillRect(0, 0, VW, VH);
-  const cx = Math.max(VW / 2 / esc, Math.min(MW - VW / 2 / esc, eu.x)), cy = Math.max(VH / 2 / esc, Math.min(MH - VH / 2 / esc, eu.y));
-  ctx.save(); ctx.translate(VW / 2, VH / 2); ctx.scale(esc, esc); ctx.translate(-cx, -cy);
-  // grama
-  ctx.fillStyle = '#4a9c3f'; ctx.fillRect(0, 0, MW, MH);
-  ctx.fillStyle = 'rgba(255,255,255,.06)'; for (let x = 0; x < MW; x += 60) for (let y = (x / 60 % 2) * 30; y < MH; y += 60) ctx.fillRect(x, y, 6, 6);
-  // rua no meio
-  ctx.fillStyle = '#d8c79c'; ctx.fillRect(0, 540, MW, 320);
-  // esteira
-  ctx.fillStyle = '#37474f'; ctx.fillRect(0, ESTEIRA.y1, MW, ESTEIRA.y2 - ESTEIRA.y1);
-  ctx.fillStyle = '#546e7a'; for (let x = (t / 1000 * 70) % 60 - 60; x < MW; x += 60) ctx.fillRect(x, ESTEIRA.y1 + 6, 30, ESTEIRA.y2 - ESTEIRA.y1 - 12);
-  ctx.fillStyle = '#ffd23f'; ctx.fillRect(0, ESTEIRA.y1 - 6, MW, 6); ctx.fillRect(0, ESTEIRA.y2, MW, 6);
-  // bases
-  for (const b of bases) {
-    ctx.fillStyle = b === minha ? '#a5d6a7' : '#e0d6c2'; ctx.fillRect(b.x, b.y, b.w, b.h);
-    ctx.fillStyle = CORES[b.i]; for (const [x, y, w, h] of b.paredes) ctx.fillRect(x, y, w, h);
-    ctx.strokeStyle = '#0e0c33'; ctx.lineWidth = 3; for (const [x, y, w, h] of b.paredes) ctx.strokeRect(x, y, w, h);
-    if (trancada(b)) {   // laser vermelho na porta
-      const [x, y, w, h] = b.porta; ctx.save(); ctx.shadowColor = '#ff1744'; ctx.shadowBlur = 20; ctx.fillStyle = 'rgba(255,23,68,' + (0.6 + Math.sin(t / 120) * 0.3) + ')'; ctx.fillRect(x, y + 3, w, h - 6); ctx.restore();
-      emoji('🔒', x + w / 2, b.cima ? y + 34 : y - 16, 22);
-    }
-    for (let k = 0; k < VAGAS; k++) { const p = b.pos[k]; ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.beginPath(); ctx.arc(p.x, p.y + 6, 30, 0, 7); ctx.fill(); }
-    // placa com o nome do dono
-    const dono = b === minha ? 'SUA BASE' : 'Base: ' + bots.find(x => x.base === b).nome;
-    ctx.font = '400 18px Bungee, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const py = b.cima ? b.y - 22 : b.y + b.h + 22, pw = ctx.measureText(dono).width + 24;
-    ctx.fillStyle = '#0e0c33'; ctx.beginPath(); ctx.roundRect(b.x + b.w / 2 - pw / 2, py - 16, pw, 32, 10); ctx.fill();
-    ctx.fillStyle = b === minha ? '#7dff8a' : '#fff'; ctx.fillText(dono, b.x + b.w / 2, py + 1);
-  }
-  // caixa de dinheiro da sua base
-  ctx.font = '400 16px Bungee, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffd23f'; ctx.strokeStyle = '#0e0c33'; ctx.lineWidth = 4;
+  const dt = Math.min(0.1, (t - tAnt) / 1000); tAnt = t; usados = 0;
+  texEsteira.offset.x = -(t / 1000 * 70) / 60;
+  for (const b of bases) { const tr = trancada(b); b.laser.visible = tr; b.cadeado.visible = tr; if (tr) laserMat.opacity = 0.55 + Math.sin(t / 120) * 0.25; }
+  for (const b of bases) b.slots.forEach((a, k) => a && bicho3d(a, b.pos[k].x, b.pos[k].y, t, false));
+  for (const a of esteira) bicho3d(a, a.x, a.y, t, !a.dono);
+  for (const a of andando) sprite(texEmoji(B(a.id).e), a.x, a.y, 0.85, 1.3);
+  for (const p of [eu, ...bots]) pessoa3d(p, t, dt);
+  if (alvoAcao) { const p = alvoAcao.a || alvoAcao.bot || (alvoAcao.b && alvoAcao.b.pos[alvoAcao.k]); if (p) sprite(texEmoji('⬇️'), p.x, p.y, (alvoAcao.bot ? 4.6 : 2.9) + Math.sin(t / 150) * 0.15, 0.8); }
   const txt = minha.caixaT > 0 ? '+' + real(minha.caixaFlut) : S.caixa >= 1 ? '💰 ' + real(S.caixa) : '';
-  if (txt) { const y = minha.y + minha.h / 2 + 40 - (minha.caixaT > 0 ? (1 - minha.caixaT) * 30 : 0); ctx.strokeText(txt, minha.x + minha.w / 2, y); ctx.fillText(txt, minha.x + minha.w / 2, y); }
-  // bichos
-  for (const b of bases) b.slots.forEach((a, k) => a && bicho(a, b.pos[k].x, b.pos[k].y, t, false));
-  for (const a of esteira) bicho(a, a.x, a.y - 8, t, !a.dono);
-  for (const a of andando) { emoji(B(a.id).e, a.x, a.y, 34); }
-  // gente (de cima pra baixo)
-  for (const p of [eu, ...bots].sort((a, b) => a.y - b.y)) pessoa(p, t);
-  // setinha em cima do que dá pra fazer
-  if (alvoAcao) {
-    const p = alvoAcao.a || (alvoAcao.bot) || (alvoAcao.b && alvoAcao.b.pos[alvoAcao.k]);
-    if (p) emoji('⬇️', p.x, p.y - 50 + Math.sin(t / 150) * 5, 24);
-  }
-  ctx.restore();
-  // joystick
-  if (joy.on) {
-    ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(joy.ox, joy.oy, 50, 0, 7); ctx.stroke();
-    const dx = joy.x - joy.ox, dy = joy.y - joy.oy, d = Math.hypot(dx, dy), k = d > 50 ? 50 / d : 1;
-    ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.arc(joy.ox + dx * k, joy.oy + dy * k, 22, 0, 7); ctx.fill();
-  }
+  spCaixa.visible = !!txt; if (txt) { desenhaCaixa(txt); spCaixa.position.set((minha.x + minha.w / 2) * SC, 2.6 + (minha.caixaT > 0 ? (1 - minha.caixaT) * 1.5 : 0), (minha.y + minha.h / 2) * SC); }
+  for (let i = usados; i < pool.length; i++) pool[i].visible = false;
+  // câmera atrás e em cima de você
+  const longe = cam.aspect < 1 ? 1.45 : 1, px = eu.x * SC, pz = eu.y * SC;
+  cam.position.set(px, 12 * longe, pz + 10 * longe); cam.lookAt(px, 0.5, pz - 1);
+  sol.position.set(px + 12, 30, pz + 8); sol.target.position.set(px, 0, pz);
+  renderer.render(cena, cam);
 }
 let ultimo = performance.now(), hudT = 0;
 function loop(agora) {
