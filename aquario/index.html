@@ -340,7 +340,11 @@ function abreTanque(i) {
   const ac3 = h('div', null, 'acoes');
   const vende = Math.floor((tq.preco + t.peixes.reduce((s, id) => s + P(id).preco, 0)) * 0.5);
   const bv = document.createElement('button'); bv.className = 'btn vermelho'; bv.textContent = '💲 Vender aquário (' + real(vende) + ')';
-  bv.onclick = () => { if (!confirm('Vender o ' + tq.nome + ' com todos os bichos por ' + real(vende) + '?')) return; if (!isAdm) S.dinheiro += vende; S.tanques[i] = null; grava(); fecha(); montaParque(); toast('Vendido!'); };
+  // primeiro toque pergunta, segundo toque vende (sem janelinha do navegador)
+  bv.onclick = () => {
+    if (!bv.dataset.certeza) { bv.dataset.certeza = '1'; bv.textContent = '⚠️ Tem certeza? Toque de novo pra vender'; setTimeout(() => { if (bv.isConnected) { delete bv.dataset.certeza; bv.textContent = '💲 Vender aquário (' + real(vende) + ')'; } }, 4000); return; }
+    S.dinheiro += vende; S.tanques[i] = null; grava(); fecha(); som('moeda'); toast('💲 Vendido por ' + real(vende) + '!');
+  };
   ac3.appendChild(bv);
   $('fundo').classList.add('on');
 }
