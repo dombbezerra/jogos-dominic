@@ -142,7 +142,7 @@ const P = id => PEIXES.find(p => p.id === id), D = id => DECOR.find(d => d.id ==
 // ── Perfil e ADM ──
 const PERFIL = new URLSearchParams(location.search).get('perfil');
 const KEY = 'parqueAquario' + (PERFIL ? ':' + PERFIL : '');
-const isAdm = (() => { try { const m = JSON.parse(localStorage.getItem('aventuraConta' + (PERFIL ? ':' + PERFIL : ''))); return ['endrick', 'dominic'].includes(String(m && m.user && m.user.nome || '').trim().toLowerCase()); } catch (e) { return false; } })();
+const isAdm = false;   // sem ADM: todo mundo paga, até o Dominic
 const custo = v => isAdm ? 0 : v;   // na conta do ADM tudo é de graça
 let S; try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) { S = null; }
 S = Object.assign({ dinheiro: 1000, lotes: 2, tanques: [], salvo: Date.now(), ganhoTotal: 0 }, S || {});
