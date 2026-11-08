@@ -156,7 +156,7 @@ const sorteia = l => l[Math.floor(Math.random() * l.length)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 if (TOUCH) document.body.classList.add('touch');
-$('dica').textContent = TOUCH ? '👀 Joystick anda, arraste o dedo pra olhar. 📣 APITAR marca falta. Pra dar cartão, mire no jogador (ou dê logo depois da falta).' : '👀 W A S D anda, arraste o mouse pra olhar, Shift corre. Espaço = 📣 apitar · Y = 🟨 · V = 🟥 (mire no jogador ou dê logo depois da falta).';
+$('dica').textContent = TOUCH ? '👀 A câmera segue a bola sozinha! Joystick anda, CORRER corre. 📣 APITAR marca falta. O cartão vai pra quem fez a falta.' : '👀 A câmera segue a bola sozinha! W A S D ou setas andam, Shift corre. Espaço = 📣 apitar · Y = 🟨 · V = 🟥 (o cartão vai pra quem fez a falta).';
 
 // ── Carreira (guardada por perfil) ──
 const PERFIL = new URLSearchParams(location.search).get('perfil');
@@ -1012,23 +1012,24 @@ function atualiza() {
   M.t += passo;
   // juiz anda (você controla, vendo pelos olhos dele)
   let fr = (teclas.arrowup || teclas.w ? 1 : 0) - (teclas.arrowdown || teclas.s ? 1 : 0) - joy.y;
-  let la = (teclas.d ? 1 : 0) - (teclas.a ? 1 : 0) + joy.x;
-  const gira = (teclas.arrowright ? 1 : 0) - (teclas.arrowleft ? 1 : 0);
-  if (gira) { M.yaw += gira * 0.045; M.olhou = 60; }
+  let la = (teclas.d || teclas.arrowright ? 1 : 0) - (teclas.a || teclas.arrowleft ? 1 : 0) + joy.x;
   const l = Math.hypot(fr, la); if (l > 1) { fr /= l; la /= l; }
   const cy = Math.cos(M.yaw), sy = Math.sin(M.yaw);
   const mx = cy * fr - sy * la, mz = sy * fr + cy * la;
   const vj = (teclas.shift || correndo ? 0.3 : 0.18) * (M.lance ? 0.5 : 1);
   M.ref.x = clamp(M.ref.x + mx * vj, -CW / 2 - 2, CW / 2 + 2); M.ref.z = clamp(M.ref.z + mz * vj, -CH / 2 - 2, CH / 2 + 2);
   M.andando = Math.min(1, l) * vj;
-  // se você não mexer na visão, ela vira sozinha pro lance
-  if (M.olhou > 0) M.olhou--;
-  else {
-    const fx = M.lance ? M.lance.x : M.bola.x, fz = M.lance ? M.lance.z : M.bola.z;
-    let dif = Math.atan2(fz - M.ref.z, fx - M.ref.x) - M.yaw;
-    while (dif > Math.PI) dif -= Math.PI * 2; while (dif < -Math.PI) dif += Math.PI * 2;
-    M.yaw += dif * (M.lance ? 0.12 : 0.045);
-    M.pitch += (-0.12 - M.pitch) * 0.05;
+  // a câmera acompanha a bola sozinha, o tempo todo
+  {
+    const B = M.bola, fx = M.lance ? M.lance.x : B.x, fz = M.lance ? M.lance.z : B.z;
+    const dist = Math.hypot(fx - M.ref.x, fz - M.ref.z);
+    if (dist > 0.8) {
+      let dif = Math.atan2(fz - M.ref.z, fx - M.ref.x) - M.yaw;
+      while (dif > Math.PI) dif -= Math.PI * 2; while (dif < -Math.PI) dif += Math.PI * 2;
+      M.yaw += dif * 0.18;
+    }
+    const alvoP = clamp(Math.atan2((B.y || 0.22) - 1.5, Math.max(dist, 2)), -0.75, 0.4);
+    M.pitch += (alvoP - M.pitch) * 0.15;
   }
 
   // lance em câmera lenta
@@ -1190,7 +1191,7 @@ function mapa() {
   mg.fillStyle = '#ffd23f'; mg.strokeStyle = '#0e0c33'; mg.lineWidth = 1.5; mg.beginPath(); mg.arc(rx, rz, 4, 0, 7); mg.fill(); mg.stroke();
 }
 // olhar em volta: arrastando o mouse ou o dedo na tela
-function olha(dx, dy) { if (!M) return; M.yaw += dx * 0.006; M.pitch = clamp(M.pitch - dy * 0.004, -0.8, 0.5); M.olhou = 100; }
+function olha(dx, dy) { if (!M || modo === 'jogando') return; M.yaw += dx * 0.006; M.pitch = clamp(M.pitch - dy * 0.004, -0.8, 0.5); }   // no jogo a câmera segue a bola sozinha
 let arrasta = null;
 renderer.domElement.addEventListener('mousedown', e => { arrasta = { x: e.clientX, y: e.clientY }; });
 addEventListener('mouseup', () => { arrasta = null; });
