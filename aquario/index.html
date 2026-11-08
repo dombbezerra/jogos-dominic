@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a4a7a">
+<title>Parque Aquário</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --tinta: #0e0c33; --creme: #fff6dc; --sol: #ffd23f; --rosa: #ff5d8f; --verde: #2fd15a; --agua: #3fe0d0; --mar: #0a4a7a;
+    --display: 'Bungee', 'Arial Black', Impact, sans-serif; --texto: 'Baloo 2', 'Segoe UI', Arial, sans-serif; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { min-height: 100vh; font-family: var(--texto); color: var(--creme); background: linear-gradient(#5cc8ff 0, #a8e4ff 180px, #f2e3b8 180px); -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+  #back-link { position: fixed; top: calc(env(safe-area-inset-top) + 10px); left: 10px; z-index: 40; text-decoration: none; font-weight: 800; background: var(--sol); color: var(--tinta); border: 3px solid var(--tinta); border-radius: 12px; padding: 4px 12px 2px; box-shadow: 0 4px 0 var(--tinta); }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 56px) 12px 110px; }
+  h1 { font-family: var(--display); font-weight: 400; font-size: clamp(26px, 7vw, 44px); text-align: center; color: #fff; text-shadow: 3px 3px 0 var(--mar); transform: rotate(-2deg); }
+  /* barra de cima */
+  .barra { position: sticky; top: calc(env(safe-area-inset-top) + 6px); z-index: 30; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0 8px; }
+  .pill { background: var(--tinta); border: 3px solid #fff; border-radius: 999px; padding: 4px 14px 2px; font-weight: 800; font-size: 16px; white-space: nowrap; box-shadow: 0 3px 0 rgba(0,0,0,.25); }
+  .pill b { font-family: var(--display); font-weight: 400; color: var(--sol); }
+  #dinheiro.pulo { animation: pulo .35s; }
+  @keyframes pulo { 50% { transform: scale(1.15); } }
+  /* rua com visitantes */
+  .rua { position: relative; height: 56px; background: repeating-linear-gradient(90deg, #d9c48e 0 40px, #cfb980 40px 80px); border: 3px solid #b39a5a; border-radius: 14px; overflow: hidden; margin-bottom: 12px; }
+  .rua .portao { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); font-size: 30px; }
+  .vis { position: absolute; top: 8px; font-size: 32px; cursor: pointer; transition: transform .1s; }
+  .vis:active { transform: scale(1.3); }
+  .moeda { position: absolute; font-family: var(--display); color: var(--sol); text-shadow: 2px 2px 0 var(--tinta); pointer-events: none; animation: sobe 1s forwards; z-index: 50; }
+  @keyframes sobe { to { transform: translateY(-40px); opacity: 0; } }
+  /* terrenos */
+  .parque { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+  .lote { position: relative; border: 4px solid var(--tinta); border-radius: 18px; overflow: hidden; background: #e8d6a0; min-height: 210px; box-shadow: 0 6px 0 var(--tinta); cursor: pointer; }
+  .lote canvas { display: block; width: 100%; height: 170px; }
+  .lote .nome { background: var(--tinta); padding: 4px 10px 2px; font-weight: 800; font-size: 14px; display: flex; justify-content: space-between; gap: 6px; }
+  .lote .alertas { position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; }
+  .lote .alertas span { background: #fff; border: 2px solid var(--tinta); border-radius: 10px; padding: 0 5px; font-size: 16px; animation: pulo 1s infinite; }
+  .vazio { display: grid; place-items: center; text-align: center; color: var(--tinta); font-weight: 800; min-height: 210px; border-style: dashed; background: rgba(255,255,255,.4); }
+  .vazio b { font-size: 46px; display: block; }
+  .travado { opacity: .75; background: repeating-linear-gradient(45deg, #cdb98a 0 14px, #c2ad7c 14px 28px); }
+  /* painel (loja e aquário) */
+  .fundo { position: fixed; inset: 0; z-index: 60; background: rgba(5,20,40,.6); display: none; align-items: flex-end; justify-content: center; }
+  .fundo.on { display: flex; }
+  .painel { width: min(560px, 100%); max-height: 86vh; overflow-y: auto; background: #fff6dc; color: var(--tinta); border: 4px solid var(--tinta); border-radius: 22px 22px 0 0; padding: 14px 14px calc(env(safe-area-inset-bottom) + 18px); }
+  .painel h2 { font-family: var(--display); font-weight: 400; font-size: 24px; text-align: center; }
+  .painel h3 { font-weight: 800; margin: 12px 0 6px; font-size: 16px; }
+  .fechar { float: right; font-size: 22px; background: none; border: none; cursor: pointer; }
+  .itens { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+  .item { border: 3px solid var(--tinta); border-radius: 14px; background: #fff; padding: 6px 4px 4px; text-align: center; cursor: pointer; font-family: var(--texto); color: var(--tinta); box-shadow: 0 4px 0 var(--tinta); }
+  .item:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
+  .item b { display: block; font-size: 34px; line-height: 1.1; }
+  .item span { display: block; font-weight: 800; font-size: 13px; }
+  .item small { display: block; font-weight: 800; font-size: 13px; color: #1a8a3a; }
+  .item.caro { opacity: .5; }
+  .item.caro small { color: #c0303a; }
+  .acoes { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+  .btn { font-family: var(--texto); font-weight: 800; font-size: 16px; cursor: pointer; border: 3px solid var(--tinta); border-radius: 14px; padding: 8px 14px 5px; color: var(--tinta); background: var(--sol); box-shadow: 0 4px 0 var(--tinta); }
+  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
+  .btn.verde { background: var(--verde); color: #fff; } .btn.azul { background: var(--agua); } .btn.vermelho { background: #ff6b6b; color: #fff; }
+  .barrinha { height: 12px; border: 2px solid var(--tinta); border-radius: 8px; overflow: hidden; background: #fff; margin: 2px 0 6px; }
+  .barrinha i { display: block; height: 100%; }
+  .lista-peixes { display: flex; flex-wrap: wrap; gap: 4px; font-size: 26px; }
+  #toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 84px); transform: translateX(-50%); z-index: 70; background: var(--tinta); color: #fff; border: 3px solid #fff; border-radius: 14px; padding: 8px 16px 5px; font-weight: 800; opacity: 0; transition: opacity .25s; pointer-events: none; max-width: 92vw; text-align: center; }
+  #toast.on { opacity: 1; }
+  .rodape { position: fixed; left: 0; right: 0; bottom: 0; z-index: 35; display: flex; justify-content: center; gap: 10px; padding: 10px 10px calc(env(safe-area-inset-bottom) + 12px); background: linear-gradient(transparent, rgba(10,74,122,.55)); }
+  .rodape .btn { font-size: 18px; padding: 10px 18px 7px; }
+</style>
+</head>
+<body>
+<a href="../index.html" id="back-link">← Menu</a>
+<div class="wrap">
+  <h1>🐠 PARQUE AQUÁRIO</h1>
+  <div class="barra">
+    <span class="pill" id="dinheiro">💰 <b>R$ 1.000</b></span>
+    <span class="pill">⭐ <b id="atracao">0</b></span>
+    <span class="pill">👥 <b id="vpm">0</b>/min</span>
+  </div>
+  <div class="rua" id="rua"><span class="portao">🎪</span></div>
+  <div class="parque" id="parque"></div>
+</div>
+<div class="rodape"><button class="btn verde" id="b-loja">🛒 Comprar aquário</button><button class="btn azul" id="b-tudo">🧽 Cuidar de tudo</button></div>
+<div class="fundo" id="fundo"><div class="painel" id="painel"></div></div>
+<div id="toast"></div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const real = v => 'R$ ' + Math.floor(v).toLocaleString('pt-BR');
+
+// ── O que dá pra comprar ──
+const TANQUES = [
+  { id: 'pequeno', nome: 'Aquário Pequeno', ic: '🫙', preco: 300, cap: 4, nivel: 1, agua: ['#7fd6ff', '#2a8fd0'] },
+  { id: 'medio', nome: 'Aquário Médio', ic: '🧊', preco: 900, cap: 8, nivel: 2, agua: ['#6ccfff', '#1f78c0'] },
+  { id: 'grande', nome: 'Aquário Grande', ic: '🌊', preco: 2500, cap: 12, nivel: 3, agua: ['#58c4ff', '#1560a8'] },
+  { id: 'tubarao', nome: 'Tanque dos Tubarões', ic: '🦈', preco: 8000, cap: 6, nivel: 4, agua: ['#3fa8e8', '#0d3f7a'] },
+  { id: 'gigante', nome: 'Oceano Gigante', ic: '🐋', preco: 25000, cap: 8, nivel: 5, agua: ['#2f8fd8', '#06264f'] },
+];
+const PEIXES = [
+  { id: 'palhaco', e: '🐠', nome: 'Peixe-palhaço', preco: 50, atr: 2, nivel: 1 },
+  { id: 'azul', e: '🐟', nome: 'Peixe-azul', preco: 80, atr: 3, nivel: 1 },
+  { id: 'camarao', e: '🦐', nome: 'Camarão', preco: 120, atr: 4, nivel: 1, fundo: true },
+  { id: 'baiacu', e: '🐡', nome: 'Baiacu', preco: 150, atr: 5, nivel: 1 },
+  { id: 'caranguejo', e: '🦀', nome: 'Caranguejo', preco: 200, atr: 6, nivel: 1, fundo: true },
+  { id: 'lagosta', e: '🦞', nome: 'Lagosta', preco: 350, atr: 9, nivel: 2, fundo: true },
+  { id: 'polvo', e: '🐙', nome: 'Polvo', preco: 600, atr: 14, nivel: 2 },
+  { id: 'lula', e: '🦑', nome: 'Lula', preco: 750, atr: 17, nivel: 2 },
+  { id: 'tartaruga', e: '🐢', nome: 'Tartaruga', preco: 1200, atr: 26, nivel: 3 },
+  { id: 'tubarao', e: '🦈', nome: 'Tubarão', preco: 3500, atr: 70, nivel: 4, grande: true },
+  { id: 'golfinho', e: '🐬', nome: 'Golfinho', preco: 6000, atr: 120, nivel: 5, grande: true },
+  { id: 'baleia', e: '🐋', nome: 'Baleia', preco: 15000, atr: 300, nivel: 5, grande: true },
+];
+const DECOR = [
+  { id: 'planta', e: '🌿', nome: 'Planta', preco: 60, atr: 1 },
+  { id: 'concha', e: '🐚', nome: 'Concha', preco: 90, atr: 2 },
+  { id: 'ancora', e: '⚓', nome: 'Âncora', preco: 180, atr: 3 },
+  { id: 'castelo', e: '🏰', nome: 'Castelo', preco: 300, atr: 6 },
+  { id: 'estatua', e: '🗿', nome: 'Estátua', preco: 450, atr: 8 },
+  { id: 'tesouro', e: '💎', nome: 'Tesouro', preco: 900, atr: 15 },
+];
+const TERRENOS = [0, 0, 1500, 3000, 6000, 12000, 24000, 48000, 96000];   // preço de cada lote (os 2 primeiros já são seus)
+const P = id => PEIXES.find(p => p.id === id), D = id => DECOR.find(d => d.id === id), TQ = id => TANQUES.find(t => t.id === id);
+
+// ── Perfil e ADM ──
+const PERFIL = new URLSearchParams(location.search).get('perfil');
+const KEY = 'parqueAquario' + (PERFIL ? ':' + PERFIL : '');
+const isAdm = (() => { try { const m = JSON.parse(localStorage.getItem('aventuraConta' + (PERFIL ? ':' + PERFIL : ''))); return ['endrick', 'dominic'].includes(String(m && m.user && m.user.nome || '').trim().toLowerCase()); } catch (e) { return false; } })();
+const custo = v => isAdm ? 0 : v;   // na conta do ADM tudo é de graça
+let S; try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) { S = null; }
+S = Object.assign({ dinheiro: 1000, lotes: 2, tanques: [], salvo: Date.now(), ganhoTotal: 0 }, S || {});
+const grava = () => { S.salvo = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ok */ } };
+
+// ── Contas do parque ──
+function atracaoTanque(t) {
+  let a = t.peixes.reduce((s, id) => s + P(id).atr, 0) + t.decor.reduce((s, id) => s + D(id).atr, 0);
+  a *= 1 - t.sujeira / 200;            // sujo: menos gente quer ver
+  if (t.fome > 70) a *= 0.7;           // peixe com fome fica triste
+  return a;
+}
+const atracao = () => S.tanques.reduce((s, t) => s + (t ? atracaoTanque(t) : 0), 0);
+const visitantesMin = () => Math.round(atracao());   // 1 visitante por minuto pra cada ⭐
+const INGRESSO = 10;
+// dinheiro que entrou enquanto você estava fora (até 10 minutos, pela metade)
+(() => {
+  const fora = Math.min((Date.now() - (S.salvo || Date.now())) / 60000, 10);
+  const ganho = Math.floor(visitantesMin() * INGRESSO * fora * 0.5);
+  if (ganho > 20) setTimeout(() => toast('🎟️ Enquanto você estava fora, o parque ganhou ' + real(ganho) + '!', 3500), 600);
+  S.dinheiro += ganho;
+})();
+
+function toast(txt, ms = 1800) { const t = $('toast'); t.textContent = txt; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), ms); }
+function paga(v) {
+  v = custo(v);
+  if (S.dinheiro < v) { toast('💸 Falta dinheiro! Precisa de ' + real(v)); som('erro'); return false; }
+  S.dinheiro -= v; som('compra'); atualizaBarra(); grava(); return true;
+}
+function ganha(v) { S.dinheiro += v; S.ganhoTotal += v; }
+
+// ── Sons ──
+let ac = null;
+function som(tipo) {
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume();
+    const t = ac.currentTime;
+    const nota = (f, d, tp = 'triangle', v = 0.07, at = 0) => { const o = ac.createOscillator(), g = ac.createGain(); o.type = tp; o.frequency.value = f; g.gain.setValueAtTime(v, t + at); g.gain.exponentialRampToValueAtTime(0.0008, t + at + d); o.connect(g); g.connect(ac.destination); o.start(t + at); o.stop(t + at + d + 0.02); };
+    if (tipo === 'compra') [660, 880].forEach((f, i) => nota(f, 0.12, 'triangle', 0.07, i * 0.07));
+    if (tipo === 'moeda') [988, 1318].forEach((f, i) => nota(f, 0.1, 'square', 0.04, i * 0.06));
+    if (tipo === 'bolha') nota(400 + Math.random() * 300, 0.15, 'sine', 0.06);
+    if (tipo === 'erro') nota(160, 0.25, 'sawtooth', 0.05);
+  } catch (e) { /* sem som */ }
+}
+
+// ── Desenho do parque ──
+function atualizaBarra() {
+  $('dinheiro').innerHTML = '💰 <b>' + real(S.dinheiro) + '</b>';
+  $('atracao').textContent = Math.round(atracao());
+  $('vpm').textContent = visitantesMin();
+}
+const canvases = [];
+function montaParque() {
+  const p = $('parque'); p.innerHTML = ''; canvases.length = 0;
+  for (let i = 0; i < 9; i++) {
+    const t = S.tanques[i];
+    const div = document.createElement('div');
+    if (i >= S.lotes) {
+      div.className = 'lote vazio travado';
+      div.innerHTML = '<div><b>🔒</b>Terreno<br>' + (isAdm ? 'grátis (ADM)' : real(TERRENOS[i])) + '</div>';
+      if (i === S.lotes) div.onclick = () => { if (paga(TERRENOS[i])) { S.lotes++; toast('🏗️ Terreno novo!'); montaParque(); } };
+      else div.onclick = () => toast('Compre o terreno anterior primeiro!');
+    } else if (!t) {
+      div.className = 'lote vazio';
+      div.innerHTML = '<div><b>➕</b>Lugar vazio<br>toque pra pôr um aquário</div>';
+      div.onclick = () => abreLoja(i);
+    } else {
+      div.className = 'lote';
+      const tq = TQ(t.tipo);
+      const cv = document.createElement('canvas'); cv.width = 300; cv.height = 220;
+      div.appendChild(cv);
+      const nome = document.createElement('div'); nome.className = 'nome';
+      nome.innerHTML = '<span></span><span></span>';
+      nome.firstChild.textContent = tq.ic + ' ' + tq.nome; nome.lastChild.textContent = '⭐ ' + Math.round(atracaoTanque(t));
+      div.appendChild(nome);
+      const al = document.createElement('div'); al.className = 'alertas'; div.appendChild(al);
+      div.onclick = () => abreTanque(i);
+      canvases.push({ cv, t, i, al, nomeEl: nome.lastChild });
+      if (!t.nado) t.nado = {};
+    }
+    p.appendChild(div);
+  }
+  atualizaBarra();
+}
+// peixes nadando (cada um com seu caminho)
+function desenha(agora) {
+  for (const { cv, t, al, nomeEl } of canvases) {
+    const g = cv.getContext('2d'), W = cv.width, H = cv.height, tq = TQ(t.tipo);
+    const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, tq.agua[0]); gr.addColorStop(1, tq.agua[1]);
+    g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    // raios de luz
+    g.fillStyle = 'rgba(255,255,255,.08)';
+    for (let k = 0; k < 4; k++) { const x = ((agora / 60 + k * 80) % (W + 100)) - 50; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 30, 0); g.lineTo(x - 20, H); g.lineTo(x - 50, H); g.fill(); }
+    // areia
+    g.fillStyle = '#e8cf8a'; g.beginPath(); g.moveTo(0, H - 26); for (let x = 0; x <= W; x += 20) g.lineTo(x, H - 26 + Math.sin(x / 30) * 5); g.lineTo(W, H); g.lineTo(0, H); g.fill();
+    // decoração na areia
+    g.font = '34px serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+    t.decor.forEach((id, k) => g.fillText(D(id).e, 30 + k * ((W - 60) / Math.max(1, t.decor.length - 1 || 1)), H - 8));
+    // sujeira: água fica verde e com pontinhos
+    if (t.sujeira > 25) { g.fillStyle = `rgba(90,110,40,${(t.sujeira - 25) / 160})`; g.fillRect(0, 0, W, H); for (let k = 0; k < t.sujeira / 4; k++) { g.fillStyle = 'rgba(60,70,20,.5)'; g.fillRect((k * 53) % W, (k * 37) % H, 3, 3); } }
+    // bichos
+    t.peixes.forEach((id, k) => {
+      const p = P(id), n = t.nado[k] || (t.nado[k] = { f: Math.random() * 6, v: 0.4 + Math.random() * 0.5, y: 0.15 + Math.random() * 0.55 });
+      const tam = p.grande ? 60 : 34;
+      g.font = tam + 'px serif'; g.textBaseline = 'middle';
+      let x, y, dir;
+      if (p.fundo) { const s = Math.sin(agora / 1000 * n.v * 0.6 + n.f); x = W / 2 + s * (W / 2 - 30); y = H - 36; dir = Math.cos(agora / 1000 * n.v * 0.6 + n.f) > 0 ? 1 : -1; }
+      else { const fase = agora / 1000 * n.v * 0.5 + n.f; x = W / 2 + Math.sin(fase) * (W / 2 - tam / 2 - 6); y = H * n.y + Math.sin(fase * 3) * 8; dir = Math.cos(fase) > 0 ? 1 : -1; }
+      g.save(); g.translate(x, y); g.scale(-dir, 1); g.fillText(p.e, 0, 0); g.restore();   // os emojis olham pra esquerda
+    });
+    // bolhas
+    g.fillStyle = 'rgba(255,255,255,.6)';
+    for (let k = 0; k < 6; k++) { const yy = H - ((agora / 20 + k * 47) % H), xx = 20 + k * 47 + Math.sin(agora / 400 + k) * 5; g.beginPath(); g.arc(xx, yy, 2 + k % 3, 0, 7); g.fill(); }
+    // vidro
+    g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 6; g.beginPath(); g.moveTo(14, 10); g.lineTo(14, 70); g.stroke();
+    // alertas
+    const txt = (t.fome > 70 ? '🍤' : '') + (t.sujeira > 60 ? '🧽' : '');
+    if (al.dataset.t !== txt) { al.dataset.t = txt; al.innerHTML = [...txt].filter(c => c.trim()).map(c => '<span>' + c + '</span>').join(''); }
+    nomeEl.textContent = '⭐ ' + Math.round(atracaoTanque(t));
+  }
+  requestAnimationFrame(desenha);
+}
+
+// ── Loja de aquários ──
+function abreLoja(lugar) {
+  if (lugar == null) { lugar = S.tanques.findIndex((t, i) => !t && i < S.lotes); if (lugar < 0 && S.tanques.length < S.lotes) lugar = S.tanques.length; }
+  if (lugar == null || lugar < 0 || lugar >= S.lotes) { toast('🏗️ Sem lugar vazio! Compre mais terreno.'); return; }
+  const p = $('painel'); p.innerHTML = '<button class="fechar" aria-label="Fechar">✖</button><h2>🛒 AQUÁRIOS</h2><p style="text-align:center;font-weight:700">Escolha o aquário pro seu parque</p><div class="itens" id="it"></div>';
+  for (const tq of TANQUES) {
+    const b = document.createElement('button'); b.className = 'item' + (S.dinheiro < custo(tq.preco) ? ' caro' : '');
+    b.innerHTML = '<b></b><span></span><span style="font-weight:600"></span><small></small>';
+    b.children[0].textContent = tq.ic; b.children[1].textContent = tq.nome; b.children[2].textContent = 'cabem ' + tq.cap + ' bichos'; b.children[3].textContent = isAdm ? 'grátis (ADM)' : real(tq.preco);
+    b.onclick = () => { if (paga(tq.preco)) { S.tanques[lugar] = { tipo: tq.id, peixes: [], decor: [], sujeira: 0, fome: 0 }; fecha(); montaParque(); toast('🎉 ' + tq.nome + ' no parque! Agora compre peixes.'); setTimeout(() => abreTanque(lugar), 400); } };
+    $('it').appendChild(b);
+  }
+  p.querySelector('.fechar').onclick = fecha;
+  $('fundo').classList.add('on');
+}
+// ── Um aquário: peixes, enfeites, limpar e dar comida ──
+function abreTanque(i) {
+  const t = S.tanques[i], tq = TQ(t.tipo), p = $('painel');
+  p.innerHTML = '';
+  const h = (tag, txt, cls) => { const e = document.createElement(tag); if (txt != null) e.textContent = txt; if (cls) e.className = cls; p.appendChild(e); return e; };
+  const x = h('button', '✖', 'fechar'); x.onclick = fecha; x.setAttribute('aria-label', 'Fechar');
+  h('h2', tq.ic + ' ' + tq.nome);
+  h('h3', '🐟 Bichos (' + t.peixes.length + '/' + tq.cap + ')');
+  const lp = h('div', null, 'lista-peixes'); lp.textContent = t.peixes.length ? t.peixes.map(id => P(id).e).join(' ') : 'Ainda não tem nenhum bicho 😢';
+  h('h3', '🧽 Limpeza');
+  const b1 = h('div', null, 'barrinha'); b1.innerHTML = '<i></i>'; b1.firstChild.style.cssText = 'width:' + (100 - t.sujeira) + '%;background:' + (t.sujeira > 60 ? '#ff6b6b' : '#3fe0d0');
+  h('h3', '🍤 Barriga cheia');
+  const b2 = h('div', null, 'barrinha'); b2.innerHTML = '<i></i>'; b2.firstChild.style.cssText = 'width:' + (100 - t.fome) + '%;background:' + (t.fome > 70 ? '#ff6b6b' : '#2fd15a');
+  const ac2 = h('div', null, 'acoes');
+  const precoComida = t.peixes.length * 3;
+  const bl = document.createElement('button'); bl.className = 'btn azul'; bl.textContent = '🧽 Limpar (grátis)'; bl.onclick = () => { t.sujeira = 0; som('bolha'); grava(); abreTanque(i); toast('✨ Aquário limpinho!'); }; ac2.appendChild(bl);
+  const bc = document.createElement('button'); bc.className = 'btn'; bc.textContent = '🍤 Dar comida (' + (isAdm ? 'grátis' : real(precoComida)) + ')';
+  bc.onclick = () => { if (!t.peixes.length) return toast('Não tem bicho pra comer!'); if (paga(precoComida)) { t.fome = 0; grava(); abreTanque(i); toast('😋 Todo mundo comeu!'); } }; ac2.appendChild(bc);
+  h('h3', '🛒 Comprar bichos');
+  const it = h('div', null, 'itens');
+  for (const pe of PEIXES) {
+    const pode = pe.nivel <= tq.nivel;
+    const b = document.createElement('button'); b.className = 'item' + (!pode || S.dinheiro < custo(pe.preco) ? ' caro' : '');
+    b.innerHTML = '<b></b><span></span><span style="font-weight:600"></span><small></small>';
+    b.children[0].textContent = pe.e; b.children[1].textContent = pe.nome; b.children[2].textContent = '+' + pe.atr + ' ⭐';
+    b.children[3].textContent = !pode ? '🔒 aquário maior' : isAdm ? 'grátis (ADM)' : real(pe.preco);
+    b.onclick = () => {
+      if (!pode) return toast(pe.e + ' ' + pe.nome + ' precisa de um ' + TANQUES[pe.nivel - 1].nome + ' ou maior!');
+      if (t.peixes.length >= tq.cap) return toast('🫧 Esse aquário está cheio!');
+      if (paga(pe.preco)) { t.peixes.push(pe.id); grava(); abreTanque(i); atualizaBarra(); toast(pe.e + ' ' + pe.nome + ' chegou!'); }
+    };
+    it.appendChild(b);
+  }
+  h('h3', '🏰 Enfeites (' + t.decor.length + '/4)');
+  const id2 = h('div', null, 'itens');
+  for (const de of DECOR) {
+    const b = document.createElement('button'); b.className = 'item' + (S.dinheiro < custo(de.preco) ? ' caro' : '');
+    b.innerHTML = '<b></b><span></span><span style="font-weight:600"></span><small></small>';
+    b.children[0].textContent = de.e; b.children[1].textContent = de.nome; b.children[2].textContent = '+' + de.atr + ' ⭐'; b.children[3].textContent = isAdm ? 'grátis (ADM)' : real(de.preco);
+    b.onclick = () => { if (t.decor.length >= 4) return toast('Já tem 4 enfeites!'); if (paga(de.preco)) { t.decor.push(de.id); grava(); abreTanque(i); atualizaBarra(); } };
+    id2.appendChild(b);
+  }
+  const ac3 = h('div', null, 'acoes');
+  const vende = Math.floor((tq.preco + t.peixes.reduce((s, id) => s + P(id).preco, 0)) * 0.5);
+  const bv = document.createElement('button'); bv.className = 'btn vermelho'; bv.textContent = '💲 Vender aquário (' + real(vende) + ')';
+  bv.onclick = () => { if (!confirm('Vender o ' + tq.nome + ' com todos os bichos por ' + real(vende) + '?')) return; if (!isAdm) S.dinheiro += vende; S.tanques[i] = null; grava(); fecha(); montaParque(); toast('Vendido!'); };
+  ac3.appendChild(bv);
+  $('fundo').classList.add('on');
+}
+function fecha() { $('fundo').classList.remove('on'); montaParque(); }
+$('fundo').addEventListener('click', e => { if (e.target === $('fundo')) fecha(); });
+$('b-loja').onclick = () => abreLoja();
+$('b-tudo').onclick = () => {
+  const vivos = S.tanques.filter(t => t && t.peixes.length);
+  if (!S.tanques.some(t => t)) return toast('Compre um aquário primeiro!');
+  const preco = vivos.reduce((s, t) => s + (t.fome > 10 ? t.peixes.length * 3 : 0), 0);
+  if (preco > 0 && !paga(preco)) return;
+  for (const t of S.tanques) if (t) { t.sujeira = 0; t.fome = 0; }
+  grava(); som('bolha'); montaParque(); toast('✨ Tudo limpo e todo mundo comeu!' + (preco && !isAdm ? ' (comida: ' + real(preco) + ')' : ''));
+};
+
+// ── Visitantes andando na rua ──
+const GENTE = ['🧍', '🧒', '👧', '👦', '🧑', '👩', '👨', '👵', '👴', '🧑‍🦱', '👩‍🦰', '🧔'];
+const visitas = [];
+function novoVisitante() {
+  const el = document.createElement('span'); el.className = 'vis'; el.textContent = GENTE[Math.floor(Math.random() * GENTE.length)];
+  const v = { el, x: -40, vel: 30 + Math.random() * 30 };
+  el.style.left = '-40px';
+  el.onclick = e => {   // toque no visitante: ele dá uma gorjeta!
+    e.stopPropagation(); ganha(5); som('moeda'); atualizaBarra();
+    const m = document.createElement('span'); m.className = 'moeda'; m.textContent = '+R$5'; m.style.left = v.x + 'px'; m.style.top = '4px'; $('rua').appendChild(m); setTimeout(() => m.remove(), 1000);
+    el.remove(); visitas.splice(visitas.indexOf(v), 1);
+  };
+  $('rua').appendChild(el); visitas.push(v);
+}
+let ultimo = performance.now(), acumulaVis = 0, acumulaSalva = 0;
+function tick(agora) {
+  const dt = Math.min(1, (agora - ultimo) / 1000); ultimo = agora;
+  // dinheiro dos ingressos
+  const vpm = visitantesMin();
+  const antes = Math.floor(S.dinheiro);
+  ganha(vpm / 60 * INGRESSO * dt);
+  if (Math.floor(S.dinheiro) !== antes) { atualizaBarra(); }
+  // os aquários sujam e os bichos ficam com fome devagarinho
+  for (const t of S.tanques) if (t && t.peixes.length) { t.sujeira = Math.min(100, t.sujeira + dt / 6); t.fome = Math.min(100, t.fome + dt / 4); }
+  // gente chegando
+  acumulaVis += dt * Math.min(vpm, 40) / 60 * 3;
+  while (acumulaVis >= 1 && visitas.length < 12) { acumulaVis -= 1; novoVisitante(); }
+  const larg = $('rua').clientWidth;
+  for (const v of visitas.slice()) { v.x += v.vel * dt; v.el.style.left = v.x + 'px'; if (v.x > larg) { v.el.remove(); visitas.splice(visitas.indexOf(v), 1); } }
+  if ((acumulaSalva += dt) > 5) { acumulaSalva = 0; grava(); }
+  requestAnimationFrame(tick);
+}
+addEventListener('visibilitychange', () => { if (document.hidden) grava(); else ultimo = performance.now(); });
+addEventListener('pagehide', grava);
+
+montaParque();
+if (!S.tanques.some(t => t)) setTimeout(() => toast('👋 Você tem ' + real(S.dinheiro) + '! Toque em ➕ pra comprar seu primeiro aquário.', 3500), 400);
+requestAnimationFrame(desenha); requestAnimationFrame(tick);
+window.__aq = { get S() { return S; }, abreLoja, abreTanque, atracao };   // usado nos testes
+})();
+</script>
+</body>
+</html>
