@@ -69,6 +69,18 @@
   #toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 84px); transform: translateX(-50%); z-index: 70; background: var(--tinta); color: #fff; border: 3px solid #fff; border-radius: 14px; padding: 8px 16px 5px; font-weight: 800; opacity: 0; transition: opacity .25s; pointer-events: none; max-width: 92vw; text-align: center; }
   #toast.on { opacity: 1; }
   .rodape { position: fixed; left: 0; right: 0; bottom: 0; z-index: 35; display: flex; justify-content: center; gap: 10px; padding: 10px 10px calc(env(safe-area-inset-bottom) + 12px); background: linear-gradient(transparent, rgba(10,74,122,.55)); }
+  /* presente diário e pet baleia */
+  #b-presente { position: relative; }
+  #b-presente.tem { animation: pulo 1s infinite; }
+  #b-presente.tem::after { content: '!'; position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%; background: #ff3b3b; color: #fff; border: 2px solid var(--tinta); font-size: 14px; line-height: 20px; }
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin: 8px 0; }
+  .cal div { border: 2px solid var(--tinta); border-radius: 10px; background: #fff; text-align: center; font-weight: 800; font-size: 11px; padding: 3px 0 1px; }
+  .cal div b { display: block; font-size: 20px; }
+  .cal div.feito { background: #c8f5d2; opacity: .6; }
+  .cal div.hoje { background: var(--sol); transform: scale(1.08); }
+  .final { text-align: center; border: 3px dashed var(--tinta); border-radius: 16px; padding: 8px; margin-top: 8px; background: #d9f3ff; font-weight: 800; }
+  .final b { display: block; font-size: 54px; line-height: 1.1; }
+  #pet { position: fixed; left: 0; top: 0; z-index: 34; font-size: 64px; line-height: 1; cursor: pointer; filter: drop-shadow(0 4px 0 rgba(0,0,0,.25)); }
   .rodape .btn { font-size: 18px; padding: 10px 18px 7px; }
 </style>
 </head>
@@ -83,7 +95,7 @@
   </div>
   <div class="parque" id="parque"></div>
 </div>
-<div class="rodape"><button class="btn verde" id="b-loja">🛒 Comprar aquário</button><button class="btn azul" id="b-tudo">🧽 Cuidar de tudo</button></div>
+<div class="rodape"><button class="btn" id="b-presente">🎁</button><button class="btn verde" id="b-loja">🛒 Comprar aquário</button><button class="btn azul" id="b-tudo">🧽 Cuidar de tudo</button></div>
 <div class="fundo" id="fundo"><div class="painel" id="painel"></div></div>
 <div id="toast"></div>
 
@@ -441,10 +453,68 @@ function tick(agora) {
 addEventListener('visibilitychange', () => { if (document.hidden) grava(); else ultimo = performance.now(); });
 addEventListener('pagehide', grava);
 
-montaParque();
+// ── Presente diário: 365 dias, e no último dia vem o PET BALEIA ──
+const ANO = 365;
+const hojeTxt = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
+if (!S.presente) S.presente = { dias: 0, ultimo: '' };
+const podePresente = () => S.presente.ultimo !== hojeTxt() && S.presente.dias < ANO;
+// o que vem em cada dia: dinheiro que vai aumentando, e a cada 7 dias um presentão
+const premio = n => n === ANO ? { e: '🐋', txt: 'PET BALEIA!' } : n % 7 === 0 ? { e: '💎', v: 1000 + n * 50 } : { e: '💰', v: 100 + n * 10 };
+function marcaPresente() { $('b-presente').classList.toggle('tem', podePresente()); }
+function abrePresente() {
+  const p = $('painel'), d = S.presente, prox = d.dias + 1;
+  const ini = Math.floor(d.dias / 7) * 7;   // mostra a semana em que você está
+  let cal = '';
+  for (let n = ini + 1; n <= Math.min(ini + 7, ANO); n++) {
+    const pr = premio(n), cls = n <= d.dias ? 'feito' : n === prox && podePresente() ? 'hoje' : '';
+    cal += '<div class="' + cls + '">Dia ' + n + '<b>' + (n <= d.dias ? '✅' : pr.e) + '</b>' + (pr.v ? real(pr.v) : '🐋') + '</div>';
+  }
+  const falta = ANO - d.dias;
+  p.innerHTML = '<button class="fechar" aria-label="Fechar">✖</button><h2>🎁 PRESENTE DIÁRIO</h2>' +
+    '<p style="text-align:center;font-weight:800">Dia ' + d.dias + ' de ' + ANO + '</p>' +
+    '<div class="barrinha"><i style="width:' + (d.dias / ANO * 100) + '%;background:#2fd15a"></i></div>' +
+    '<div class="cal">' + cal + '</div>' +
+    '<div class="acoes" id="ac"></div>' +
+    '<div class="final"><b>🐋</b>' + (S.petBaleia ? 'Você já tem o PET BALEIA! 💙' : 'No dia 365 você ganha o PET BALEIA!<br>Faltam ' + falta + ' dias') + '</div>';
+  const b = document.createElement('button'); b.className = 'btn verde';
+  if (podePresente()) {
+    b.textContent = '🎁 Abrir presente do dia ' + prox;
+    b.onclick = () => {
+      if (!podePresente()) return;
+      const pr = premio(prox); d.dias = prox; d.ultimo = hojeTxt();
+      if (pr.v) { ganha(pr.v); toast(pr.e + ' Presente do dia ' + prox + ': ' + real(pr.v) + '!', 2500); }
+      else { S.petBaleia = true; poePet(); toast('🐋 VOCÊ COMPLETOU O ANO! Ganhou o PET BALEIA!', 4000); }
+      som('moeda'); grava(); atualizaBarra(); marcaPresente(); abrePresente();
+    };
+  } else { b.textContent = d.dias >= ANO ? '🏆 Você completou o ano!' : '⏰ Volte amanhã pro próximo!'; b.disabled = true; b.style.opacity = .6; }
+  $('ac').appendChild(b);
+  p.querySelector('.fechar').onclick = fecha;
+  $('fundo').classList.add('on');
+}
+$('b-presente').onclick = abrePresente;
+setInterval(marcaPresente, 60000);   // vira o dia com o jogo aberto
+// pet baleia: nada pela tela do parque e, quando você toca nela, dá um presentinho
+function poePet() {
+  if (!S.petBaleia || $('pet')) return;
+  const el = document.createElement('div'); el.id = 'pet'; el.textContent = '🐋'; document.body.appendChild(el);
+  let pronto = 0;
+  el.onclick = () => {
+    if (performance.now() < pronto) { toast('🐋 A baleia tá descansando...'); return; }
+    pronto = performance.now() + 60000; ganha(500); som('moeda'); atualizaBarra(); toast('🐋💦 Sua baleia te deu R$ 500!');
+  };
+  (function nada(t) {
+    const W = innerWidth - 80, H = innerHeight;
+    const x = W / 2 + Math.sin(t / 7000) * W / 2, y = H * 0.35 + Math.sin(t / 1300) * 40;
+    el.style.transform = 'translate(' + x + 'px,' + y + 'px) scaleX(' + (Math.cos(t / 7000) > 0 ? -1 : 1) + ')';
+    requestAnimationFrame(nada);
+  })(performance.now());
+}
+
+montaParque(); marcaPresente(); poePet();
+if (podePresente()) setTimeout(abrePresente, 900);
 if (!S.tanques.some(t => t)) setTimeout(() => toast('👋 Você tem ' + real(S.dinheiro) + '! Toque em ➕ pra comprar seu primeiro aquário.', 3500), 400);
 requestAnimationFrame(desenha); requestAnimationFrame(tick);
-window.__aq = { get S() { return S; }, abreLoja, abreTanque, atracao };   // usado nos testes
+window.__aq = { get S() { return S; }, abreLoja, abreTanque, atracao, abrePresente, poePet };   // usado nos testes
 })();
 </script>
 </body>
