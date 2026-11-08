@@ -339,7 +339,7 @@ function pensaBots(dt) {
 }
 
 // ── Servidor: até 8 pessoas jogando juntas ──
-const API = '/api/roube';
+const API = '/api/roube/';
 const api = b => fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...b, id: S.id, nome: S.nome, sala }) }).then(r => r.ok ? r.json() : Promise.reject(r.status));
 const compacta = () => S.slots.map(a => a ? a.id + (a.ouro ? '*' : '') : '');
 const descompacta = s => Array.from({ length: VAGAS }, (_, k) => { const v = (s || [])[k]; if (!v) return null; const id = v.replace('*', ''); return B(id) ? { id, ouro: v.endsWith('*') } : null; });
