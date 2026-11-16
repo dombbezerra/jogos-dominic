@@ -22,9 +22,14 @@
   .btn { font-family: var(--texto); font-weight: 800; font-size: 18px; cursor: pointer; border: 3px solid var(--tinta); border-radius: 16px; padding: 10px 24px 7px; color: var(--tinta); background: var(--creme); box-shadow: 0 5px 0 var(--tinta); }
   .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--tinta); }
   .btn.grande { font-family: var(--display); font-weight: 400; font-size: clamp(22px, 6vw, 32px); background: var(--verde); color: #fff; padding: 10px 40px 6px; margin-top: 18px; }
-  #niveis { display: grid; grid-template-columns: repeat(5, 58px); gap: 10px; margin-top: 18px; }
-  #niveis button { font-family: var(--display); font-size: 22px; height: 58px; border: 3px solid var(--tinta); border-radius: 14px; box-shadow: 0 4px 0 var(--tinta); cursor: pointer; color: var(--tinta); }
+  #niveis { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; width: min(100%, 520px); margin-top: 18px; }
+  #niveis button { font-family: var(--display); font-size: clamp(11px, 3vw, 16px); height: clamp(30px, 8.5vw, 44px); padding: 0; border: 2px solid var(--tinta); border-radius: 9px; box-shadow: 0 3px 0 var(--tinta); cursor: pointer; color: var(--tinta); }
   #niveis button:disabled { background: #555 !important; color: #999; cursor: default; box-shadow: none; }
+  #perso { justify-content: flex-start; }
+  #perso h2 { font-family: var(--display); font-weight: 400; font-size: 20px; margin-top: 16px; text-shadow: 2px 2px 0 #000; }
+  .opcoes { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 8px; max-width: 520px; }
+  .opcoes button { width: 50px; height: 50px; font-size: 26px; border: 3px solid var(--tinta); border-radius: 14px; background: var(--creme); box-shadow: 0 4px 0 var(--tinta); cursor: pointer; }
+  .opcoes button.on { outline: 4px solid var(--sol); outline-offset: 2px; transform: scale(1.08); }
   .dica { font-size: 14px; opacity: .85; margin-top: 14px; max-width: 520px; }
 
   #jogo { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: calc(env(safe-area-inset-top) + 58px); gap: 10px; }
@@ -46,10 +51,20 @@
 <a href="../index.html" id="back-link">← Menu</a>
 
 <div id="menu" class="tela">
-  <h1>COBRINHA<span>10 NÍVEIS</span></h1>
-  <p class="sub">Coma as frutas pra crescer! Cada nível é mais rápido e tem mais paredes. O nível 10 é o MAIS DIFÍCIL! 💀</p>
+  <h1>COBRINHA<span>100 NÍVEIS</span></h1>
+  <p class="sub">Coma as frutas pra crescer! Cada nível é mais rápido e tem mais paredes. O nível 100 é o MAIS DIFÍCIL! 💀</p>
   <div id="niveis"></div>
+  <button class="btn" id="b-perso" style="margin-top:18px">🎨 Personalizar cobrinha</button>
   <p class="dica">Setas ou W A S D no computador. No celular: arraste o dedo ou use os botões.</p>
+</div>
+
+<div id="perso" class="tela hidden">
+  <h1 style="font-size:clamp(30px,8vw,56px)">PERSONALIZAR</h1>
+  <canvas id="previa" style="margin-top:16px"></canvas>
+  <h2>🎨 Cor</h2><div class="opcoes" id="o-cor"></div>
+  <h2>🎩 Chapéu</h2><div class="opcoes" id="o-chapeu"></div>
+  <h2>🕶️ Acessório</h2><div class="opcoes" id="o-acess"></div>
+  <button class="btn grande" id="b-perso-ok">PRONTO ✔</button>
 </div>
 
 <div id="fim" class="tela hidden">
@@ -76,7 +91,7 @@
 const $ = (id) => document.getElementById(id);
 const N = 20; // tamanho do campo (20 x 20 quadradinhos)
 
-// ── Os 10 níveis: velocidade (ms por passo), quantas frutas pra passar e onde ficam as paredes ──
+// ── Os níveis 1 a 10: velocidade (ms por passo), quantas frutas pra passar e onde ficam as paredes ──
 function paredes(nivel) {
   const p = [];
   const linha = (x1, y1, x2, y2) => { for (let x = x1; x <= x2; x++) for (let y = y1; y <= y2; y++) p.push(x + ',' + y); };
@@ -90,11 +105,40 @@ function paredes(nivel) {
   if (nivel >= 10) { linha(13, 2, 13, 3); linha(6, 16, 6, 17); linha(2, 2, 3, 2); linha(16, 17, 17, 17); }
   return new Set(p);
 }
-const NIVEIS = Array.from({ length: 10 }, (_, i) => ({
-  velo: [170, 155, 140, 128, 116, 104, 94, 84, 74, 64][i],
-  meta: 8 + i * 2,
-  paredes: paredes(i + 1),
-  cor: ['#8fe05a', '#5cd18a', '#3fb8f0', '#6f8cff', '#b06cff', '#ff8ad8', '#ff8a3d', '#ff5d5d', '#d92b2b', '#1a1a1a'][i],
+// Do nível 11 ao 100 as paredes são sorteadas (sempre iguais pra cada nível) e vão ficando mais e mais
+function sorteio(semente) { return () => { semente = (semente + 0x6D2B79F5) | 0; let t = Math.imul(semente ^ (semente >>> 15), 1 | semente); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function paredesSorteadas(nivel) {
+  const rnd = sorteio(nivel * 7919), p = new Set();
+  const pecas = 16 + Math.floor((nivel - 10) / 4); // nível 11: 16 pedaços … nível 100: 38
+  for (let k = 0; k < pecas; k++) {
+    const tam = 2 + Math.floor(rnd() * Math.min(6, 2 + nivel / 25)), deitada = rnd() < .5;
+    const x0 = Math.floor(rnd() * N), y0 = Math.floor(rnd() * N);
+    for (let j = 0; j < tam; j++) {
+      const x = deitada ? x0 + j : x0, y = deitada ? y0 : y0 + j;
+      if (x >= N || y >= N || (y >= 11 && y <= 13 && x <= 9)) continue; // deixa livre onde a cobrinha nasce
+      p.add(x + ',' + y);
+    }
+  }
+  // quadradinho que a cobrinha não consegue alcançar vira parede (pra fruta nunca nascer lá)
+  const visto = new Set(['5,12']), fila = [[5, 12]];
+  while (fila.length) {
+    const [x, y] = fila.pop();
+    [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => {
+      const k = (x + dx) + ',' + (y + dy);
+      if (x + dx < 0 || y + dy < 0 || x + dx >= N || y + dy >= N || p.has(k) || visto.has(k)) return;
+      visto.add(k); fila.push([x + dx, y + dy]);
+    });
+  }
+  for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) if (!visto.has(x + ',' + y)) p.add(x + ',' + y);
+  return p;
+}
+const ULTIMO = 100;
+const CORES_NIVEL = ['#8fe05a', '#5cd18a', '#3fb8f0', '#6f8cff', '#b06cff', '#ff8ad8', '#ff8a3d', '#ff5d5d', '#d92b2b', '#1a1a1a'];
+const NIVEIS = Array.from({ length: ULTIMO }, (_, i) => ({
+  velo: Math.round(170 - i * 1.15), // 170ms no nível 1 … 56ms no 100 (cada nível um pouquinho mais rápido)
+  meta: 8 + Math.floor(i * 0.3),     // 8 frutas no nível 1 … 37 no 100
+  paredes: i < 10 ? paredes(i + 1) : paredesSorteadas(i + 1),
+  cor: CORES_NIVEL[Math.floor(i / 10)],
 }));
 const FRUTAS = ['🍎', '🍓', '🍌', '🍇', '🍉', '🍒', '🍍', '🥝'];
 
@@ -134,12 +178,12 @@ function ajusta() {
 let nivel = 1, cobra = [], dir = { x: 1, y: 0 }, fila = [], fruta = null, comidas = 0, vivo = false, timer = null;
 
 function menu() {
-  $('menu').classList.remove('hidden'); $('fim').classList.add('hidden');
+  $('menu').classList.remove('hidden'); $('fim').classList.add('hidden'); $('perso').classList.add('hidden');
   const box = $('niveis'); box.innerHTML = '';
   NIVEIS.forEach((nv, i) => {
     const b = document.createElement('button');
-    b.textContent = i + 1 > save.liberado ? '🔒' : (i === 9 ? '💀' : i + 1);
-    b.style.background = nv.cor; if (i === 9) b.style.color = '#fff';
+    b.textContent = i + 1 > save.liberado ? '🔒' : (i === ULTIMO - 1 ? '💀' : i + 1);
+    b.style.background = nv.cor; if (i >= 90) b.style.color = '#fff';
     b.disabled = i + 1 > save.liberado;
     b.onclick = () => comeca(i + 1);
     box.appendChild(b);
@@ -148,11 +192,11 @@ function menu() {
 
 function comeca(n) {
   nivel = n;
-  $('menu').classList.add('hidden'); $('fim').classList.add('hidden');
+  $('menu').classList.add('hidden'); $('fim').classList.add('hidden'); $('perso').classList.add('hidden');
   cobra = [{ x: 4, y: 12 }, { x: 3, y: 12 }, { x: 2, y: 12 }]; // linha 12 não tem parede em nenhum nível
   dir = { x: 1, y: 0 }; fila = []; comidas = 0; vivo = true;
   novaFruta(); hud(); ajusta();
-  aviso('NÍVEL ' + n + (n === 10 ? ' 💀' : ''), 1200);
+  aviso('NÍVEL ' + n + (n === ULTIMO ? ' 💀' : ''), 1200);
   clearInterval(timer); clearTimeout(comeca.t);
   comeca.t = setTimeout(() => { if (vivo) timer = setInterval(passo, NIVEIS[nivel - 1].velo); }, 900);
 }
@@ -190,8 +234,8 @@ function ganha() {
   vivo = false; clearInterval(timer); hud(); desenha();
   [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => som(f, .15), i * 110));
   guardaRecorde();
-  if (nivel < 10 && save.liberado < nivel + 1) save.liberado = nivel + 1;
-  if (nivel === 10) save.zerou = true;
+  if (nivel < ULTIMO && save.liberado < nivel + 1) save.liberado = nivel + 1;
+  if (nivel === ULTIMO) save.zerou = true;
   grava();
   setTimeout(() => fim(true), 900);
 }
@@ -201,16 +245,16 @@ function guardaRecorde() {
 
 function fim(venceu) {
   $('fim').classList.remove('hidden');
-  $('fim-titulo').textContent = venceu ? (nivel === 10 ? '🏆 ZEROU!' : 'PASSOU! 🎉') : 'BATEU! 💥';
+  $('fim-titulo').textContent = venceu ? (nivel === ULTIMO ? '🏆 ZEROU!' : 'PASSOU! 🎉') : 'BATEU! 💥';
   $('fim-texto').textContent = venceu
-    ? (nivel === 10 ? 'Você venceu o nível MAIS DIFÍCIL! Você é o mestre da cobrinha! 🐍👑' : 'Nível ' + (nivel + 1) + ' liberado!')
+    ? (nivel === ULTIMO ? 'Você venceu o nível MAIS DIFÍCIL! Você é o mestre da cobrinha! 🐍👑' : 'Nível ' + (nivel + 1) + ' liberado!')
     : 'Você comeu ' + comidas + ' de ' + NIVEIS[nivel - 1].meta + ' frutas no nível ' + nivel + '.';
-  $('b-proximo').style.display = venceu && nivel < 10 ? '' : 'none';
+  $('b-proximo').style.display = venceu && nivel < ULTIMO ? '' : 'none';
 }
 
 function hud() {
   const nv = NIVEIS[nivel - 1];
-  $('h-nivel').textContent = 'Nível ' + nivel + (nivel === 10 ? ' 💀' : '');
+  $('h-nivel').textContent = 'Nível ' + nivel + (nivel === ULTIMO ? ' 💀' : '');
   $('h-frutas').textContent = '🍎 ' + comidas + ' / ' + nv.meta;
   $('h-recorde').textContent = '🏆 ' + (save.recordes[nivel] || 0);
   document.querySelector('#barra i').style.width = (comidas / nv.meta * 100) + '%';
@@ -240,21 +284,87 @@ function desenha(bateu) {
   ctx.fillStyle = '#000';
   ctx.font = Math.floor(Q * .9) + 'px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(fruta.e, fruta.x * Q + Q / 2, fruta.y * Q + Q / 2 + 1);
-  // cobra (do rabo pra cabeça)
+  desenhaCobra(ctx, cobra, dir, Q, bateu);
+}
+
+// ── Personalizar: cor, chapéu e acessório ──
+const CORES = [
+  { n: 'Verde', a: '#27a845', b: '#1f8f3a' }, { n: 'Azul', a: '#2f8fe0', b: '#1f6ab0' },
+  { n: 'Vermelha', a: '#e0453a', b: '#b02a22' }, { n: 'Amarela', a: '#ffd23f', b: '#e0a800' },
+  { n: 'Roxa', a: '#9b5cff', b: '#6a35c7' }, { n: 'Rosa', a: '#ff8ad8', b: '#d94aa8' },
+  { n: 'Laranja', a: '#ff8a3d', b: '#d9600f' }, { n: 'Preta', a: '#333', b: '#111' },
+  { n: 'Dourada', a: '#ffcc33', b: '#c99400', brilho: true }, { n: 'Arco-íris', arco: true },
+];
+const CHAPEUS = ['', '🎩', '👑', '🧢', '🎓', '🤠', '🎅', '⛑️', '🪖', '🎉'];
+const ACESSORIOS = [
+  { e: '', n: 'Nada' }, { e: '🕶️', n: 'Óculos', onde: 'olho' }, { e: '🎀', n: 'Laço', onde: 'pescoco' },
+  { e: '🧣', n: 'Cachecol', onde: 'pescoco' }, { e: '👔', n: 'Gravata', onde: 'pescoco' }, { e: '🥸', n: 'Disfarce', onde: 'olho' },
+  { e: '🌹', n: 'Flor', onde: 'boca' }, { e: '⭐', n: 'Estrelas', onde: 'rabo' },
+];
+save.visual = Object.assign({ cor: 0, chapeu: 0, acess: 0 }, save.visual);
+
+function corDo(i, bateu) {
+  if (bateu && i === 0) return '#ff3b3b';
+  const c = CORES[save.visual.cor] || CORES[0];
+  if (c.arco) return 'hsl(' + ((i * 30) % 360) + ',85%,55%)';
+  return i % 2 ? c.b : c.a;
+}
+
+function desenhaCobra(ctx, cobra, dir, Q, bateu) {
+  const v = save.visual, ac = ACESSORIOS[v.acess] || ACESSORIOS[0];
+  const meio = (c) => [c.x * Q + Q / 2, c.y * Q + Q / 2];
+  const emoji = (e, x, y, t) => { ctx.fillStyle = '#000'; ctx.font = Math.floor(t) + 'px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(e, x, y); };
+  // corpo (do rabo pra cabeça)
   for (let i = cobra.length - 1; i >= 0; i--) {
-    const c = cobra[i], r = i === 0 ? Q * .5 : Q * .42;
-    ctx.fillStyle = bateu && i === 0 ? '#ff3b3b' : (i % 2 ? '#1f8f3a' : '#27a845');
-    ctx.beginPath(); ctx.arc(c.x * Q + Q / 2, c.y * Q + Q / 2, r, 0, Math.PI * 2); ctx.fill();
+    const [x, y] = meio(cobra[i]), r = i === 0 ? Q * .5 : Q * .42;
+    ctx.fillStyle = corDo(i, bateu);
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    if ((CORES[v.cor] || {}).brilho && i % 3 === 0) { ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.beginPath(); ctx.arc(x - r * .3, y - r * .3, r * .25, 0, 7); ctx.fill(); }
   }
+  if (ac.onde === 'rabo') { const [x, y] = meio(cobra[cobra.length - 1]); emoji(ac.e, x, y, Q * .8); }
+  if (ac.onde === 'pescoco' && cobra[1]) { const [x, y] = meio(cobra[1]); emoji(ac.e, x, y + 1, Q * .85); }
   // olhinhos
-  const h = cobra[0], cx = h.x * Q + Q / 2, cy = h.y * Q + Q / 2;
+  const [cx, cy] = meio(cobra[0]);
   const px = -dir.y, py = dir.x; // de lado
   [1, -1].forEach((s) => {
     const ex = cx + dir.x * Q * .15 + px * s * Q * .2, ey = cy + dir.y * Q * .15 + py * s * Q * .2;
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, ey, Q * .14, 0, 7); ctx.fill();
     ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(ex + dir.x * Q * .04, ey + dir.y * Q * .04, Q * .07, 0, 7); ctx.fill();
   });
+  if (ac.onde === 'olho') emoji(ac.e, cx + dir.x * Q * .15, cy + dir.y * Q * .15, Q * .8);
+  if (ac.onde === 'boca') emoji(ac.e, cx + dir.x * Q * .5, cy + dir.y * Q * .5 + Q * .1, Q * .6);
+  if (CHAPEUS[v.chapeu]) emoji(CHAPEUS[v.chapeu], cx, cy - Q * .55, Q * .85);
 }
+
+// tela de personalizar, com a cobrinha de exemplo
+const pv = document.getElementById('previa'), pctx = pv.getContext('2d');
+function previa() {
+  const q = 44, dpr = devicePixelRatio || 1;
+  pv.width = 8 * q * dpr; pv.height = 3 * q * dpr; pv.style.width = 8 * q + 'px'; pv.style.height = 3 * q + 'px';
+  pctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  pctx.fillStyle = '#a8e063'; pctx.fillRect(0, 0, 8 * q, 3 * q);
+  const c = [6, 5, 4, 3, 2, 1].map((x) => ({ x, y: 1.5 }));
+  desenhaCobra(pctx, c, { x: 1, y: 0 }, q, false);
+}
+function opcoes(id, lista, chave, mostra) {
+  const box = $(id); box.innerHTML = '';
+  lista.forEach((it, i) => {
+    const b = document.createElement('button');
+    mostra(b, it, i);
+    if (save.visual[chave] === i) b.classList.add('on');
+    b.onclick = () => { save.visual[chave] = i; grava(); som(520 + i * 40, .08); personalizar(); };
+    box.appendChild(b);
+  });
+}
+function personalizar() {
+  $('menu').classList.add('hidden'); $('perso').classList.remove('hidden');
+  opcoes('o-cor', CORES, 'cor', (b, c) => { b.title = c.n; b.style.background = c.arco ? 'linear-gradient(90deg,red,orange,yellow,lime,cyan,blue,violet)' : c.a; });
+  opcoes('o-chapeu', CHAPEUS, 'chapeu', (b, e) => { b.textContent = e || '🚫'; });
+  opcoes('o-acess', ACESSORIOS, 'acess', (b, a) => { b.textContent = a.e || '🚫'; b.title = a.n; });
+  previa();
+}
+$('b-perso').onclick = personalizar;
+$('b-perso-ok').onclick = menu;
 
 // ── Controles ──
 const DIRS = { cima: { x: 0, y: -1 }, baixo: { x: 0, y: 1 }, esq: { x: -1, y: 0 }, dir: { x: 1, y: 0 } };
