@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1a8a3a">
+<title>Cobrinha</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --tinta: #0e0c33; --creme: #fff6dc; --sol: #ffd23f; --rosa: #ff5d8f; --verde: #2fd15a;
+    --display: 'Bungee', 'Arial Black', Impact, sans-serif; --texto: 'Baloo 2', 'Segoe UI', Arial, sans-serif; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; background: #0b2414; color: var(--creme); font-family: var(--texto); -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; touch-action: none; }
+  #back-link { position: fixed; top: calc(env(safe-area-inset-top) + 10px); left: 10px; z-index: 30; text-decoration: none; font-weight: 800; background: var(--sol); color: var(--tinta); border: 3px solid var(--tinta); border-radius: 12px; padding: 4px 12px 2px; box-shadow: 0 4px 0 var(--tinta); }
+  .tela { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 16px 20px; text-align: center; overflow-y: auto; background: radial-gradient(circle at 50% 30%, #2e9e4f, #0b2414 75%); }
+  .tela.hidden { display: none; }
+  h1 { font-family: var(--display); font-weight: 400; font-size: clamp(40px, 11vw, 80px); line-height: .95; text-shadow: 4px 4px 0 #000; transform: rotate(-3deg); }
+  h1 span { color: var(--sol); display: block; font-size: .5em; }
+  .sub { font-weight: 700; margin-top: 12px; max-width: 520px; }
+  .btn { font-family: var(--texto); font-weight: 800; font-size: 18px; cursor: pointer; border: 3px solid var(--tinta); border-radius: 16px; padding: 10px 24px 7px; color: var(--tinta); background: var(--creme); box-shadow: 0 5px 0 var(--tinta); }
+  .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--tinta); }
+  .btn.grande { font-family: var(--display); font-weight: 400; font-size: clamp(22px, 6vw, 32px); background: var(--verde); color: #fff; padding: 10px 40px 6px; margin-top: 18px; }
+  #niveis { display: grid; grid-template-columns: repeat(5, 58px); gap: 10px; margin-top: 18px; }
+  #niveis button { font-family: var(--display); font-size: 22px; height: 58px; border: 3px solid var(--tinta); border-radius: 14px; box-shadow: 0 4px 0 var(--tinta); cursor: pointer; color: var(--tinta); }
+  #niveis button:disabled { background: #555 !important; color: #999; cursor: default; box-shadow: none; }
+  .dica { font-size: 14px; opacity: .85; margin-top: 14px; max-width: 520px; }
+
+  #jogo { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: calc(env(safe-area-inset-top) + 58px); gap: 10px; }
+  #hud { display: flex; gap: 8px; font-weight: 800; font-size: 17px; flex-wrap: wrap; justify-content: center; }
+  .pill { background: rgba(0,0,0,.45); border: 2px solid rgba(255,255,255,.35); border-radius: 12px; padding: 2px 12px 0; white-space: nowrap; }
+  #barra { width: min(92vw, 420px); height: 12px; border-radius: 8px; background: rgba(0,0,0,.45); overflow: hidden; border: 2px solid rgba(255,255,255,.35); }
+  #barra i { display: block; height: 100%; width: 0; background: var(--sol); transition: width .2s; }
+  canvas { border: 4px solid var(--tinta); border-radius: 10px; box-shadow: 0 6px 0 var(--tinta); }
+  #setas { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(2, 56px); gap: 6px; margin-top: 4px; }
+  #setas button { font-size: 26px; border: 3px solid var(--tinta); border-radius: 14px; background: var(--creme); box-shadow: 0 4px 0 var(--tinta); }
+  #setas button:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
+  #b-cima { grid-column: 2; } #b-esq { grid-column: 1; grid-row: 2; } #b-baixo { grid-column: 2; grid-row: 2; } #b-dir { grid-column: 3; grid-row: 2; }
+  @media (hover: hover) and (pointer: fine) { #setas { display: none; } }
+  #aviso { position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 12; font-family: var(--display); font-size: clamp(28px, 8vw, 56px); text-shadow: 4px 4px 0 #000; text-align: center; pointer-events: none; opacity: 0; transition: opacity .25s; white-space: nowrap; }
+  #aviso.on { opacity: 1; }
+</style>
+</head>
+<body>
+<a href="../index.html" id="back-link">← Menu</a>
+
+<div id="menu" class="tela">
+  <h1>COBRINHA<span>10 NÍVEIS</span></h1>
+  <p class="sub">Coma as frutas pra crescer! Cada nível é mais rápido e tem mais paredes. O nível 10 é o MAIS DIFÍCIL! 💀</p>
+  <div id="niveis"></div>
+  <p class="dica">Setas ou W A S D no computador. No celular: arraste o dedo ou use os botões.</p>
+</div>
+
+<div id="fim" class="tela hidden">
+  <h1 id="fim-titulo">BATEU!</h1>
+  <p class="sub" id="fim-texto"></p>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+    <button class="btn grande" id="b-de-novo">DE NOVO</button>
+    <button class="btn grande" id="b-proximo" style="background:var(--rosa)">PRÓXIMO ▶</button>
+  </div>
+  <button class="btn" id="b-niveis" style="margin-top:16px">Escolher nível</button>
+</div>
+
+<div id="jogo">
+  <div id="hud"><span class="pill" id="h-nivel"></span><span class="pill" id="h-frutas"></span><span class="pill" id="h-recorde"></span></div>
+  <div id="barra"><i></i></div>
+  <canvas id="tela"></canvas>
+  <div id="setas">
+    <button id="b-cima">⬆️</button><button id="b-esq">⬅️</button><button id="b-baixo">⬇️</button><button id="b-dir">➡️</button>
+  </div>
+</div>
+<div id="aviso"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const N = 20; // tamanho do campo (20 x 20 quadradinhos)
+
+// ── Os 10 níveis: velocidade (ms por passo), quantas frutas pra passar e onde ficam as paredes ──
+function paredes(nivel) {
+  const p = [];
+  const linha = (x1, y1, x2, y2) => { for (let x = x1; x <= x2; x++) for (let y = y1; y <= y2; y++) p.push(x + ',' + y); };
+  if (nivel >= 3) { linha(4, 4, 5, 5); linha(14, 4, 15, 5); linha(4, 14, 5, 15); linha(14, 14, 15, 15); }
+  if (nivel >= 4) { linha(9, 8, 10, 11); }
+  if (nivel >= 5) { linha(2, 9, 6, 10); linha(13, 9, 17, 10); }
+  if (nivel >= 6) { linha(8, 1, 11, 1); linha(8, 18, 11, 18); }
+  if (nivel >= 7) { linha(1, 1, 1, 6); linha(18, 13, 18, 18); }
+  if (nivel >= 8) { linha(7, 5, 12, 5); linha(7, 14, 12, 14); }
+  if (nivel >= 9) { linha(1, 13, 1, 18); linha(18, 1, 18, 6); }
+  if (nivel >= 10) { linha(13, 2, 13, 3); linha(6, 16, 6, 17); linha(2, 2, 3, 2); linha(16, 17, 17, 17); }
+  return new Set(p);
+}
+const NIVEIS = Array.from({ length: 10 }, (_, i) => ({
+  velo: [170, 155, 140, 128, 116, 104, 94, 84, 74, 64][i],
+  meta: 8 + i * 2,
+  paredes: paredes(i + 1),
+  cor: ['#8fe05a', '#5cd18a', '#3fb8f0', '#6f8cff', '#b06cff', '#ff8ad8', '#ff8a3d', '#ff5d5d', '#d92b2b', '#1a1a1a'][i],
+}));
+const FRUTAS = ['🍎', '🍓', '🍌', '🍇', '🍉', '🍒', '🍍', '🥝'];
+
+// ── Save (por perfil) ──
+const PERFIL = new URLSearchParams(location.search).get('perfil');
+const KEY = 'cobrinha' + (PERFIL ? ':' + PERFIL : '');
+let save; try { save = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { save = {}; }
+save = Object.assign({ liberado: 1, recordes: {} }, save);
+const grava = () => { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { /* ok */ } };
+
+// ── Sons simples ──
+let ac;
+function som(f, d, tipo) {
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = tipo || 'square'; o.frequency.value = f;
+    g.gain.setValueAtTime(.08, ac.currentTime); g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + d);
+    o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + d);
+  } catch (e) { /* sem som */ }
+}
+
+// ── Tela (canvas) ──
+const cv = $('tela'), ctx = cv.getContext('2d');
+let Q = 20; // tamanho de cada quadradinho em pixels
+function ajusta() {
+  const livre = Math.min(innerWidth - 24, innerHeight - (matchMedia('(hover: hover) and (pointer: fine)').matches ? 150 : 290));
+  Q = Math.max(12, Math.floor(Math.min(livre, 560) / N));
+  const dpr = devicePixelRatio || 1;
+  cv.style.width = cv.style.height = Q * N + 'px';
+  cv.width = cv.height = Q * N * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  desenha();
+}
+
+// ── Estado do jogo ──
+let nivel = 1, cobra = [], dir = { x: 1, y: 0 }, fila = [], fruta = null, comidas = 0, vivo = false, timer = null;
+
+function menu() {
+  $('menu').classList.remove('hidden'); $('fim').classList.add('hidden');
+  const box = $('niveis'); box.innerHTML = '';
+  NIVEIS.forEach((nv, i) => {
+    const b = document.createElement('button');
+    b.textContent = i + 1 > save.liberado ? '🔒' : (i === 9 ? '💀' : i + 1);
+    b.style.background = nv.cor; if (i === 9) b.style.color = '#fff';
+    b.disabled = i + 1 > save.liberado;
+    b.onclick = () => comeca(i + 1);
+    box.appendChild(b);
+  });
+}
+
+function comeca(n) {
+  nivel = n;
+  $('menu').classList.add('hidden'); $('fim').classList.add('hidden');
+  cobra = [{ x: 4, y: 12 }, { x: 3, y: 12 }, { x: 2, y: 12 }]; // linha 12 não tem parede em nenhum nível
+  dir = { x: 1, y: 0 }; fila = []; comidas = 0; vivo = true;
+  novaFruta(); hud(); ajusta();
+  aviso('NÍVEL ' + n + (n === 10 ? ' 💀' : ''), 1200);
+  clearInterval(timer); clearTimeout(comeca.t);
+  comeca.t = setTimeout(() => { if (vivo) timer = setInterval(passo, NIVEIS[nivel - 1].velo); }, 900);
+}
+
+function livre(x, y) {
+  return !NIVEIS[nivel - 1].paredes.has(x + ',' + y) && !cobra.some((c) => c.x === x && c.y === y);
+}
+function novaFruta() {
+  let x, y, t = 0;
+  do { x = Math.floor(Math.random() * N); y = Math.floor(Math.random() * N); } while (!livre(x, y) && ++t < 999);
+  fruta = { x, y, e: FRUTAS[Math.floor(Math.random() * FRUTAS.length)] };
+}
+
+function passo() {
+  if (fila.length) { const d = fila.shift(); if (d.x !== -dir.x || d.y !== -dir.y) dir = d; }
+  const cab = { x: cobra[0].x + dir.x, y: cobra[0].y + dir.y };
+  const comeu = cab.x === fruta.x && cab.y === fruta.y;
+  if (!comeu) cobra.pop();
+  if (cab.x < 0 || cab.y < 0 || cab.x >= N || cab.y >= N || !livre(cab.x, cab.y)) { cobra.push(cobra[cobra.length - 1]); return perde(); }
+  cobra.unshift(cab);
+  if (comeu) {
+    comidas++; som(660 + comidas * 20, .1);
+    if (comidas >= NIVEIS[nivel - 1].meta) return ganha();
+    novaFruta();
+  }
+  hud(); desenha();
+}
+
+function perde() {
+  vivo = false; clearInterval(timer); som(140, .5, 'sawtooth'); desenha(true);
+  guardaRecorde();
+  setTimeout(() => fim(false), 700);
+}
+function ganha() {
+  vivo = false; clearInterval(timer); hud(); desenha();
+  [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => som(f, .15), i * 110));
+  guardaRecorde();
+  if (nivel < 10 && save.liberado < nivel + 1) save.liberado = nivel + 1;
+  if (nivel === 10) save.zerou = true;
+  grava();
+  setTimeout(() => fim(true), 900);
+}
+function guardaRecorde() {
+  if (comidas > (save.recordes[nivel] || 0)) { save.recordes[nivel] = comidas; grava(); }
+}
+
+function fim(venceu) {
+  $('fim').classList.remove('hidden');
+  $('fim-titulo').textContent = venceu ? (nivel === 10 ? '🏆 ZEROU!' : 'PASSOU! 🎉') : 'BATEU! 💥';
+  $('fim-texto').textContent = venceu
+    ? (nivel === 10 ? 'Você venceu o nível MAIS DIFÍCIL! Você é o mestre da cobrinha! 🐍👑' : 'Nível ' + (nivel + 1) + ' liberado!')
+    : 'Você comeu ' + comidas + ' de ' + NIVEIS[nivel - 1].meta + ' frutas no nível ' + nivel + '.';
+  $('b-proximo').style.display = venceu && nivel < 10 ? '' : 'none';
+}
+
+function hud() {
+  const nv = NIVEIS[nivel - 1];
+  $('h-nivel').textContent = 'Nível ' + nivel + (nivel === 10 ? ' 💀' : '');
+  $('h-frutas').textContent = '🍎 ' + comidas + ' / ' + nv.meta;
+  $('h-recorde').textContent = '🏆 ' + (save.recordes[nivel] || 0);
+  document.querySelector('#barra i').style.width = (comidas / nv.meta * 100) + '%';
+}
+
+function aviso(t, ms) {
+  const a = $('aviso'); a.textContent = t; a.classList.add('on');
+  clearTimeout(aviso.t); aviso.t = setTimeout(() => a.classList.remove('on'), ms);
+}
+
+function desenha(bateu) {
+  if (!cobra.length) return;
+  const nv = NIVEIS[nivel - 1];
+  // grama quadriculada
+  for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) {
+    ctx.fillStyle = (x + y) % 2 ? '#a8e063' : '#9ad455';
+    ctx.fillRect(x * Q, y * Q, Q, Q);
+  }
+  // paredes de pedra
+  nv.paredes.forEach((k) => {
+    const [x, y] = k.split(',').map(Number);
+    ctx.fillStyle = '#6b6b7a'; ctx.fillRect(x * Q, y * Q, Q, Q);
+    ctx.fillStyle = '#4a4a56'; ctx.fillRect(x * Q, y * Q + Q * .7, Q, Q * .3);
+    ctx.fillStyle = '#8a8a99'; ctx.fillRect(x * Q + 2, y * Q + 2, Q * .4, Q * .25);
+  });
+  // fruta
+  ctx.fillStyle = '#000';
+  ctx.font = Math.floor(Q * .9) + 'px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(fruta.e, fruta.x * Q + Q / 2, fruta.y * Q + Q / 2 + 1);
+  // cobra (do rabo pra cabeça)
+  for (let i = cobra.length - 1; i >= 0; i--) {
+    const c = cobra[i], r = i === 0 ? Q * .5 : Q * .42;
+    ctx.fillStyle = bateu && i === 0 ? '#ff3b3b' : (i % 2 ? '#1f8f3a' : '#27a845');
+    ctx.beginPath(); ctx.arc(c.x * Q + Q / 2, c.y * Q + Q / 2, r, 0, Math.PI * 2); ctx.fill();
+  }
+  // olhinhos
+  const h = cobra[0], cx = h.x * Q + Q / 2, cy = h.y * Q + Q / 2;
+  const px = -dir.y, py = dir.x; // de lado
+  [1, -1].forEach((s) => {
+    const ex = cx + dir.x * Q * .15 + px * s * Q * .2, ey = cy + dir.y * Q * .15 + py * s * Q * .2;
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, ey, Q * .14, 0, 7); ctx.fill();
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(ex + dir.x * Q * .04, ey + dir.y * Q * .04, Q * .07, 0, 7); ctx.fill();
+  });
+}
+
+// ── Controles ──
+const DIRS = { cima: { x: 0, y: -1 }, baixo: { x: 0, y: 1 }, esq: { x: -1, y: 0 }, dir: { x: 1, y: 0 } };
+function vira(nome) {
+  if (!vivo) return;
+  const d = DIRS[nome], ult = fila.length ? fila[fila.length - 1] : dir;
+  if ((d.x === ult.x && d.y === ult.y) || (d.x === -ult.x && d.y === -ult.y)) return;
+  if (fila.length < 3) fila.push(d);
+}
+addEventListener('keydown', (e) => {
+  const k = { ArrowUp: 'cima', w: 'cima', W: 'cima', ArrowDown: 'baixo', s: 'baixo', S: 'baixo', ArrowLeft: 'esq', a: 'esq', A: 'esq', ArrowRight: 'dir', d: 'dir', D: 'dir' }[e.key];
+  if (k) { e.preventDefault(); vira(k); }
+});
+['cima', 'baixo', 'esq', 'dir'].forEach((n) => $('b-' + n).addEventListener('pointerdown', (e) => { e.preventDefault(); vira(n); }));
+let toque = null;
+addEventListener('touchstart', (e) => { toque = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }, { passive: true });
+addEventListener('touchmove', (e) => {
+  if (!toque) return;
+  const dx = e.touches[0].clientX - toque.x, dy = e.touches[0].clientY - toque.y;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < 25) return;
+  vira(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'dir' : 'esq') : (dy > 0 ? 'baixo' : 'cima'));
+  toque = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+}, { passive: true });
+
+$('b-de-novo').onclick = () => comeca(nivel);
+$('b-proximo').onclick = () => comeca(nivel + 1);
+$('b-niveis').onclick = menu;
+addEventListener('resize', ajusta);
+
+window.__cobra = { NIVEIS, save, comeca, get cobra() { return cobra; }, get fruta() { return fruta; }, set fruta(f) { fruta = f; }, passo, vira };
+menu(); ajusta();
+</script>
+</body>
+</html>
