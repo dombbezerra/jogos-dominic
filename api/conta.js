@@ -247,7 +247,9 @@ module.exports = async (req, res) => {
       const adm = !!marcado && admPeloNome(raw);
       if (!(membro || adm || oculto) || !raw) return res.status(200).json({ membro: false });
       // Conta de teste: tem um chat só dela, sem ninguém
-      const sala = oculto ? 'aventura:chat:msgs:teste:' + email : 'aventura:chat:msgs';
+      // Sala do App de Amigos: conversa separada da Base Secreta
+      const amigos = body.sala === 'amigos';
+      const sala = oculto ? 'aventura:chat:msgs:teste:' + email : amigos ? 'aventura:chat:msgs:amigos' : 'aventura:chat:msgs';
       // Ouvir um áudio do chat (fica guardado 7 dias)
       if (action === 'chatAudio') {
         const id = String(body.id || '');
@@ -281,7 +283,7 @@ module.exports = async (req, res) => {
         const msg = { id, nome: u.nomeChat || u.nome, cor: u.cor || 'branco', foto: u.foto || 'skin:gotinha', moldura: u.moldura || 'nenhuma', fotoChat: u.fotoChat || null, texto, gif, emoji, audio, t: Date.now() };
         await redis(['RPUSH', sala, JSON.stringify(msg)], ['LTRIM', sala, -100, -1]);
       }
-      const [lista, limpo] = await redis(['LRANGE', sala, 0, -1], ['GET', oculto ? 'aventura:chat:limpo:teste' : 'aventura:chat:limpo']);
+      const [lista, limpo] = await redis(['LRANGE', sala, 0, -1], ['GET', oculto ? 'aventura:chat:limpo:teste' : amigos ? 'aventura:chat:limpo:amigos' : 'aventura:chat:limpo']);
       const desde = Number(body.desde) || 0;
       return res.status(200).json({ membro: true, limpo: Number(limpo) || 0, msgs: (lista || []).map((m) => JSON.parse(m)).filter((m) => m.id > desde) });
     }
