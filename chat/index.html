@@ -116,6 +116,14 @@
     #ligacao { position: fixed; inset: 0; z-index: 30; background: rgba(5, 4, 25, 0.88); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; text-align: center; }
     #ligacao.on { display: flex; }
     #lig-icone { font-size: 74px; line-height: 1; }
+    /* Chamada de vídeo: o rosto do amigo grande e o seu pequeno no canto */
+    #video-btn { display: none; background: var(--roxo); padding: 4px 16px 2px; font-size: 15px; }
+    #lig-videos { display: none; position: relative; width: min(94vw, 560px); height: min(58vh, 620px); background: #000; border: 4px solid var(--tinta); border-radius: 18px; overflow: hidden; }
+    #ligacao.video #lig-videos { display: block; }
+    #ligacao.video #lig-icone { display: none; }
+    #lig-video-outro { width: 100%; height: 100%; object-fit: cover; }
+    #lig-video-eu { position: absolute; right: 10px; bottom: 10px; width: 30%; max-width: 150px; aspect-ratio: 3 / 4; object-fit: cover; border: 3px solid #fff; border-radius: 12px; background: #222; transform: scaleX(-1); }
+    #lig-camera { background: #4a3a8a; }
     #ligacao.tocando #lig-icone { animation: gif-treme 0.25s linear infinite; }
     #lig-nome { font-family: var(--display); font-size: clamp(22px, 6vw, 32px); color: var(--sol); }
     #lig-status { font-size: 18px; font-weight: 700; min-height: 24px; }
@@ -188,6 +196,7 @@
     <button class="limpar" id="limpar" style="display:none">🗑️ APAGAR CONVERSAS</button>
     <div class="acoes">
       <button type="button" class="btn" id="ligar-btn">📞 LIGAR</button>
+      <button type="button" class="btn" id="video-btn">🎥 VÍDEO</button>
       <button type="button" class="btn" id="avisos-btn">🔔 AVISOS</button>
     </div>
     <div class="meio">
@@ -206,11 +215,16 @@
   <div id="ver-foto"><img alt="Foto"></div>
   <div id="ligacao">
     <div id="lig-icone">📞</div>
+    <div id="lig-videos">
+      <video id="lig-video-outro" autoplay playsinline></video>
+      <video id="lig-video-eu" autoplay playsinline muted></video>
+    </div>
     <div id="lig-nome"></div>
     <div id="lig-status"></div>
     <div id="lig-botoes">
       <button type="button" class="btn" id="lig-atender">✅ ATENDER</button>
       <button type="button" class="btn" id="lig-mudo">🔇 MUDO</button>
+      <button type="button" class="btn" id="lig-camera">📷 CÂMERA</button>
       <button type="button" class="btn" id="lig-desligar">❌ DESLIGAR</button>
     </div>
   </div>
@@ -674,28 +688,32 @@
       $('ligar-btn').style.display = eu() && membro ? 'block' : 'none';
       const amigo = contatos.find(c => c.id === com);
       $('ligar-btn').textContent = amigo ? '📞 LIGAR PRA ' + amigo.nome.toUpperCase() : SALA ? '📞 LIGAR PRA TODOS' : '📞 LIGAR';
-      if (!lig) { t.classList.remove('on', 'tocando'); return; }
+      $('video-btn').style.display = eu() && membro ? 'block' : 'none';
+      if (!lig) { t.classList.remove('on', 'tocando', 'video'); return; }
       t.classList.add('on');
+      t.classList.toggle('video', !!lig.video && lig.estado !== 'tocando');
       t.classList.toggle('tocando', lig.estado === 'tocando');
       $('lig-nome').textContent = lig.nome || 'Chat de Amigos';
       const seg = lig.inicio ? Math.floor((Date.now() - lig.inicio) / 1000) : 0;
-      $('lig-status').textContent = { chamando: 'Chamando... 📳', tocando: 'está te ligando!', conectando: 'Conectando...',
+      $('lig-status').textContent = { chamando: 'Chamando... 📳', tocando: lig.video ? 'quer fazer chamada de vídeo! 🎥' : 'está te ligando!', conectando: 'Conectando...',
         falando: '🔊 ' + Math.floor(seg / 60) + ':' + String(seg % 60).padStart(2, '0') }[lig.estado] || '';
       $('lig-atender').style.display = lig.estado === 'tocando' ? '' : 'none';
       $('lig-mudo').style.display = lig.estado === 'falando' ? '' : 'none';
+      $('lig-camera').style.display = lig.video && lig.estado === 'falando' ? '' : 'none';
       $('lig-desligar').textContent = lig.estado === 'tocando' ? '❌ RECUSAR' : '❌ DESLIGAR';
     }
 
-    async function microfone() {
+    async function microfone(video) {
       if (!navigator.mediaDevices || !window.RTCPeerConnection) throw new Error('Esse aparelho não faz ligação.');
-      try { return await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
-      catch (e) { throw new Error('🎤 Precisa deixar o site usar o microfone.'); }
+      try { return await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true },
+        video: video ? { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } : false }); }
+      catch (e) { throw new Error(video ? '🎥 Precisa deixar o site usar a câmera e o microfone.' : '🎤 Precisa deixar o site usar o microfone.'); }
     }
     // Cria a conexão e espera juntar os caminhos (assim manda tudo num recado só)
     function novaConexao() {
       const pc = new RTCPeerConnection(ICE);
       lig.stream.getTracks().forEach(t => pc.addTrack(t, lig.stream));
-      pc.ontrack = e => { const a = $('lig-som'); a.srcObject = e.streams[0]; a.play().catch(() => {}); };
+      pc.ontrack = e => { const a = lig && lig.video ? $('lig-video-outro') : $('lig-som'); if (a.srcObject !== e.streams[0]) { a.srcObject = e.streams[0]; a.play().catch(() => {}); } };
       pc.onconnectionstatechange = () => {
         if (!lig || lig.pc !== pc) return;
         if (pc.connectionState === 'connected' && lig.estado !== 'falando') { lig.estado = 'falando'; lig.inicio = Date.now(); tocar(false); telaLigacao(); }
@@ -717,7 +735,8 @@
       if (lig.pc) lig.pc.close();
       if (lig.stream) lig.stream.getTracks().forEach(t => t.stop());
       clearInterval(lig.timer); clearTimeout(lig.desiste);
-      $('lig-som').srcObject = null;
+      $('lig-som').srcObject = null; $('lig-video-outro').srcObject = null; $('lig-video-eu').srcObject = null;
+      $('lig-camera').textContent = '📷 CÂMERA';
       $('lig-mudo').textContent = '🔇 MUDO';
       tocar(false);
       lig = null;
@@ -726,22 +745,32 @@
       rapido(false);
     }
 
-    $('ligar-btn').onclick = async () => {
+    async function ligar(video) {
       if (lig) return;
       $('msg').textContent = '';
       let stream;
-      try { stream = await microfone(); } catch (e) { $('msg').textContent = e.message; return; }
+      try { stream = await microfone(video); } catch (e) { $('msg').textContent = e.message; return; }
       const amigo = contatos.find(c => c.id === com);
-      lig = { estado: 'chamando', nome: amigo ? amigo.nome : SALA ? 'Todos do App de Amigos' : 'Chat de Amigos', stream, paraAmigo: amigo ? amigo.id : null };
+      lig = { estado: 'chamando', nome: amigo ? amigo.nome : SALA ? 'Todos do App de Amigos' : 'Chat de Amigos', stream, paraAmigo: amigo ? amigo.id : null, video };
+      if (video) $('lig-video-eu').srcObject = stream;
       lig.timer = setInterval(telaLigacao, 1000);
       lig.desiste = setTimeout(() => { if (lig && lig.estado === 'chamando') fimLigacao('Ninguém atendeu. 📵', true); }, 45000);
       telaLigacao(); tocar(true); rapido(true);
-      try { await sinal('liga', null, null, lig.paraAmigo); } catch (e) { fimLigacao(e.message); }
+      try { await sinal('liga', null, video ? 'video' : null, lig.paraAmigo); } catch (e) { fimLigacao(e.message); }
+    }
+    $('ligar-btn').onclick = () => ligar(false);
+    $('video-btn').onclick = () => ligar(true);
+    $('lig-camera').onclick = () => {
+      const t = lig && lig.stream && lig.stream.getVideoTracks()[0];
+      if (!t) return;
+      t.enabled = !t.enabled;
+      $('lig-camera').textContent = t.enabled ? '📷 CÂMERA' : '🚫 SEM CÂMERA';
     };
     $('lig-atender').onclick = async () => {
       if (!lig || lig.estado !== 'tocando') return;
       tocar(false);
-      try { lig.stream = await microfone(); } catch (e) { const outro = lig.outro; fimLigacao(e.message); sinal('recusa', outro).catch(() => {}); return; }
+      try { lig.stream = await microfone(lig.video); } catch (e) { const outro = lig.outro; fimLigacao(e.message); sinal('recusa', outro).catch(() => {}); return; }
+      if (lig.video) $('lig-video-eu').srcObject = lig.stream;
       lig.estado = 'conectando'; telaLigacao(); rapido(true);
       sinal('aceita', lig.outro).catch(() => fimLigacao('Não deu pra atender.'));
     };
@@ -765,7 +794,7 @@
         if (Date.now() - r.t > 60000) continue;   // recado velho
         if (r.tipo === 'liga') {
           if (lig) { if (!r.para) sinal('ocupado', r.de).catch(() => {}); continue; }
-          lig = { estado: 'tocando', outro: r.de, nome: r.nome };
+          lig = { estado: 'tocando', outro: r.de, nome: r.nome, video: r.dados === 'video' };
           lig.timer = setInterval(telaLigacao, 1000);
           lig.desiste = setTimeout(() => { if (lig && lig.estado === 'tocando') fimLigacao('Você perdeu uma ligação de ' + r.nome + '. 📵'); }, 45000);
           telaLigacao(); tocar(true); rapido(true);
