@@ -157,6 +157,21 @@
     .cobrinha { --card-color: #7be05a; --card-deep: #2e9e3a; }
     .chat     { --card-color: #b06cff; --card-deep: #7a45c7; }
 
+
+    /* Aviso "Baixar os Jogos do Dominic" (vira app na tela do celular) */
+    .baixar {
+      position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); z-index: 20;
+      width: min(420px, calc(100% - 24px)); transform: translate(-50%, 160%); transition: transform .4s cubic-bezier(.2, 1.4, .4, 1);
+      background: var(--creme); color: var(--tinta); border: 3px solid var(--tinta); border-radius: 18px; box-shadow: 0 6px 0 var(--tinta);
+      padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; text-align: left;
+    }
+    .baixar.on { transform: translate(-50%, 0); }
+    .baixar b { font-family: var(--display); font-weight: 400; font-size: 17px; }
+    .baixar p { font-weight: 700; font-size: 14px; line-height: 1.25; }
+    .baixar .botoes { display: flex; gap: 8px; }
+    .baixar button { flex: 1; font-family: var(--texto); font-weight: 800; font-size: 16px; cursor: pointer; border: 3px solid var(--tinta); border-radius: 12px; padding: 7px 10px 4px; box-shadow: 0 3px 0 var(--tinta); color: var(--tinta); background: #fff; }
+    .baixar #b-baixar { background: var(--sol); }
+
     /* Botão fixo no canto: abre a página de mandar avisos (precisa do login da Base Secreta) */
     .send-notice {
       position: fixed; top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); z-index: 10;
@@ -330,6 +345,12 @@
     feito com <a href="base-secreta/" class="secret">❤️</a> por Dominic
   </footer>
 
+  <div class="baixar" id="baixar">
+    <b>📲 BAIXAR OS JOGOS?</b>
+    <p id="baixar-texto">Coloque os Jogos do Dominic na tela do celular, igual a um aplicativo!</p>
+    <div class="botoes"><button id="b-baixar">BAIXAR</button><button id="b-depois">Depois</button></div>
+  </div>
+
   <div class="test-banner">🧪 MODO TESTE</div>
   <script>
     // Modo teste: tudo nesta aba é de teste (conta teste separada e jogos novos antes de todo mundo)
@@ -380,6 +401,38 @@
         showToast(data.total ? '📣 Aviso mandado pra ' + data.enviados + ' de ' + data.total + ' celulares!' : 'Ninguém ligou os avisos ainda.');
       } catch (err) { showToast('Não deu pra mandar agora. Tenta de novo.'); }
     });
+
+    // ── 📲 Aviso "Baixar": aparece ao entrar, some se já baixou ou se tocou em "Depois" (volta em 3 dias) ──
+    (() => {
+      const box = document.getElementById('baixar'), txt = document.getElementById('baixar-texto');
+      const instalado = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+      let depois = 0;
+      try { depois = +localStorage.getItem('baixar_depois') || 0; } catch (err) { depois = 0; }
+      if (instalado || Date.now() - depois < 3 * 864e5) return;
+      let pedido = null;   // o "Instalar" do Chrome/Android, quando o navegador deixa
+      addEventListener('beforeinstallprompt', e => { e.preventDefault(); pedido = e; });
+      addEventListener('appinstalled', () => box.classList.remove('on'));
+      setTimeout(() => box.classList.add('on'), 1500);
+      document.getElementById('b-depois').onclick = () => {
+        box.classList.remove('on');
+        try { localStorage.setItem('baixar_depois', String(Date.now())); } catch (err) {}
+      };
+      document.getElementById('b-baixar').onclick = async () => {
+        if (pedido) {
+          pedido.prompt();
+          const { outcome } = await pedido.userChoice.catch(() => ({}));
+          pedido = null;
+          if (outcome === 'accepted') box.classList.remove('on');
+          return;
+        }
+        const iphone = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        txt.innerHTML = iphone
+          ? 'No <b style="font-size:14px">Safari</b>: toque em <b style="font-size:14px">Compartilhar ⬆️</b> (embaixo) e depois em <b style="font-size:14px">"Adicionar à Tela de Início"</b>.'
+          : 'Toque nos <b style="font-size:14px">três pontinhos ⋮</b> do navegador e depois em <b style="font-size:14px">"Instalar app"</b> ou <b style="font-size:14px">"Adicionar à tela inicial"</b>.';
+        document.getElementById('b-baixar').textContent = 'OK!';
+        document.getElementById('b-baixar').onclick = () => box.classList.remove('on');
+      };
+    })();
 
     // Mantém o service worker de quem já ligou os avisos (a notificação continua chegando)
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
