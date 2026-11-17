@@ -136,12 +136,18 @@ const admPeloNome = (raw) => !!raw && NOMES_ADM.includes(nomeKey(JSON.parse(raw)
 // Contatos do chat: quem foi convidado + os ADMs (contas de teste escondidas ficam de fora)
 // Cada um tem um número só do chat, pra ninguém ver o e-mail dos outros
 const idChat = (email) => crypto.createHmac('sha256', SECRET).update('chat:' + email).digest('hex').slice(0, 12);
+// Quem o Dominic tirou de todos os chats (pelo nome da conta ou do chat)
+const FORA_DO_CHAT = ['endrick', 'endrik'];
+const foraPeloNome = (raw) => { const u = JSON.parse(raw); return FORA_DO_CHAT.includes(nomeKey(u.nome || '')) || FORA_DO_CHAT.includes(nomeKey(u.nomeChat || '')); };
+const cmdsFora = () => [['HMGET', 'aventura:nomes', ...FORA_DO_CHAT], ['HMGET', 'aventura:nomesChat', ...FORA_DO_CHAT]];
+const juntaFora = (a, b) => new Set([...(a || []), ...(b || [])].filter(Boolean));
 async function contatosChat() {
-  const [membros, adms, ocultos] = await redis(['SMEMBERS', 'aventura:chat:membros'], ['SMEMBERS', 'aventura:adm'], ['SMEMBERS', 'aventura:ocultos']);
-  const oc = new Set(ocultos || []), convidado = new Set(membros || []);
+  const [membros, adms, ocultos, fora1, fora2] = await redis(['SMEMBERS', 'aventura:chat:membros'], ['SMEMBERS', 'aventura:adm'], ['SMEMBERS', 'aventura:ocultos'], ...cmdsFora());
+  const fora = juntaFora(fora1, fora2);
+  const oc = new Set([...(ocultos || []), ...fora]), convidado = new Set(membros || []);
   const emails = [...new Set([...(membros || []), ...(adms || [])])].filter((e) => !oc.has(e));
   const raws = emails.length ? await redis(...emails.map((e) => ['GET', 'aventura:user:' + e])) : [];
-  return emails.map((e, i) => ({ email: e, raw: raws[i] })).filter((c) => c.raw && (convidado.has(c.email) || admPeloNome(c.raw)));
+  return emails.map((e, i) => ({ email: e, raw: raws[i] })).filter((c) => c.raw && !foraPeloNome(c.raw) && (convidado.has(c.email) || admPeloNome(c.raw)));
 }
 async function ehAdm(email) {
   const [marcado, raw] = await redis(['SISMEMBER', 'aventura:adm', email], ['GET', 'aventura:user:' + email]);
@@ -256,10 +262,11 @@ module.exports = async (req, res) => {
 
     // Chat de amigos (só convidados)
     if (action === 'chatLer' || action === 'chatEnviar' || action === 'chatAudio' || action === 'chatFoto' || action === 'chatSinal' || action === 'chatContatos') {
-      const [membro, raw, marcado, oculto] = await redis(['SISMEMBER', 'aventura:chat:membros', email], ['GET', 'aventura:user:' + email],
-        ['SISMEMBER', 'aventura:adm', email], ['SISMEMBER', 'aventura:ocultos', email]);
+      const [membro, raw, marcado, oculto, fora1, fora2] = await redis(['SISMEMBER', 'aventura:chat:membros', email], ['GET', 'aventura:user:' + email],
+        ['SISMEMBER', 'aventura:adm', email], ['SISMEMBER', 'aventura:ocultos', email], ...cmdsFora());
       const adm = !!marcado && admPeloNome(raw);
       if (!(membro || adm || oculto) || !raw) return res.status(200).json({ membro: false });
+      if (juntaFora(fora1, fora2).has(email) || foraPeloNome(raw)) return res.status(200).json({ membro: false });
       // Conta de teste: tem um chat só dela, sem ninguém
       // Sala do App de Amigos: conversa separada da Base Secreta
       const amigos = body.sala === 'amigos';
