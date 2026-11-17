@@ -55,6 +55,8 @@ function limparEmoji(e) {
   out.extras = Array.isArray(e.extras) ? e.extras.filter(ok).slice(0, 50) : [];
   return out.rosto ? out : null;
 }
+// Ligação de voz: os tipos de recado que um aparelho manda pro outro
+const SINAIS = ['liga', 'aceita', 'recusa', 'atendida', 'ocupado', 'oferta', 'resposta', 'desliga'];
 const CHAT_GIFS = ['rindo', 'fogo', 'festa', 'joinha', 'oculos', 'caveira', 'coracao', 'trofeu', 'raio', 'chorando', 'susto', 'danca'];
 // GIFs comprados na loja: só manda quem tem (está no progresso salvo da conta)
 const GIFS_LOJA = ['dragao', 'foguete', 'alien', 'robo', 'unicornio', 'coroa', 'diamante', 'ninja',
@@ -178,7 +180,8 @@ module.exports = async (req, res) => {
       // Apagar todas as conversas do chat (os aparelhos limpam a tela sozinhos)
       if (body.action === 'admin-limpar-chat') {
         const [ultimo] = await redis(['GET', 'aventura:chat:id']);
-        await redis(['DEL', 'aventura:chat:msgs'], ['SET', 'aventura:chat:limpo', Number(ultimo) || 0]);
+        const amigos = body.sala === 'amigos';   // a sala do App de Amigos apaga só ela
+        await redis(['DEL', amigos ? 'aventura:chat:amigos:msgs' : 'aventura:chat:msgs'], ['SET', amigos ? 'aventura:chat:amigos:limpo' : 'aventura:chat:limpo', Number(ultimo) || 0]);
         return res.status(200).json({ ok: true });
       }
       let [todos, membros, adms] = await redis(['SMEMBERS', 'aventura:users'], ['SMEMBERS', 'aventura:chat:membros'], ['SMEMBERS', 'aventura:adm']);
@@ -241,7 +244,7 @@ module.exports = async (req, res) => {
     }
 
     // Chat de amigos (só convidados)
-    if (action === 'chatLer' || action === 'chatEnviar' || action === 'chatAudio') {
+    if (action === 'chatLer' || action === 'chatEnviar' || action === 'chatAudio' || action === 'chatFoto' || action === 'chatSinal') {
       const [membro, raw, marcado, oculto] = await redis(['SISMEMBER', 'aventura:chat:membros', email], ['GET', 'aventura:user:' + email],
         ['SISMEMBER', 'aventura:adm', email], ['SISMEMBER', 'aventura:ocultos', email]);
       const adm = !!marcado && admPeloNome(raw);
@@ -249,7 +252,26 @@ module.exports = async (req, res) => {
       // Conta de teste: tem um chat só dela, sem ninguém
       // Sala do App de Amigos: conversa separada da Base Secreta
       const amigos = body.sala === 'amigos';
-      const sala = oculto ? 'aventura:chat:msgs:teste:' + email : amigos ? 'aventura:chat:msgs:amigos' : 'aventura:chat:msgs';
+      const sala = oculto ? 'aventura:chat:msgs:teste:' + email : amigos ? 'aventura:chat:amigos:msgs' : 'aventura:chat:msgs';
+      // Ver uma foto do chat (fica guardada 30 dias)
+      if (action === 'chatFoto') {
+        const id = String(body.id || '');
+        if (!/^[a-z0-9]{6,40}$/.test(id)) return res.status(400).json({ error: 'Foto inválida.' });
+        const [f] = await redis(['GET', 'aventura:chat:foto:' + id]);
+        if (!f) return res.status(404).json({ error: 'Essa foto já sumiu.' });
+        return res.status(200).json(JSON.parse(f));
+      }
+      // Ligação: os recados entre os aparelhos (quem liga, quem atende...) ficam 2 minutos na sala
+      if (action === 'chatSinal') {
+        const tipo = String(body.tipo || '');
+        if (!SINAIS.includes(tipo)) return res.status(400).json({ error: 'Sinal inválido.' });
+        const u = JSON.parse(raw);
+        const sinal = { de: String(body.cliente || '').slice(0, 20), para: body.para ? String(body.para).slice(0, 20) : null, tipo,
+          dados: body.dados == null ? null : String(body.dados).slice(0, 20000), nome: u.nomeChat || u.nome, t: Date.now() };
+        const [n] = await redis(['INCR', 'aventura:chat:sinal:id']);
+        await redis(['RPUSH', sala + ':sinais', JSON.stringify({ n, ...sinal })], ['LTRIM', sala + ':sinais', -60, -1], ['EXPIRE', sala + ':sinais', 120]);
+        return res.status(200).json({ ok: true, n });
+      }
       // Ouvir um áudio do chat (fica guardado 7 dias)
       if (action === 'chatAudio') {
         const id = String(body.id || '');
@@ -267,6 +289,15 @@ module.exports = async (req, res) => {
           if (!tem) return res.status(403).json({ error: 'Esse GIF é da loja. Compre lá primeiro!' });
         }
         const emoji = limparEmoji(body.emoji);   // figurinha do Monta Emoji
+        // Foto: já vem pequena do aparelho (JPEG), guardada à parte por 30 dias
+        let foto = null;
+        if (body.foto && typeof body.foto === 'object') {
+          const dados = String(body.foto.dados || '');
+          if (!/^[A-Za-z0-9+/=]+$/.test(dados) || dados.length > 700000) return res.status(400).json({ error: 'Foto muito grande ou inválida.' });
+          const lado = (v) => Math.max(1, Math.min(4000, Math.round(Number(v) || 1)));
+          foto = { id: crypto.randomBytes(9).toString('hex'), w: lado(body.foto.w), h: lado(body.foto.h) };
+          await redis(['SET', 'aventura:chat:foto:' + foto.id, JSON.stringify({ dados, tipo: 'image/jpeg' }), 'EX', 30 * 24 * 3600]);
+        }
         // Áudio: até 20 segundos, guardado à parte (a mensagem só leva o número dele)
         let audio = null;
         if (body.audio && typeof body.audio === 'object') {
@@ -275,17 +306,22 @@ module.exports = async (req, res) => {
           audio = { id: crypto.randomBytes(9).toString('hex'), dur: Math.max(1, Math.min(20, Math.round(Number(body.audio.dur) || 1))) };
           await redis(['SET', 'aventura:chat:audio:' + audio.id, JSON.stringify({ dados, tipo }), 'EX', 7 * 24 * 3600]);
         }
-        if (!texto && !gif && !emoji && !audio) return res.status(400).json({ error: 'Mensagem vazia.' });
+        if (!texto && !gif && !emoji && !audio && !foto) return res.status(400).json({ error: 'Mensagem vazia.' });
         const [ok] = await redis(['SET', 'aventura:chat:rl:' + email, '1', 'PX', 1200, 'NX']);
         if (!ok) return res.status(429).json({ error: 'Calma! Espera um pouquinho.' });
         const u = JSON.parse(raw);
         const [id] = await redis(['INCR', 'aventura:chat:id']);
-        const msg = { id, nome: u.nomeChat || u.nome, cor: u.cor || 'branco', foto: u.foto || 'skin:gotinha', moldura: u.moldura || 'nenhuma', fotoChat: u.fotoChat || null, texto, gif, emoji, audio, t: Date.now() };
+        const msg = { id, nome: u.nomeChat || u.nome, cor: u.cor || 'branco', foto: u.foto || 'skin:gotinha', moldura: u.moldura || 'nenhuma', fotoChat: u.fotoChat || null, texto, gif, emoji, audio, imagem: foto, t: Date.now() };
         await redis(['RPUSH', sala, JSON.stringify(msg)], ['LTRIM', sala, -100, -1]);
       }
-      const [lista, limpo] = await redis(['LRANGE', sala, 0, -1], ['GET', oculto ? 'aventura:chat:limpo:teste' : amigos ? 'aventura:chat:limpo:amigos' : 'aventura:chat:limpo']);
+      const [lista, limpo, sinais, sinalUltimo] = await redis(['LRANGE', sala, 0, -1], ['GET', oculto ? 'aventura:chat:limpo:teste' : amigos ? 'aventura:chat:amigos:limpo' : 'aventura:chat:limpo'],
+        ['LRANGE', sala + ':sinais', 0, -1], ['GET', 'aventura:chat:sinal:id']);
       const desde = Number(body.desde) || 0;
-      return res.status(200).json({ membro: true, limpo: Number(limpo) || 0, msgs: (lista || []).map((m) => JSON.parse(m)).filter((m) => m.id > desde) });
+      // Recados de ligação pra este aparelho (na primeira olhada só pega o número, pra não tocar ligação velha)
+      const cliente = String(body.cliente || ''), sinalDesde = Number(body.sinalDesde) || 0;
+      const meus = cliente && sinalDesde ? (sinais || []).map((x) => JSON.parse(x)).filter((x) => x.n > sinalDesde && x.de !== cliente && (!x.para || x.para === cliente)) : [];
+      return res.status(200).json({ membro: true, limpo: Number(limpo) || 0, msgs: (lista || []).map((m) => JSON.parse(m)).filter((m) => m.id > desde),
+        sinais: meus, sinalUltimo: Number(sinalUltimo) || 0 });
     }
 
     // Foto do chat (escolhida no PERSONALIZAR do chat)

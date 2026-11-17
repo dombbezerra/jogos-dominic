@@ -51,7 +51,7 @@
     #input { flex: 1; min-width: 0; padding: 10px 12px; font-size: 16px; border-radius: 14px; border: 3px solid var(--tinta); background: var(--creme); color: var(--tinta); font-family: inherit; font-weight: 700; }
     .btn { font-family: var(--texto); font-weight: 800; font-size: 16px; cursor: pointer; border: 3px solid var(--tinta); border-radius: 14px; padding: 0 14px; color: #fff; box-shadow: 0 4px 0 var(--tinta); }
     .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
-    #gif-btn { background: var(--roxo); } #send { background: var(--verde); font-size: 20px; }
+    #foto-btn { background: var(--roxo); font-size: 20px; } #send { background: var(--verde); font-size: 20px; }
     #audio-btn { background: var(--sol); color: var(--tinta); font-size: 20px; white-space: nowrap; }
     #audio-btn.gravando { background: #ff3b3b; color: #fff; font-size: 15px; animation: gravando 1s ease-in-out infinite; }
     @keyframes gravando { 50% { box-shadow: 0 4px 0 var(--tinta), 0 0 0 6px rgba(255, 59, 59, 0.35); } }
@@ -87,6 +87,24 @@
     .limpar { align-self: center; margin-bottom: 8px; background: none; border: 2px solid #e04848; color: #ff8a8a; border-radius: 10px; padding: 3px 12px; font-weight: 800; font-size: 13px; cursor: pointer; font-family: inherit; }
     .limpar.armado { background: #e04848; color: #fff; }
     #msg { min-height: 20px; font-size: 13px; color: #ff9a9a; margin-top: 4px; text-align: center; }
+
+    /* Fotos do chat */
+    .foto { display: block; margin-top: 4px; max-width: min(260px, 100%); border-radius: 12px; border: 2px solid var(--tinta); background: #1b1550; cursor: zoom-in; object-fit: cover; }
+    #ver-foto { position: fixed; inset: 0; z-index: 40; background: rgba(5, 4, 25, 0.92); display: none; align-items: center; justify-content: center; padding: 12px; cursor: zoom-out; }
+    #ver-foto.on { display: flex; }
+    #ver-foto img { max-width: 100%; max-height: 100%; border-radius: 12px; }
+
+    /* Ligação */
+    #ligar-btn { display: none; align-self: center; margin: -4px 0 8px; background: var(--verde); padding: 4px 16px 2px; font-size: 15px; }
+    #ligacao { position: fixed; inset: 0; z-index: 30; background: rgba(5, 4, 25, 0.88); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; text-align: center; }
+    #ligacao.on { display: flex; }
+    #lig-icone { font-size: 74px; line-height: 1; }
+    #ligacao.tocando #lig-icone { animation: gif-treme 0.25s linear infinite; }
+    #lig-nome { font-family: var(--display); font-size: clamp(22px, 6vw, 32px); color: var(--sol); }
+    #lig-status { font-size: 18px; font-weight: 700; min-height: 24px; }
+    #lig-botoes { display: flex; gap: 14px; margin-top: 8px; }
+    #lig-botoes .btn { padding: 10px 20px 8px; font-size: 18px; }
+    #lig-atender { background: var(--verde); } #lig-desligar { background: #e04848; } #lig-mudo { background: #4a3a8a; }
 
     #picker { display: none; max-height: 42vh; overflow-y: auto; margin-top: 8px; padding: 8px; background: rgba(0,0,0,0.3); border: 3px solid var(--tinta); border-radius: 16px; }
     #picker.on { display: block; }
@@ -151,16 +169,29 @@
     <h1>💬 CHAT DE <span>AMIGOS</span></h1>
     <div class="eu" id="eu"></div>
     <button class="limpar" id="limpar" style="display:none">🗑️ APAGAR CONVERSAS</button>
+    <button type="button" class="btn" id="ligar-btn">📞 LIGAR</button>
     <ul id="list"></ul>
-    <div id="picker"></div>
     <form id="form" style="display:none">
       <button type="button" class="btn" id="audio-btn" title="Mandar áudio">🎤</button>
-      <button type="button" class="btn" id="gif-btn" title="Os emojis que você montou">GIF</button>
+      <button type="button" class="btn" id="foto-btn" title="Mandar foto">📷</button>
+      <input type="file" id="foto-arq" accept="image/*" hidden>
       <input id="input" maxlength="200" placeholder="Escreva aqui..." autocomplete="off">
       <button class="btn" id="send" title="Mandar">➤</button>
     </form>
     <div id="msg"></div>
   </div>
+  <div id="ver-foto"><img alt="Foto"></div>
+  <div id="ligacao">
+    <div id="lig-icone">📞</div>
+    <div id="lig-nome"></div>
+    <div id="lig-status"></div>
+    <div id="lig-botoes">
+      <button type="button" class="btn" id="lig-atender">✅ ATENDER</button>
+      <button type="button" class="btn" id="lig-mudo">🔇 MUDO</button>
+      <button type="button" class="btn" id="lig-desligar">❌ DESLIGAR</button>
+    </div>
+  </div>
+  <audio id="lig-som" autoplay playsinline></audio>
 
   <script src="../monta-emoji/emoji.js?v=1"></script>
   <script>
@@ -258,14 +289,17 @@
         if (m.gif) txt.appendChild(gifEl(m.gif));
         if (m.emoji) txt.appendChild(emojiEl(m.emoji));
         if (m.audio) txt.appendChild(audioEl(m.audio));
+        if (m.imagem) txt.appendChild(fotoMsgEl(m.imagem));
         li.append(who, txt);
         l.appendChild(li);
       }
       if (noFim || ocupado) l.scrollTop = l.scrollHeight;
       botaoLimpar();
+      telaLigacao();
     }
     function junta(d) {
       membro = !!(d && d.membro);
+      if (d) recados(d);
       if (d && d.limpo) msgs = msgs.filter(m => m.id > d.limpo);   // o ADM apagou as conversas
       for (const m of (d && d.msgs) || []) if (m.id > ultimo) { msgs.push(m); ultimo = m.id; }
       msgs = msgs.slice(-100);
@@ -273,72 +307,64 @@
     async function ler() {
       const u = eu();
       if (!u) return render();
-      try { junta(await api({ action: 'chatLer', email: u.email, desde: ultimo })); } catch (e) { return; }
+      try { junta(await api({ action: 'chatLer', email: u.email, desde: ultimo, cliente: CLIENTE, sinalDesde })); } catch (e) { return; }
       render();
     }
-    async function mandar(texto, gif, emoji, audio) {
+    async function mandar(texto, gif, emoji, audio, foto) {
       const u = eu();
       if (!u || ocupado) return;
       ocupado = true;
       $('msg').textContent = '';
       try {
         if (audio) $('msg').textContent = '📤 Mandando áudio...';
-        junta(await api({ action: 'chatEnviar', email: u.email, texto, gif, emoji, audio, desde: ultimo }));
+        if (foto) $('msg').textContent = '📤 Mandando foto...';
+        junta(await api({ action: 'chatEnviar', email: u.email, texto, gif, emoji, audio, foto, desde: ultimo, cliente: CLIENTE, sinalDesde }));
         $('msg').textContent = '';
-        $('input').value = '';
-        $('picker').classList.remove('on');
+        if (!audio && !foto) $('input').value = '';
         render();
       } catch (e) { $('msg').textContent = e.message; }
       ocupado = false;
     }
     $('form').addEventListener('submit', e => { e.preventDefault(); const t = $('input').value.trim(); if (t) mandar(t, null, null); });
 
-    // ── GIFs: os emojis que você montou no Monta Emoji (se mexem igual GIF) ──
-    // apagando = modo de tirar GIF da lista (toca no 🗑️ e depois no GIF)
-    let apagando = false;
-    function picker(manter) {
-      const p = $('picker');
-      if (!manter && p.classList.contains('on')) { p.classList.remove('on'); apagando = false; return; }
-      p.innerHTML = '';
-      p.classList.add('on');
-      const topo = el('div', null, 'sec');
-      topo.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:8px';
-      topo.appendChild(el('span', apagando ? '🗑️ TOQUE NO GIF PRA TIRAR' : '🎞️ MEUS GIFS'));
-      const lixo = el('button', apagando ? '✅ PRONTO' : '🗑️ APAGAR', 'btn');
-      lixo.type = 'button';
-      lixo.style.cssText = 'padding:2px 10px 0;font-size:13px;' + (apagando ? 'background:var(--verde);' : 'background:var(--rosa);');
-      lixo.onclick = () => { apagando = !apagando; picker(true); };
-      topo.appendChild(lixo);
-      p.appendChild(topo);
-      const g = el('div', 'Carregando...', 'dica');
-      p.appendChild(g);
-      const link = '../monta-emoji/' + (PERFIL ? '?perfil=' + encodeURIComponent(PERFIL) : '');
-      api({ action: 'figurinhas', email: eu().email }).then(d => {
-        const figs = d.figurinhas || [];
-        g.textContent = '';
-        if (!figs.length) {
-          lixo.style.display = 'none';
-          g.innerHTML = 'Você ainda não tem GIFs. Monte um emoji no <a href="' + link + '">MONTA EMOJI</a> e aperte 💬 SALVAR GIF!';
-          return;
+    // ── Foto: escolhe uma foto do aparelho, ela fica menor (pra ir rápido) e vai pro chat ──
+    $('foto-btn').onclick = () => $('foto-arq').click();
+    $('foto-arq').onchange = async () => {
+      const arq = $('foto-arq').files[0];
+      $('foto-arq').value = '';
+      if (!arq) return;
+      try {
+        const img = await new Promise((ok, erro) => { const i = new Image(); i.onload = () => ok(i); i.onerror = erro; i.src = URL.createObjectURL(arq); });
+        let foto = null;
+        for (const [lado, q] of [[1280, 0.75], [960, 0.65], [720, 0.55]]) {
+          const k = Math.min(1, lado / Math.max(img.naturalWidth, img.naturalHeight));
+          const c = document.createElement('canvas');
+          c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          const dados = c.toDataURL('image/jpeg', q).split(',')[1] || '';
+          foto = { dados, w: c.width, h: c.height };
+          if (dados.length <= 600000) break;
         }
-        g.className = 'grade';
-        figs.forEach((e, i) => {
-          const b = el('button'); b.type = 'button'; b.appendChild(emojiEl(e));
-          if (apagando) { b.style.borderColor = '#ff5d8f'; b.style.position = 'relative'; const x = el('span', '✕'); x.style.cssText = 'position:absolute;top:-6px;right:-6px;background:#ff5d8f;color:#fff;border-radius:50%;width:20px;height:20px;font-size:12px;font-weight:800;display:grid;place-items:center;border:2px solid #0e0c33'; b.appendChild(x); }
-          b.onclick = async () => {
-            if (!apagando) return mandar('', null, e);
-            b.disabled = true;
-            try { await api({ action: 'figurinhas', email: eu().email, apagar: i }); picker(true); }
-            catch (err) { $('msg').textContent = 'Não deu pra tirar agora.'; b.disabled = false; }
-          };
-          g.appendChild(b);
-        });
-        const mais = el('div', null, 'dica');
-        mais.innerHTML = '<a href="' + link + '">➕ Fazer mais GIFs</a>';
-        p.appendChild(mais);
-      }).catch(() => { g.textContent = 'Não deu pra carregar seus GIFs.'; });
+        URL.revokeObjectURL(img.src);
+        mandar('', null, null, null, foto);
+      } catch (e) { $('msg').textContent = 'Não deu pra abrir essa foto.'; }
+    };
+    // Mostrar uma foto que chegou (guarda a imagem pra não buscar de novo a cada olhada)
+    const fotos = {};
+    function fotoMsgEl(f) {
+      if (fotos[f.id]) return fotos[f.id];
+      const img = el('img', null, 'foto');
+      img.alt = 'Foto';
+      img.style.aspectRatio = f.w + ' / ' + f.h;
+      img.style.width = Math.min(260, f.w) + 'px';
+      img.onclick = () => { if (img.src) { $('ver-foto').querySelector('img').src = img.src; $('ver-foto').classList.add('on'); } };
+      fotos[f.id] = img;
+      api({ action: 'chatFoto', email: eu().email, id: f.id })
+        .then(d => { img.src = 'data:' + d.tipo + ';base64,' + d.dados; })
+        .catch(() => { img.replaceWith(el('span', '🖼️ Essa foto já sumiu.')); delete fotos[f.id]; });
+      return img;
     }
-    $('gif-btn').onclick = () => picker();
+    $('ver-foto').onclick = () => $('ver-foto').classList.remove('on');
 
     // ── Áudio: toca no 🎤 pra gravar, toca de novo pra mandar (até 20 segundos) ──
     let grava = null;
@@ -380,7 +406,7 @@
     }
     $('audio-btn').onclick = () => {
       if (grava) { clearInterval(grava.timer); grava.rec.stop(); }
-      else { $('picker').classList.remove('on'); comecaGravar(); }
+      else comecaGravar();
     };
     // Tocar um áudio que chegou
     const audios = {};
@@ -505,10 +531,182 @@
       b.disabled = false; b.classList.remove('armado'); b.textContent = '🗑️ APAGAR CONVERSAS';
     };
 
+    // ── Ligação de voz (de aparelho pra aparelho; o site só leva os recados) ──
+    // Quem liga toca em todo mundo da sala; o primeiro que atender conversa com ele
+    const CLIENTE = Math.random().toString(36).slice(2, 12);   // este aparelho
+    let sinalDesde = 0;
+    let lig = null;   // { estado: 'chamando'|'tocando'|'conectando'|'falando', outro, nome, pc, stream, inicio, timer }
+    const ICE = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
+    const sinal = (tipo, para, dados) => api({ action: 'chatSinal', email: eu().email, cliente: CLIENTE, tipo, para: para || null, dados: dados || null });
+
+    // Toque do telefone (bip-bip feito no próprio aparelho)
+    let toque = null;
+    function tocar(liga) {
+      clearInterval(toque); toque = null;
+      if (!liga) return;
+      const bip = () => {
+        try {
+          const ac = tocar.ac || (tocar.ac = new (window.AudioContext || window.webkitAudioContext)());
+          [0, 0.35].forEach(t => {
+            const o = ac.createOscillator(), g = ac.createGain();
+            o.frequency.value = lig && lig.estado === 'chamando' ? 440 : 880;
+            g.gain.setValueAtTime(0.12, ac.currentTime + t); g.gain.setValueAtTime(0, ac.currentTime + t + 0.25);
+            o.connect(g); g.connect(ac.destination); o.start(ac.currentTime + t); o.stop(ac.currentTime + t + 0.26);
+          });
+          if (lig && lig.estado === 'tocando' && navigator.vibrate) navigator.vibrate([300, 200, 300]);
+        } catch (e) { /* sem som, tudo bem */ }
+      };
+      bip(); toque = setInterval(bip, 2000);
+    }
+
+    function telaLigacao() {
+      const t = $('ligacao');
+      $('ligar-btn').style.display = eu() && membro ? 'block' : 'none';
+      if (!lig) { t.classList.remove('on', 'tocando'); return; }
+      t.classList.add('on');
+      t.classList.toggle('tocando', lig.estado === 'tocando');
+      $('lig-nome').textContent = lig.nome || 'Chat de Amigos';
+      const seg = lig.inicio ? Math.floor((Date.now() - lig.inicio) / 1000) : 0;
+      $('lig-status').textContent = { chamando: 'Chamando... 📳', tocando: 'está te ligando!', conectando: 'Conectando...',
+        falando: '🔊 ' + Math.floor(seg / 60) + ':' + String(seg % 60).padStart(2, '0') }[lig.estado] || '';
+      $('lig-atender').style.display = lig.estado === 'tocando' ? '' : 'none';
+      $('lig-mudo').style.display = lig.estado === 'falando' ? '' : 'none';
+      $('lig-desligar').textContent = lig.estado === 'tocando' ? '❌ RECUSAR' : '❌ DESLIGAR';
+    }
+
+    async function microfone() {
+      if (!navigator.mediaDevices || !window.RTCPeerConnection) throw new Error('Esse aparelho não faz ligação.');
+      try { return await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+      catch (e) { throw new Error('🎤 Precisa deixar o site usar o microfone.'); }
+    }
+    // Cria a conexão e espera juntar os caminhos (assim manda tudo num recado só)
+    function novaConexao() {
+      const pc = new RTCPeerConnection(ICE);
+      lig.stream.getTracks().forEach(t => pc.addTrack(t, lig.stream));
+      pc.ontrack = e => { const a = $('lig-som'); a.srcObject = e.streams[0]; a.play().catch(() => {}); };
+      pc.onconnectionstatechange = () => {
+        if (!lig || lig.pc !== pc) return;
+        if (pc.connectionState === 'connected' && lig.estado !== 'falando') { lig.estado = 'falando'; lig.inicio = Date.now(); tocar(false); telaLigacao(); }
+        if (pc.connectionState === 'failed') fimLigacao('Não deu pra conectar. 😕', true);
+      };
+      return pc;
+    }
+    const juntaCaminhos = pc => new Promise(ok => {
+      if (pc.iceGatheringState === 'complete') return ok();
+      const fim = () => { if (pc.iceGatheringState === 'complete') ok(); };
+      pc.addEventListener('icegatheringstatechange', fim);
+      setTimeout(ok, 3000);
+    });
+
+    function fimLigacao(aviso, avisar) {
+      if (!lig) return;
+      if (avisar && lig.outro) sinal('desliga', lig.outro).catch(() => {});
+      else if (avisar && lig.estado === 'chamando') sinal('desliga', null).catch(() => {});
+      if (lig.pc) lig.pc.close();
+      if (lig.stream) lig.stream.getTracks().forEach(t => t.stop());
+      clearInterval(lig.timer); clearTimeout(lig.desiste);
+      $('lig-som').srcObject = null;
+      $('lig-mudo').textContent = '🔇 MUDO';
+      tocar(false);
+      lig = null;
+      telaLigacao();
+      if (aviso) $('msg').textContent = aviso;
+      rapido(false);
+    }
+
+    $('ligar-btn').onclick = async () => {
+      if (lig) return;
+      $('msg').textContent = '';
+      let stream;
+      try { stream = await microfone(); } catch (e) { $('msg').textContent = e.message; return; }
+      lig = { estado: 'chamando', nome: SALA ? 'App de Amigos' : 'Chat de Amigos', stream };
+      lig.timer = setInterval(telaLigacao, 1000);
+      lig.desiste = setTimeout(() => { if (lig && lig.estado === 'chamando') fimLigacao('Ninguém atendeu. 📵', true); }, 45000);
+      telaLigacao(); tocar(true); rapido(true);
+      try { await sinal('liga'); } catch (e) { fimLigacao(e.message); }
+    };
+    $('lig-atender').onclick = async () => {
+      if (!lig || lig.estado !== 'tocando') return;
+      tocar(false);
+      try { lig.stream = await microfone(); } catch (e) { const outro = lig.outro; fimLigacao(e.message); sinal('recusa', outro).catch(() => {}); return; }
+      lig.estado = 'conectando'; telaLigacao(); rapido(true);
+      sinal('aceita', lig.outro).catch(() => fimLigacao('Não deu pra atender.'));
+    };
+    $('lig-desligar').onclick = () => {
+      if (lig && lig.estado === 'tocando') { sinal('recusa', lig.outro).catch(() => {}); fimLigacao(); }
+      else fimLigacao('Ligação encerrada.', true);
+    };
+    $('lig-mudo').onclick = () => {
+      if (!lig || !lig.stream) return;
+      const t = lig.stream.getAudioTracks()[0];
+      t.enabled = !t.enabled;
+      $('lig-mudo').textContent = t.enabled ? '🔇 MUDO' : '🎤 FALAR';
+    };
+
+    // Os recados que chegaram dos outros aparelhos
+    async function recados(d) {
+      if (!sinalDesde) { sinalDesde = d.sinalUltimo || 0; if (!sinalDesde) sinalDesde = -1; return; }
+      for (const r of d.sinais || []) {
+        if (r.n <= sinalDesde) continue;
+        sinalDesde = Math.max(sinalDesde, r.n);
+        if (Date.now() - r.t > 60000) continue;   // recado velho
+        if (r.tipo === 'liga') {
+          if (lig) { if (!r.para) sinal('ocupado', r.de).catch(() => {}); continue; }
+          lig = { estado: 'tocando', outro: r.de, nome: r.nome };
+          lig.timer = setInterval(telaLigacao, 1000);
+          lig.desiste = setTimeout(() => { if (lig && lig.estado === 'tocando') fimLigacao('Você perdeu uma ligação de ' + r.nome + '. 📵'); }, 45000);
+          telaLigacao(); tocar(true); rapido(true);
+        } else if (!lig) {
+          continue;
+        } else if (r.tipo === 'aceita' && lig.estado === 'chamando') {
+          // O primeiro que atendeu fala comigo; os outros param de tocar
+          lig.outro = r.de; lig.nome = r.nome; lig.estado = 'conectando';
+          clearTimeout(lig.desiste); tocar(false); telaLigacao();
+          sinal('atendida', null).catch(() => {});
+          try {
+            const pc = lig.pc = novaConexao();
+            await pc.setLocalDescription(await pc.createOffer());
+            await juntaCaminhos(pc);
+            if (lig && lig.pc === pc) await sinal('oferta', r.de, JSON.stringify(pc.localDescription));
+          } catch (e) { fimLigacao('Não deu pra conectar. 😕', true); }
+          lig && (lig.desiste = setTimeout(() => { if (lig && lig.estado === 'conectando') fimLigacao('Não deu pra conectar. 😕', true); }, 25000));
+        } else if (r.tipo === 'aceita' && r.de !== lig.outro) {
+          sinal('ocupado', r.de).catch(() => {});
+        } else if (r.tipo === 'oferta' && r.de === lig.outro && lig.estado === 'conectando' && !lig.pc) {
+          try {
+            const pc = lig.pc = novaConexao();
+            await pc.setRemoteDescription(JSON.parse(r.dados));
+            await pc.setLocalDescription(await pc.createAnswer());
+            await juntaCaminhos(pc);
+            if (lig && lig.pc === pc) await sinal('resposta', r.de, JSON.stringify(pc.localDescription));
+          } catch (e) { fimLigacao('Não deu pra conectar. 😕', true); }
+        } else if (r.tipo === 'resposta' && r.de === lig.outro && lig.pc) {
+          try { await lig.pc.setRemoteDescription(JSON.parse(r.dados)); } catch (e) { fimLigacao('Não deu pra conectar. 😕', true); }
+        } else if (r.tipo === 'recusa' && lig.estado === 'chamando') {
+          fimLigacao(r.nome + ' recusou a ligação. 📵', true);
+        } else if (r.tipo === 'recusa' && r.de === lig.outro) {
+          fimLigacao('Ligação recusada.');
+        } else if ((r.tipo === 'atendida' || r.tipo === 'desliga') && r.de === lig.outro && lig.estado === 'tocando') {
+          fimLigacao(r.tipo === 'atendida' ? 'Outra pessoa atendeu. 🙂' : 'Você perdeu uma ligação de ' + r.nome + '. 📵');
+        } else if (r.tipo === 'desliga' && r.de === lig.outro) {
+          fimLigacao('Ligação encerrada.');
+        } else if (r.tipo === 'ocupado' && r.de === lig.outro && lig.estado === 'conectando') {
+          fimLigacao('Outra pessoa já atendeu. 🙂');
+        }
+      }
+    }
+    // Durante a ligação olha os recados mais rápido
+    let rapidoTimer = null;
+    function rapido(liga) {
+      clearInterval(rapidoTimer); rapidoTimer = null;
+      if (liga) rapidoTimer = setInterval(ler, 900);
+    }
+    window.addEventListener('pagehide', () => { if (lig) fimLigacao(null, true); });
+
     render();
     ler();
     // Olha mensagem nova a cada 2,5 segundos (só com a página aberta na tela)
-    setInterval(() => { if (!document.hidden) ler(); }, 2500);
+    setInterval(() => { if (!document.hidden && !rapidoTimer) ler(); }, 2500);
   })();
   </script>
 </body>
