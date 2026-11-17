@@ -132,6 +132,17 @@ function protegerSave(novo, velho) {
 // Trocou o nome pra outro, deixa de ser ADM até voltar pro nome
 const NOMES_ADM = ['endrick', 'dominic'];   // o Dominic (a conta também precisa estar marcada como ADM)
 const admPeloNome = (raw) => !!raw && NOMES_ADM.includes(nomeKey(JSON.parse(raw).nome));
+
+// Contatos do chat: quem foi convidado + os ADMs (contas de teste escondidas ficam de fora)
+// Cada um tem um número só do chat, pra ninguém ver o e-mail dos outros
+const idChat = (email) => crypto.createHmac('sha256', SECRET).update('chat:' + email).digest('hex').slice(0, 12);
+async function contatosChat() {
+  const [membros, adms, ocultos] = await redis(['SMEMBERS', 'aventura:chat:membros'], ['SMEMBERS', 'aventura:adm'], ['SMEMBERS', 'aventura:ocultos']);
+  const oc = new Set(ocultos || []), convidado = new Set(membros || []);
+  const emails = [...new Set([...(membros || []), ...(adms || [])])].filter((e) => !oc.has(e));
+  const raws = emails.length ? await redis(...emails.map((e) => ['GET', 'aventura:user:' + e])) : [];
+  return emails.map((e, i) => ({ email: e, raw: raws[i] })).filter((c) => c.raw && (convidado.has(c.email) || admPeloNome(c.raw)));
+}
 async function ehAdm(email) {
   const [marcado, raw] = await redis(['SISMEMBER', 'aventura:adm', email], ['GET', 'aventura:user:' + email]);
   return !!marcado && admPeloNome(raw);
@@ -244,7 +255,7 @@ module.exports = async (req, res) => {
     }
 
     // Chat de amigos (só convidados)
-    if (action === 'chatLer' || action === 'chatEnviar' || action === 'chatAudio' || action === 'chatFoto' || action === 'chatSinal') {
+    if (action === 'chatLer' || action === 'chatEnviar' || action === 'chatAudio' || action === 'chatFoto' || action === 'chatSinal' || action === 'chatContatos') {
       const [membro, raw, marcado, oculto] = await redis(['SISMEMBER', 'aventura:chat:membros', email], ['GET', 'aventura:user:' + email],
         ['SISMEMBER', 'aventura:adm', email], ['SISMEMBER', 'aventura:ocultos', email]);
       const adm = !!marcado && admPeloNome(raw);
@@ -253,6 +264,21 @@ module.exports = async (req, res) => {
       // Sala do App de Amigos: conversa separada da Base Secreta
       const amigos = body.sala === 'amigos';
       const sala = oculto ? 'aventura:chat:msgs:teste:' + email : amigos ? 'aventura:chat:amigos:msgs' : 'aventura:chat:msgs';
+      // Conversa só entre dois amigos (no App de Amigos)
+      const meuId = idChat(email);
+      let conversa = sala;
+      if (body.com && amigos && !oculto) {
+        const outro = (await contatosChat()).find((c) => idChat(c.email) === String(body.com));
+        if (!outro) return res.status(404).json({ error: 'Esse amigo não está mais no chat.' });
+        conversa = 'aventura:chat:amigos:dm:' + [meuId, idChat(outro.email)].sort().join(':');
+      }
+      if (action === 'chatContatos') {
+        const contatos = amigos && !oculto ? (await contatosChat()).filter((c) => c.email !== email).map((c) => {
+          const u = JSON.parse(c.raw);
+          return { id: idChat(c.email), nome: u.nomeChat || u.nome, cor: u.cor || 'branco', fotoChat: u.fotoChat || null };
+        }) : [];
+        return res.status(200).json({ membro: true, eu: meuId, contatos });
+      }
       // Ver uma foto do chat (fica guardada 30 dias)
       if (action === 'chatFoto') {
         const id = String(body.id || '');
@@ -267,6 +293,7 @@ module.exports = async (req, res) => {
         if (!SINAIS.includes(tipo)) return res.status(400).json({ error: 'Sinal inválido.' });
         const u = JSON.parse(raw);
         const sinal = { de: String(body.cliente || '').slice(0, 20), para: body.para ? String(body.para).slice(0, 20) : null, tipo,
+          paraAmigo: body.paraAmigo ? String(body.paraAmigo).slice(0, 20) : null,
           dados: body.dados == null ? null : String(body.dados).slice(0, 20000), nome: u.nomeChat || u.nome, t: Date.now() };
         const [n] = await redis(['INCR', 'aventura:chat:sinal:id']);
         await redis(['RPUSH', sala + ':sinais', JSON.stringify({ n, ...sinal })], ['LTRIM', sala + ':sinais', -60, -1], ['EXPIRE', sala + ':sinais', 120]);
@@ -312,14 +339,15 @@ module.exports = async (req, res) => {
         const u = JSON.parse(raw);
         const [id] = await redis(['INCR', 'aventura:chat:id']);
         const msg = { id, nome: u.nomeChat || u.nome, cor: u.cor || 'branco', foto: u.foto || 'skin:gotinha', moldura: u.moldura || 'nenhuma', fotoChat: u.fotoChat || null, texto, gif, emoji, audio, imagem: foto, t: Date.now() };
-        await redis(['RPUSH', sala, JSON.stringify(msg)], ['LTRIM', sala, -100, -1]);
+        await redis(['RPUSH', conversa, JSON.stringify(msg)], ['LTRIM', conversa, -100, -1]);
       }
-      const [lista, limpo, sinais, sinalUltimo] = await redis(['LRANGE', sala, 0, -1], ['GET', oculto ? 'aventura:chat:limpo:teste' : amigos ? 'aventura:chat:amigos:limpo' : 'aventura:chat:limpo'],
+      const chaveLimpo = conversa !== sala ? conversa + ':limpo' : oculto ? 'aventura:chat:limpo:teste' : amigos ? 'aventura:chat:amigos:limpo' : 'aventura:chat:limpo';
+      const [lista, limpo, sinais, sinalUltimo] = await redis(['LRANGE', conversa, 0, -1], ['GET', chaveLimpo],
         ['LRANGE', sala + ':sinais', 0, -1], ['GET', 'aventura:chat:sinal:id']);
       const desde = Number(body.desde) || 0;
       // Recados de ligação pra este aparelho (na primeira olhada só pega o número, pra não tocar ligação velha)
       const cliente = String(body.cliente || ''), sinalDesde = Number(body.sinalDesde) || 0;
-      const meus = cliente && sinalDesde ? (sinais || []).map((x) => JSON.parse(x)).filter((x) => x.n > sinalDesde && x.de !== cliente && (!x.para || x.para === cliente)) : [];
+      const meus = cliente && sinalDesde ? (sinais || []).map((x) => JSON.parse(x)).filter((x) => x.n > sinalDesde && x.de !== cliente && (!x.para || x.para === cliente) && (!x.paraAmigo || x.paraAmigo === meuId)) : [];
       return res.status(200).json({ membro: true, limpo: Number(limpo) || 0, msgs: (lista || []).map((m) => JSON.parse(m)).filter((m) => m.id > desde),
         sinais: meus, sinalUltimo: Number(sinalUltimo) || 0 });
     }

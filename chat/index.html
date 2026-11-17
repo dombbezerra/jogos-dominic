@@ -88,6 +88,21 @@
     .limpar.armado { background: #e04848; color: #fff; }
     #msg { min-height: 20px; font-size: 13px; color: #ff9a9a; margin-top: 4px; text-align: center; }
 
+    /* Amigos do lado (só no App de Amigos): clica numa bolinha e abre a conversa com ela */
+    .meio { flex: 1; min-height: 0; display: flex; gap: 8px; }
+    .meio #list { flex: 1; min-width: 0; }
+    #contatos { display: none; flex: none; width: 84px; overflow-y: auto; background: rgba(0, 0, 0, 0.25); border: 3px solid var(--tinta); border-radius: 18px; padding: 8px 4px; flex-direction: column; gap: 8px; align-items: stretch; }
+    .com-contatos #contatos { display: flex; }
+    .contato { background: none; border: 2px solid transparent; border-radius: 14px; color: var(--creme); font-family: inherit; font-weight: 800; font-size: 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 2px; }
+    .contato .bola { width: 46px; height: 46px; font-size: 24px; }
+    .contato .nm { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .contato.on { border-color: var(--sol); background: rgba(255, 210, 63, 0.14); }
+    @media (min-width: 640px) {
+      .com-contatos .app { width: min(940px, 100%); }
+      #contatos { width: 190px; }
+      .contato { flex-direction: row; font-size: 15px; padding: 6px 8px; text-align: left; }
+    }
+
     /* Fotos do chat */
     .foto { display: block; margin-top: 4px; max-width: min(260px, 100%); border-radius: 12px; border: 2px solid var(--tinta); background: #1b1550; cursor: zoom-in; object-fit: cover; }
     #ver-foto { position: fixed; inset: 0; z-index: 40; background: rgba(5, 4, 25, 0.92); display: none; align-items: center; justify-content: center; padding: 12px; cursor: zoom-out; }
@@ -170,7 +185,10 @@
     <div class="eu" id="eu"></div>
     <button class="limpar" id="limpar" style="display:none">🗑️ APAGAR CONVERSAS</button>
     <button type="button" class="btn" id="ligar-btn">📞 LIGAR</button>
-    <ul id="list"></ul>
+    <div class="meio">
+      <aside id="contatos"></aside>
+      <ul id="list"></ul>
+    </div>
     <form id="form" style="display:none">
       <button type="button" class="btn" id="audio-btn" title="Mandar áudio">🎤</button>
       <button type="button" class="btn" id="foto-btn" title="Mandar foto">📷</button>
@@ -200,6 +218,7 @@
     const el = (tag, text, cls) => { const e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
     const PERFIL = new URLSearchParams(location.search).get('perfil');
     const SALA = new URLSearchParams(location.search).get('sala') === 'amigos' ? 'amigos' : undefined;   // sala do App de Amigos
+    let com = null, contatos = [];   // conversa aberta: null = Todos, ou o número de um amigo
     if (SALA) $('back-link').href = 'https://app-de-amigos.vercel.app/';   // voltar leva pro App de Amigos
     const KEY = 'aventuraConta' + (PERFIL ? ':' + PERFIL : '');   // a mesma conta da Aventura Elemental
     const conta = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
@@ -251,7 +270,7 @@
     }
 
     async function api(body) {
-      const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, sala: SALA }) });
+      const r = await fetch('/api/conta/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, sala: SALA, com: com || undefined }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error || 'Não deu agora.');
       return d;
@@ -262,6 +281,7 @@
     function info(t) { const l = $('list'); l.innerHTML = ''; l.appendChild(el('li', t, 'info')); }
     function render() {
       const u = eu();
+      document.body.classList.toggle('com-contatos', !!(SALA && u && membro));
       $('form').style.display = u && membro ? '' : 'none';
       if (!u) {
         $('eu').textContent = '';
@@ -278,7 +298,8 @@
       const l = $('list');
       const noFim = l.scrollHeight - l.scrollTop - l.clientHeight < 60;
       l.innerHTML = '';
-      if (!msgs.length) l.appendChild(el('li', 'Ninguém falou nada ainda. Diga oi! 👋', 'info'));
+      const amigo = contatos.find(c => c.id === com);
+      if (!msgs.length) l.appendChild(el('li', amigo ? '🔒 Conversa só entre você e ' + amigo.nome + '. Diga oi! 👋' : 'Ninguém falou nada ainda. Diga oi! 👋', 'info'));
       for (const m of msgs) {
         const li = el('li', null, m.nome === u.nome || m.nome === meuNomeChat ? 'mine' : '');
         const who = el('div', null, 'who');
@@ -307,7 +328,11 @@
     async function ler() {
       const u = eu();
       if (!u) return render();
-      try { junta(await api({ action: 'chatLer', email: u.email, desde: ultimo, cliente: CLIENTE, sinalDesde })); } catch (e) { return; }
+      const aberta = com;
+      let d;
+      try { d = await api({ action: 'chatLer', email: u.email, desde: ultimo, cliente: CLIENTE, sinalDesde }); } catch (e) { return; }
+      if (aberta !== com) return recados(d);
+      junta(d);
       render();
     }
     async function mandar(texto, gif, emoji, audio, foto) {
@@ -318,7 +343,9 @@
       try {
         if (audio) $('msg').textContent = '📤 Mandando áudio...';
         if (foto) $('msg').textContent = '📤 Mandando foto...';
-        junta(await api({ action: 'chatEnviar', email: u.email, texto, gif, emoji, audio, foto, desde: ultimo, cliente: CLIENTE, sinalDesde }));
+        const aberta = com;
+        const d = await api({ action: 'chatEnviar', email: u.email, texto, gif, emoji, audio, foto, desde: ultimo, cliente: CLIENTE, sinalDesde });
+        if (aberta === com) junta(d); else recados(d);
         $('msg').textContent = '';
         if (!audio && !foto) $('input').value = '';
         render();
@@ -511,7 +538,7 @@
 
     // ADM: só ele vê o botão de apagar todas as conversas (toca duas vezes)
     let adm = false;
-    function botaoLimpar() { $('limpar').style.display = adm && membro && msgs.length ? '' : 'none'; }
+    function botaoLimpar() { $('limpar').style.display = adm && membro && msgs.length && !com ? '' : 'none'; }
     if (eu()) {
       $('perso-btn').style.display = '';
       api({ action: 'online', email: eu().email }).then(d => { adm = !!d.adm; botaoLimpar(); }).catch(() => {});
@@ -531,13 +558,46 @@
       b.disabled = false; b.classList.remove('armado'); b.textContent = '🗑️ APAGAR CONVERSAS';
     };
 
+    // ── Amigos do lado: Todos + uma bolinha pra cada amigo ──
+    function desenhaContatos() {
+      const a = $('contatos');
+      a.innerHTML = '';
+      const todos = el('button', null, 'contato' + (com ? '' : ' on'));
+      todos.type = 'button';
+      const bt = el('span', '👥', 'bola'); bt.style.background = '#b06cff';
+      todos.append(bt, el('span', 'Todos', 'nm'));
+      todos.onclick = () => abre(null);
+      a.appendChild(todos);
+      for (const c of contatos) {
+        const b = el('button', null, 'contato' + (com === c.id ? ' on' : ''));
+        b.type = 'button';
+        b.append(fotoEl(c.fotoChat, c.nome, c.cor), el('span', c.nome, 'nm'));
+        b.onclick = () => abre(c.id);
+        a.appendChild(b);
+      }
+    }
+    function abre(id) {
+      if (com === id) return;
+      com = id; msgs = []; ultimo = 0;
+      $('msg').textContent = '';
+      desenhaContatos(); render(); ler();
+    }
+    async function carregaContatos() {
+      if (!SALA || !eu()) return;
+      try { const d = await api({ action: 'chatContatos', email: eu().email }); contatos = d.contatos || []; } catch (e) { return; }
+      if (com && !contatos.some(c => c.id === com)) com = null;
+      desenhaContatos(); render();
+    }
+    carregaContatos();
+    setInterval(() => { if (!document.hidden) carregaContatos(); }, 30000);
+
     // ── Ligação de voz (de aparelho pra aparelho; o site só leva os recados) ──
     // Quem liga toca em todo mundo da sala; o primeiro que atender conversa com ele
     const CLIENTE = Math.random().toString(36).slice(2, 12);   // este aparelho
     let sinalDesde = 0;
     let lig = null;   // { estado: 'chamando'|'tocando'|'conectando'|'falando', outro, nome, pc, stream, inicio, timer }
     const ICE = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
-    const sinal = (tipo, para, dados) => api({ action: 'chatSinal', email: eu().email, cliente: CLIENTE, tipo, para: para || null, dados: dados || null });
+    const sinal = (tipo, para, dados, paraAmigo) => api({ action: 'chatSinal', email: eu().email, cliente: CLIENTE, tipo, para: para || null, dados: dados || null, paraAmigo: paraAmigo || null });
 
     // Toque do telefone (bip-bip feito no próprio aparelho)
     let toque = null;
@@ -562,6 +622,8 @@
     function telaLigacao() {
       const t = $('ligacao');
       $('ligar-btn').style.display = eu() && membro ? 'block' : 'none';
+      const amigo = contatos.find(c => c.id === com);
+      $('ligar-btn').textContent = amigo ? '📞 LIGAR PRA ' + amigo.nome.toUpperCase() : SALA ? '📞 LIGAR PRA TODOS' : '📞 LIGAR';
       if (!lig) { t.classList.remove('on', 'tocando'); return; }
       t.classList.add('on');
       t.classList.toggle('tocando', lig.estado === 'tocando');
@@ -601,7 +663,7 @@
     function fimLigacao(aviso, avisar) {
       if (!lig) return;
       if (avisar && lig.outro) sinal('desliga', lig.outro).catch(() => {});
-      else if (avisar && lig.estado === 'chamando') sinal('desliga', null).catch(() => {});
+      else if (avisar && lig.estado === 'chamando') sinal('desliga', null, null, lig.paraAmigo).catch(() => {});
       if (lig.pc) lig.pc.close();
       if (lig.stream) lig.stream.getTracks().forEach(t => t.stop());
       clearInterval(lig.timer); clearTimeout(lig.desiste);
@@ -619,11 +681,12 @@
       $('msg').textContent = '';
       let stream;
       try { stream = await microfone(); } catch (e) { $('msg').textContent = e.message; return; }
-      lig = { estado: 'chamando', nome: SALA ? 'App de Amigos' : 'Chat de Amigos', stream };
+      const amigo = contatos.find(c => c.id === com);
+      lig = { estado: 'chamando', nome: amigo ? amigo.nome : SALA ? 'Todos do App de Amigos' : 'Chat de Amigos', stream, paraAmigo: amigo ? amigo.id : null };
       lig.timer = setInterval(telaLigacao, 1000);
       lig.desiste = setTimeout(() => { if (lig && lig.estado === 'chamando') fimLigacao('Ninguém atendeu. 📵', true); }, 45000);
       telaLigacao(); tocar(true); rapido(true);
-      try { await sinal('liga'); } catch (e) { fimLigacao(e.message); }
+      try { await sinal('liga', null, null, lig.paraAmigo); } catch (e) { fimLigacao(e.message); }
     };
     $('lig-atender').onclick = async () => {
       if (!lig || lig.estado !== 'tocando') return;
