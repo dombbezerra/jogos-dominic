@@ -78,6 +78,12 @@ module.exports = async (req, res) => {
     if (req.method === 'GET') {
       if (req.query && req.query.chave) return res.status(200).json({ chave: vapidKeys().pub });
       if (req.query && req.query.status) { const [n] = await redis(['SCARD', SUBS_KEY]); return res.status(200).json({ aparelhos: n || 0 }); }
+      // Mensagem do chat pra este celular (fila guardada pelo api/conta.js); se não tiver, é aviso de jogo novo
+      const ep = String((req.query && req.query.ep) || '');
+      if (/^[0-9a-f]{32}$/.test(ep)) {
+        const [doChat] = await redis(['LPOP', 'push:para:' + ep]);
+        if (doChat) return res.status(200).json(JSON.parse(doChat));
+      }
       const [last] = await redis(['GET', LAST_KEY]);
       return res.status(200).json(last ? JSON.parse(last) : { titulo: 'Jogos do Dominic', texto: 'Tem novidade nos jogos!', url: '/' });
     }

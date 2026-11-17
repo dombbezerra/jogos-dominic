@@ -7,7 +7,14 @@ self.addEventListener('push', (e) => {
   e.waitUntil((async () => {
     let msg = { titulo: 'Jogos do Dominic', texto: 'Tem novidade nos jogos! 🎮', url: '/' };
     try {
-      const r = await fetch('/api/push/?ultima=1', { cache: 'no-store' });
+      // Cada celular tem a sua fila de mensagens do chat (pelo número da inscrição dele)
+      let ep = '';
+      const sub = await self.registration.pushManager.getSubscription();
+      if (sub) {
+        const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(sub.endpoint));
+        ep = [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+      }
+      const r = await fetch('/api/push/?ultima=1' + (ep ? '&ep=' + ep : ''), { cache: 'no-store' });
       if (r.ok) msg = await r.json();
     } catch (err) { /* sem internet: mostra o aviso padrão */ }
     await self.registration.showNotification(msg.titulo, {
@@ -15,6 +22,8 @@ self.addEventListener('push', (e) => {
       icon: '/icon-192.png',
       badge: '/icon-192.png',
       data: { url: msg.url || '/' },
+      tag: msg.url && msg.url.startsWith('/chat/') ? msg.url : undefined,   // mensagens da mesma conversa ficam numa notificação só
+      renotify: !!(msg.url && msg.url.startsWith('/chat/')),
     });
   })());
 });

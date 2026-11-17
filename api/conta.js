@@ -55,6 +55,50 @@ function limparEmoji(e) {
   out.extras = Array.isArray(e.extras) ? e.extras.filter(ok).slice(0, 50) : [];
   return out.rosto ? out : null;
 }
+// ── Notificação de mensagem nova no celular (Web Push, o mesmo jeito do api/push.js) ──
+// O aviso vai sem texto; o celular acorda e busca a mensagem na fila dele (api/push.js ?ultima=1&ep=...)
+const b64url = (buf) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+function vapidKeys() {
+  const ecdh = crypto.createECDH('prime256v1');
+  ecdh.setPrivateKey(crypto.createHmac('sha256', SECRET).update('vapid-v1').digest());
+  const pub = ecdh.getPublicKey();
+  const key = crypto.createPrivateKey({
+    format: 'jwk',
+    key: { kty: 'EC', crv: 'P-256', d: b64url(ecdh.getPrivateKey()), x: b64url(pub.subarray(1, 33)), y: b64url(pub.subarray(33)) },
+  });
+  return { pub: b64url(pub), key };
+}
+async function pushTo(endpoint, vapid) {
+  const aud = new URL(endpoint).origin;
+  const head = b64url(JSON.stringify({ typ: 'JWT', alg: 'ES256' }));
+  const body = b64url(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'https://jogos-dominic.vercel.app' }));
+  const sig = crypto.sign('sha256', Buffer.from(head + '.' + body), { key: vapid.key, dsaEncoding: 'ieee-p1363' });
+  const r = await fetch(endpoint, {
+    method: 'POST',
+    headers: { TTL: '86400', Urgency: 'high', Authorization: `vapid t=${head}.${body}.${b64url(sig)}, k=${vapid.pub}`, 'Content-Length': '0' },
+  });
+  return r.status;
+}
+const filaAviso = (endpoint) => 'push:para:' + crypto.createHash('sha256').update(endpoint).digest('hex').slice(0, 32);
+// Avisa os celulares dessas pessoas (se der erro, a mensagem já foi mandada do mesmo jeito)
+async function avisarChat(emails, aviso) {
+  try {
+    if (!emails.length) return;
+    const listas = await redis(...emails.map((e) => ['SMEMBERS', 'aventura:chat:subs:' + e]));
+    const alvos = [];
+    emails.forEach((e, i) => (listas[i] || []).forEach((ep) => alvos.push([e, ep])));
+    if (!alvos.length) return;
+    const msg = JSON.stringify({ ...aviso, quando: Date.now() });
+    await redis(...alvos.flatMap(([, ep]) => [['RPUSH', filaAviso(ep), msg], ['LTRIM', filaAviso(ep), -5, -1], ['EXPIRE', filaAviso(ep), 3600]]));
+    const vapid = vapidKeys();
+    const mortos = [];
+    await Promise.all(alvos.map(async ([e, ep]) => {
+      try { const st = await pushTo(ep, vapid); if (st === 404 || st === 410) mortos.push(['SREM', 'aventura:chat:subs:' + e, ep]); } catch (err) { /* um celular com erro não para os outros */ }
+    }));
+    if (mortos.length) await redis(...mortos);
+  } catch (err) { /* sem aviso, tudo bem */ }
+}
+
 // Ligação de voz: os tipos de recado que um aparelho manda pro outro
 const SINAIS = ['liga', 'aceita', 'recusa', 'atendida', 'ocupado', 'oferta', 'resposta', 'desliga'];
 const CHAT_GIFS = ['rindo', 'fogo', 'festa', 'joinha', 'oculos', 'caveira', 'coracao', 'trofeu', 'raio', 'chorando', 'susto', 'danca'];
@@ -261,7 +305,7 @@ module.exports = async (req, res) => {
     }
 
     // Chat de amigos (só convidados)
-    if (action === 'chatLer' || action === 'chatEnviar' || action === 'chatAudio' || action === 'chatFoto' || action === 'chatSinal' || action === 'chatContatos') {
+    if (action === 'chatLer' || action === 'chatEnviar' || action === 'chatAudio' || action === 'chatFoto' || action === 'chatSinal' || action === 'chatContatos' || action === 'chatAvisos') {
       const [membro, raw, marcado, oculto, fora1, fora2] = await redis(['SISMEMBER', 'aventura:chat:membros', email], ['GET', 'aventura:user:' + email],
         ['SISMEMBER', 'aventura:adm', email], ['SISMEMBER', 'aventura:ocultos', email], ...cmdsFora());
       const adm = !!marcado && admPeloNome(raw);
@@ -273,11 +317,23 @@ module.exports = async (req, res) => {
       const sala = oculto ? 'aventura:chat:msgs:teste:' + email : amigos ? 'aventura:chat:amigos:msgs' : 'aventura:chat:msgs';
       // Conversa só entre dois amigos (no App de Amigos)
       const meuId = idChat(email);
-      let conversa = sala;
+      let conversa = sala, outro = null;
       if (body.com && amigos && !oculto) {
-        const outro = (await contatosChat()).find((c) => idChat(c.email) === String(body.com));
+        outro = (await contatosChat()).find((c) => idChat(c.email) === String(body.com));
         if (!outro) return res.status(404).json({ error: 'Esse amigo não está mais no chat.' });
         conversa = 'aventura:chat:amigos:dm:' + [meuId, idChat(outro.email)].sort().join(':');
+      }
+      // Ligar os avisos: guarda este celular na conta (até 5 celulares)
+      if (action === 'chatAvisos') {
+        const endpoint = String((body.sub && body.sub.endpoint) || '');
+        if (!/^https:\/\//.test(endpoint) || endpoint.length > 1000) return res.status(400).json({ error: 'Não deu pra ligar os avisos.' });
+        const chave = 'aventura:chat:subs:' + email;
+        const [antes] = await redis(['SMEMBERS', chave]);
+        const velhos = (antes || []).filter((x) => x !== endpoint);
+        const cmds = [['SADD', chave, endpoint]];
+        if (velhos.length >= 5) cmds.push(['SREM', chave, ...velhos.slice(0, velhos.length - 4)]);
+        await redis(...cmds);
+        return res.status(200).json({ ok: true });
       }
       if (action === 'chatContatos') {
         const contatos = amigos && !oculto ? (await contatosChat()).filter((c) => c.email !== email).map((c) => {
@@ -347,6 +403,16 @@ module.exports = async (req, res) => {
         const [id] = await redis(['INCR', 'aventura:chat:id']);
         const msg = { id, nome: u.nomeChat || u.nome, cor: u.cor || 'branco', foto: u.foto || 'skin:gotinha', moldura: u.moldura || 'nenhuma', fotoChat: u.fotoChat || null, texto, gif, emoji, audio, imagem: foto, t: Date.now() };
         await redis(['RPUSH', conversa, JSON.stringify(msg)], ['LTRIM', conversa, -100, -1]);
+        // Notificação pra quem está na conversa (menos quem mandou). Conta de teste não avisa ninguém
+        if (!oculto) {
+          const para = outro ? [outro.email] : (await contatosChat()).map((c) => c.email).filter((e) => e !== email);
+          const resumo = texto || (foto ? '📷 Foto' : audio ? '🎤 Áudio' : '😀 Figurinha');
+          await avisarChat(para, {
+            titulo: outro ? msg.nome : amigos ? '💬 App de Amigos' : '💬 Chat de Amigos',
+            texto: outro ? resumo : msg.nome + ': ' + resumo,
+            url: '/chat/' + (amigos ? '?sala=amigos' + (outro ? '&com=' + meuId : '') : ''),
+          });
+        }
       }
       const chaveLimpo = conversa !== sala ? conversa + ':limpo' : oculto ? 'aventura:chat:limpo:teste' : amigos ? 'aventura:chat:amigos:limpo' : 'aventura:chat:limpo';
       const [lista, limpo, sinais, sinalUltimo] = await redis(['LRANGE', conversa, 0, -1], ['GET', chaveLimpo],
