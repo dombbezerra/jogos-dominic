@@ -188,7 +188,7 @@
     <button class="limpar" id="limpar" style="display:none">🗑️ APAGAR CONVERSAS</button>
     <div class="acoes">
       <button type="button" class="btn" id="ligar-btn">📞 LIGAR</button>
-      <button type="button" class="btn" id="avisos-btn">🔔 LIGAR AVISOS</button>
+      <button type="button" class="btn" id="avisos-btn">🔔 AVISOS</button>
     </div>
     <div class="meio">
       <aside id="contatos"></aside>
@@ -568,7 +568,7 @@
     const temAvisos = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
     const ehIphone = /iPhone|iPad|iPod/.test(navigator.userAgent);
     let avisosLigados = false;
-    function botaoAvisos() { $('avisos-btn').style.display = eu() && membro && !avisosLigados ? 'inline-block' : 'none'; }
+    function botaoAvisos() { $('avisos-btn').style.display = eu() && membro && !temAvisos && ehIphone ? 'inline-block' : 'none'; }
     const chaveBytes = k => { const b = atob(k.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - k.length % 4) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); };
     async function inscrever(pedir) {
       const reg = await navigator.serviceWorker.register('/sw.js');
@@ -597,8 +597,16 @@
         if (avisosLigados) $('msg').textContent = '🔔 Avisos ligados! Quando chegar mensagem, o celular avisa.';
       } catch (e) { $('msg').textContent = e.message || 'Não deu pra ligar os avisos.'; }
     };
-    // Quem já ligou os avisos: renova a inscrição sem perguntar nada
-    if (temAvisos && eu() && Notification.permission === 'granted') inscrever(false).then(ok => { avisosLigados = ok; botaoAvisos(); }).catch(() => {});
+    // Automático: quem já deixou, renova sem perguntar; quem ainda não, o celular pergunta no primeiro toque na tela
+    if (temAvisos && eu() && Notification.permission === 'granted') inscrever(false).then(ok => { avisosLigados = ok; }).catch(() => {});
+    if (temAvisos && eu() && Notification.permission === 'default') {
+      const primeiroToque = () => {
+        if (!membro) return;   // só quem está no chat
+        document.removeEventListener('pointerup', primeiroToque, true);
+        inscrever(true).then(ok => { avisosLigados = ok; if (ok) $('msg').textContent = '🔔 Pronto! Quando chegar mensagem, o celular avisa.'; }).catch(() => {});
+      };
+      document.addEventListener('pointerup', primeiroToque, true);
+    }
 
     // ── Amigos do lado: Todos + uma bolinha pra cada amigo ──
     function desenhaContatos() {
