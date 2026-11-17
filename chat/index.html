@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Chat de Amigos</title>
+  <!-- pra dar pra pôr na tela de início (no iPhone o aviso só funciona assim) -->
+  <link rel="manifest" id="manifesto" href="/manifest.json">
+  <script>if (new URLSearchParams(location.search).get('sala') === 'amigos') document.getElementById('manifesto').href = '/chat/amigos.webmanifest';</script>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="apple-touch-icon" href="/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
@@ -582,15 +587,16 @@
     const temAvisos = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
     const ehIphone = /iPhone|iPad|iPod/.test(navigator.userAgent);
     let avisosLigados = false;
-    function botaoAvisos() { $('avisos-btn').style.display = eu() && membro && !temAvisos && ehIphone ? 'inline-block' : 'none'; }
+    // o 🔔 aparece sempre que os avisos ainda não estão ligados neste celular
+    function botaoAvisos() { $('avisos-btn').style.display = eu() && membro && !avisosLigados && (temAvisos || ehIphone) ? 'inline-block' : 'none'; }
     const chaveBytes = k => { const b = atob(k.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - k.length % 4) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); };
     async function inscrever(pedir) {
+      // pergunta na hora do toque (se esperar antes, o iPhone ignora a pergunta)
+      const pergunta = pedir && Notification.permission === 'default' ? Notification.requestPermission() : null;
       const reg = await navigator.serviceWorker.register('/sw.js');
+      if (pergunta && (await pergunta) !== 'granted') throw new Error('🔕 Os avisos ficaram desligados. Toque no 🔔 AVISOS pra tentar de novo.');
+      if (pedir && Notification.permission === 'denied') throw new Error('🔕 Os avisos estão bloqueados. Libere nas configurações do celular: Notificações → permitir pra este site.');
       await navigator.serviceWorker.ready;
-      if (pedir && Notification.permission !== 'granted') {
-        const r = await Notification.requestPermission();
-        if (r !== 'granted') throw new Error('🔕 Os avisos foram bloqueados. Dá pra liberar nas configurações do navegador.');
-      }
       if (Notification.permission !== 'granted') return false;
       let sub = await reg.pushManager.getSubscription();
       if (!sub) {
@@ -608,16 +614,21 @@
       try {
         avisosLigados = await inscrever(true);
         botaoAvisos();
-        if (avisosLigados) $('msg').textContent = '🔔 Avisos ligados! Quando chegar mensagem, o celular avisa.';
+        if (avisosLigados) {
+          $('msg').textContent = '🔔 Avisos ligados! Quando chegar mensagem, o celular avisa.';
+          // um aviso de teste, pra ver que funciona
+          const reg = await navigator.serviceWorker.ready;
+          reg.showNotification('🔔 Avisos ligados!', { body: 'Quando seu amigo mandar mensagem, aparece assim.', icon: '/icon-192.png' }).catch(() => {});
+        }
       } catch (e) { $('msg').textContent = e.message || 'Não deu pra ligar os avisos.'; }
     };
     // Automático: quem já deixou, renova sem perguntar; quem ainda não, o celular pergunta no primeiro toque na tela
-    if (temAvisos && eu() && Notification.permission === 'granted') inscrever(false).then(ok => { avisosLigados = ok; }).catch(() => {});
+    if (temAvisos && eu() && Notification.permission === 'granted') inscrever(false).then(ok => { avisosLigados = ok; botaoAvisos(); }).catch(() => {});
     if (temAvisos && eu() && Notification.permission === 'default') {
       const primeiroToque = () => {
         if (!membro) return;   // só quem está no chat
         document.removeEventListener('pointerup', primeiroToque, true);
-        inscrever(true).then(ok => { avisosLigados = ok; if (ok) $('msg').textContent = '🔔 Pronto! Quando chegar mensagem, o celular avisa.'; }).catch(() => {});
+        inscrever(true).then(ok => { avisosLigados = ok; botaoAvisos(); if (ok) $('msg').textContent = '🔔 Pronto! Quando chegar mensagem, o celular avisa.'; }).catch(() => {});
       };
       document.addEventListener('pointerup', primeiroToque, true);
     }
