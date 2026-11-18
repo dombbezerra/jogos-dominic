@@ -357,8 +357,11 @@
       let d;
       try { d = await api({ action: 'chatLer', email: u.email, desde: ultimo, cliente: CLIENTE, sinalDesde }); } catch (e) { return; }
       if (aberta !== com) return recados(d);
+      // só desenha de novo se mudou alguma coisa (desenhar tudo a cada 2 segundos deixava o celular travando)
+      const antes = membro + ':' + ultimo + ':' + msgs.length;
       junta(d);
-      render();
+      if (membro + ':' + ultimo + ':' + msgs.length !== antes || !$('list').childElementCount) render();
+      else { botaoLimpar(); telaLigacao(); botaoAvisos(); }
     }
     async function mandar(texto, gif, emoji, audio, foto) {
       const u = eu();
@@ -664,7 +667,7 @@
       desenhaContatos(); render();
     }
     carregaContatos();
-    setInterval(() => { if (!document.hidden) carregaContatos(); }, 30000);
+    setInterval(() => { if (!document.hidden) carregaContatos(); }, 120000);
 
     // ── Ligação de voz (de aparelho pra aparelho; o site só leva os recados) ──
     // Quem liga toca em todo mundo da sala; o primeiro que atender conversa com ele
@@ -859,7 +862,8 @@
     render();
     ler();
     // Olha mensagem nova a cada 2,5 segundos (só com a página aberta na tela)
-    setInterval(() => { if (!document.hidden && !rapidoTimer) ler(); }, 2500);
+    // procura mensagem nova a cada 5 segundos (o banco de dados grátis tem limite por mês)
+    setInterval(() => { if (!document.hidden && !rapidoTimer) ler(); }, 5000);
   })();
   </script>
 </body>
