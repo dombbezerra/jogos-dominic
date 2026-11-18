@@ -112,16 +112,21 @@ const PALAVROES = ['porra', 'caralho', 'merda', 'bosta', 'puta', 'puto', 'putari
 const semAcento = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const juntar = (t) => t.replace(/(.)\1+/g, '$1');   // letras repetidas viram uma só
 const PALAVROES_J = PALAVROES.map(juntar);
-// Troca palavrão por ***, e não deixa passar telefone, e-mail, link nem endereço
+// Troca palavrão por ***, e não deixa passar telefone, e-mail nem endereço (link pode)
+const palavrao = (w) => { const n = juntar(semAcento(w)); return PALAVROES_J.some((p) => n === p || n === p + 's'); };   // "merdaaa" vira "merda"
 function filtrar(texto) {
-  let t = String(texto || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 200);
+  let t = String(texto || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 300);
+  // Links podem passar (o chat pergunta antes de abrir): guarda eles à parte pra os filtros abaixo não estragarem
+  const links = [];
+  t = t.replace(/(?:https?:\/\/|www\.)\S+|\S+\.(?:com|br|net|org|gg|me|io|tv|app)\b\S*/gi, (l) => { links.push(l); return '\u0001' + (links.length - 1) + '\u0001'; });
   t = t.replace(/(?:\d[\s.\-()]*){7,}/g, '🚫');                                   // telefone
   t = t.replace(/\S+@\S+/g, '🚫');                                                  // e-mail
-  t = t.replace(/(https?:\/\/|www\.)\S*|\S+\.(com|br|net|org|gg|me|io|tv|app)\b\S*/gi, '🚫');   // link
   t = t.replace(/\b(rua|avenida|av\.|endere[cç]o|whats\S*|zap|insta\S*|tiktok|telefone|celular|cpf|senha)\b/gi, '🚫');
-  return t.replace(/[\p{L}\p{N}]+/gu, (w) => {
-    const n = juntar(semAcento(w));   // "merdaaa" vira "merda"
-    return PALAVROES_J.some((p) => n === p || n === p + 's') ? '*'.repeat(w.length) : w;
+  t = t.replace(/[\p{L}\p{N}]+/gu, (w) => (palavrao(w) ? '*'.repeat(w.length) : w));
+  // link com e-mail ou palavrão continua bloqueado
+  return t.replace(/\u0001(\d+)\u0001/g, (_, i) => {
+    const l = links[i];
+    return /@/.test(l) || (l.match(/[\p{L}\p{N}]+/gu) || []).some(palavrao) ? '🚫' : l;
   });
 }
 
