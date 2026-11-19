@@ -53,7 +53,7 @@ async function rodaBanco(req, res) {
   const daqui = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
   if (!daqui || req.headers.authorization !== 'Bearer ' + process.env.KV_REST_API_TOKEN) return naoAchou(res);
   const comandos = JSON.parse(await lerCorpo(req));
-  const saida = await banco.pipeline(comandos.map((c) => c.map(String))).exec();
+  const saida = await banco.pipeline(comandos.map((c) => ['call', ...c.map(String)])).exec();
   res.status(200).json(saida.map(([e, r]) => (e ? { error: e.message } : { result: r })));
 }
 
