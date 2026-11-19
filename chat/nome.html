@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat — App de Amigos</title>
+  <meta name="theme-color" content="#008069">
+</head>
+<body style="background:#008069">
+  <script>
+    // O App de Amigos (outro site) quer o mesmo nome da conta da Aventura Elemental, que só existe aqui.
+    // Esta página lê só o nome e volta pro chat dele (sempre pro mesmo endereço).
+    const PERFIL = (new URLSearchParams(location.search).get('perfil') || '').replace(/[^a-z0-9]/gi, '').slice(0, 20);
+    let nome = '';
+    try { const m = JSON.parse(localStorage.getItem('aventuraConta' + (PERFIL ? ':' + PERFIL : ''))); nome = String(m && m.user && m.user.nome || '').trim().slice(0, 30); } catch (e) { /* sem conta */ }
+    location.replace('https://amigos.dominicbezerra.com.br/chat.html' + (PERFIL ? '?perfil=' + PERFIL : '') + '#nome=' + encodeURIComponent(nome));
+  </script>
+</body>
+</html>
