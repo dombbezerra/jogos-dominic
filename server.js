@@ -39,6 +39,24 @@ function lerCorpo(req) {
   });
 }
 
+// Banco próprio (Dokploy): com REDIS_URL, este servidor faz o papel do Upstash em /_banco/pipeline,
+// só pra dentro dele mesmo. Assim os arquivos da pasta api/ continuam iguais aos da Vercel.
+let banco = null;
+if (process.env.REDIS_URL && !process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+  const Redis = require('ioredis');
+  banco = new Redis(process.env.REDIS_URL, { maxRetriesPerRequest: 2 });
+  banco.on('error', (e) => console.error('banco:', e.message));
+  process.env.KV_REST_API_URL = 'http://127.0.0.1:' + PORTA + '/_banco';
+}
+
+async function rodaBanco(req, res) {
+  const daqui = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
+  if (!daqui || req.headers.authorization !== 'Bearer ' + process.env.KV_REST_API_TOKEN) return naoAchou(res);
+  const comandos = JSON.parse(await lerCorpo(req));
+  const saida = await banco.pipeline(comandos.map((c) => c.map(String))).exec();
+  res.status(200).json(saida.map(([e, r]) => (e ? { error: e.message } : { result: r })));
+}
+
 const funcoes = {};
 async function rodaApi(nome, req, res, url) {
   const arq = path.join(RAIZ, 'api', nome + '.js');
@@ -89,6 +107,7 @@ http.createServer(async (req, res) => {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   try {
     const url = new URL(req.url, 'http://x');
+    if (banco && url.pathname === '/_banco/pipeline' && req.method === 'POST') return await rodaBanco(req, res);
     const api = url.pathname.match(/^\/api\/([^/]+)\/?$/);
     if (api) return await rodaApi(api[1], req, res, url);
     if (req.method !== 'GET' && req.method !== 'HEAD') return res.status(405).end();

@@ -2,7 +2,8 @@
   "name": "jogos-dominic",
   "private": true,
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.6.0"
+    "@anthropic-ai/sdk": "^1.6.0",
+    "ioredis": "^5.4.1"
   },
   "scripts": {
     "start": "node server.js"
