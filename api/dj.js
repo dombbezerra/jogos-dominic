@@ -1,5 +1,5 @@
 // DJ IA — a inteligência do Claude criando as músicas do Estúdio de Música.
-// Só funciona quando ANTHROPIC_API_KEY está configurada no Vercel (o pai coloca a chave).
+// Só funciona quando ANTHROPIC_API_KEY está configurada no Dokploy (o pai coloca a chave).
 // Sem a chave, responde "semChave" e o site usa o robozinho de sempre.
 const sdk = require('@anthropic-ai/sdk');
 const Anthropic = sdk.default || sdk;

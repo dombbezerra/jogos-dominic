@@ -1,5 +1,5 @@
 // Aventura Elemental — usuário (e-mail, nome e cor do nome) e quem está online agora.
-// Guarda tudo no Redis (Upstash) do Vercel.
+// Guarda tudo no Redis do servidor (Dokploy).
 const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 const SECRET = process.env.CHAT_SECRET || REDIS_TOKEN || '';
@@ -71,7 +71,7 @@ function vapidKeys() {
 async function pushTo(endpoint, vapid) {
   const aud = new URL(endpoint).origin;
   const head = b64url(JSON.stringify({ typ: 'JWT', alg: 'ES256' }));
-  const body = b64url(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'https://jogos-dominic.vercel.app' }));
+  const body = b64url(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'https://jogos.dominicbezerra.com.br' }));
   const sig = crypto.sign('sha256', Buffer.from(head + '.' + body), { key: vapid.key, dsaEncoding: 'ieee-p1363' });
   const r = await fetch(endpoint, {
     method: 'POST',
@@ -230,7 +230,7 @@ module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Robots-Tag', 'noindex');
   if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST.' });
-  if (!REDIS_URL || !REDIS_TOKEN) return res.status(503).json({ error: 'Banco de dados não configurado no Vercel.' });
+  if (!REDIS_URL || !REDIS_TOKEN) return res.status(503).json({ error: 'Banco de dados não configurado no servidor.' });
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};

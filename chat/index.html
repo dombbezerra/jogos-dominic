@@ -265,7 +265,7 @@
     }
     const SALA = new URLSearchParams(location.search).get('sala') === 'amigos' ? 'amigos' : undefined;   // sala do App de Amigos
     let com = (SALA && new URLSearchParams(location.search).get('com')) || null, contatos = [];   // conversa aberta: null = Todos, ou o número de um amigo
-    if (SALA) $('back-link').href = 'https://app-de-amigos.vercel.app/';   // voltar leva pro App de Amigos
+    if (SALA) $('back-link').href = 'https://amigos.dominicbezerra.com.br/';   // voltar leva pro App de Amigos
     const KEY = 'aventuraConta' + (PERFIL ? ':' + PERFIL : '');   // a mesma conta da Aventura Elemental
     const conta = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
     const eu = () => conta().user;

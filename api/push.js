@@ -15,7 +15,7 @@ const LAST_KEY = 'push:ultima';
 const hmac = (s) => crypto.createHmac('sha256', SECRET).update(s).digest('hex');
 const b64url = (buf) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
-// Chave VAPID tirada do segredo que já existe no Vercel (não precisa configurar nada novo)
+// Chave VAPID tirada do segredo CHAT_SECRET do Dokploy (não precisa configurar nada novo)
 function vapidKeys() {
   const ecdh = crypto.createECDH('prime256v1');
   ecdh.setPrivateKey(crypto.createHmac('sha256', SECRET).update('vapid-v1').digest());
@@ -61,7 +61,7 @@ async function redis(...commands) {
 async function pushTo(endpoint, vapid) {
   const aud = new URL(endpoint).origin;
   const head = b64url(JSON.stringify({ typ: 'JWT', alg: 'ES256' }));
-  const body = b64url(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'https://jogos-dominic.vercel.app' }));
+  const body = b64url(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'https://jogos.dominicbezerra.com.br' }));
   const sig = crypto.sign('sha256', Buffer.from(head + '.' + body), { key: vapid.key, dsaEncoding: 'ieee-p1363' });
   const jwt = head + '.' + body + '.' + b64url(sig);
   const r = await fetch(endpoint, {
@@ -73,7 +73,7 @@ async function pushTo(endpoint, vapid) {
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
-  if (!REDIS_URL || !REDIS_TOKEN) return res.status(503).json({ error: 'Banco de dados não configurado no Vercel.' });
+  if (!REDIS_URL || !REDIS_TOKEN) return res.status(503).json({ error: 'Banco de dados não configurado no servidor.' });
   try {
     if (req.method === 'GET') {
       if (req.query && req.query.chave) return res.status(200).json({ chave: vapidKeys().pub });

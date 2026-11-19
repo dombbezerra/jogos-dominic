@@ -19,25 +19,12 @@ python3 -m http.server 8000
 
 Depois acesse http://localhost:8000
 
-## Deploy no Vercel
+## Publicar (servidor do Dom no Dokploy)
 
-### Opção 1 — pelo site (mais fácil)
+É só fazer `git push` na branch `main`: o Dokploy (https://painel.dominicbezerra.com.br) monta o `Dockerfile` e publica sozinho em **https://jogos.dominicbezerra.com.br**.
 
-1. Acesse https://vercel.com/new
-2. Importe o repositório `dombbezerra/jogos-dominic`
-3. Em **Framework Preset**, selecione **Other**
-4. Mantenha tudo padrão e clique em **Deploy**
-
-Pronto — o Vercel detecta o `vercel.json` e serve os arquivos estáticos.
-
-### Opção 2 — pela CLI
-
-```bash
-npm i -g vercel
-vercel login
-vercel        # preview
-vercel --prod # produção
-```
+- O `server.js` mostra os jogos e roda a pasta `api/`.
+- O banco é o Redis do próprio Dokploy (variável `REDIS_URL`).
 
 ## Controles
 

@@ -6,7 +6,7 @@ const { URL } = require('url');
 
 const RAIZ = __dirname;
 const PORTA = Number(process.env.PORT) || 3000;
-const ESCONDIDO = /^\/(api|node_modules|\.git)(\/|$)|^\/(server\.js|Dockerfile|package(-lock)?\.json|vercel\.json|\.[^/]*)$/;
+const ESCONDIDO = /^\/(api|node_modules|\.git)(\/|$)|^\/(server\.js|Dockerfile|package(-lock)?\.json|\.[^/]*)$/;
 
 const TIPOS = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',

@@ -1,5 +1,5 @@
 // Base Secreta — API do chat entre Felipe e Dominic.
-// Guarda as mensagens num Redis (Upstash) conectado ao projeto no Vercel.
+// Guarda as mensagens no Redis do servidor (Dokploy).
 const crypto = require('crypto');
 
 const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
@@ -12,7 +12,7 @@ const TOKEN_DAYS = 60;
 
 const sha256 = (s) => crypto.createHash('sha256').update(s).digest('hex');
 
-// As senhas ficam só nas variáveis de ambiente do Vercel, nunca no código
+// As senhas ficam só nas variáveis de ambiente do Dokploy, nunca no código
 const hashEnv = (k) => (process.env[k] ? sha256(process.env[k]) : '');
 const USERS = {
   felipe: { name: 'Felipe', hash: hashEnv('CHAT_SENHA_FELIPE') },
@@ -60,7 +60,7 @@ module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Robots-Tag', 'noindex');
   if (!REDIS_URL || !REDIS_TOKEN) {
-    return res.status(503).json({ error: 'Banco de dados não configurado no Vercel.' });
+    return res.status(503).json({ error: 'Banco de dados não configurado no servidor.' });
   }
 
   try {
