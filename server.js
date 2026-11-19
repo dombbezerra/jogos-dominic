@@ -111,6 +111,8 @@ http.createServer(async (req, res) => {
     const api = url.pathname.match(/^\/api\/([^/]+)\/?$/);
     if (api) return await rodaApi(api[1], req, res, url);
     if (req.method !== 'GET' && req.method !== 'HEAD') return res.status(405).end();
+    // code.dominicbezerra.com.br abre direto o DOM CODE
+    if (/^code\./.test(req.headers.host || '') && url.pathname === '/') url.pathname = '/criador/';
     serveArquivo(req, res, url);
   } catch (e) {
     console.error(req.method, req.url, e);
