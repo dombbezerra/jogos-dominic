@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0f0d24">
+<title>DOM CODE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --fundo: #0f0d24; --painel: #1a1738; --borda: #2c2860; --texto: #f2efff; --apagado: #a39fc9;
+    --roxo: #9b6cff; --rosa: #ff5d8f; --verde: #2fd15a; --sol: #ffd23f; --ciano: #3fd6ff;
+    --display: 'Bungee', 'Arial Black', Impact, sans-serif; --fonte: 'Baloo 2', 'Segoe UI', Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { background: var(--fundo); color: var(--texto); font-family: var(--fonte); display: flex; flex-direction: column; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+  header { flex: none; display: flex; align-items: center; gap: 10px; padding: calc(env(safe-area-inset-top) + 10px) 14px 10px; border-bottom: 1px solid var(--borda); background: rgba(15,13,36,.92); }
+  header a, .bt { text-decoration: none; color: var(--texto); font-family: inherit; font-weight: 800; font-size: 14px; background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; padding: 4px 12px 2px; cursor: pointer; }
+  .bt:disabled { opacity: .4; cursor: default; }
+  header h1 { flex: 1; font-family: var(--display); font-weight: 400; font-size: 20px; text-align: center; }
+  header h1 span { color: var(--ciano); }
+
+  .area { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(320px, 420px) 1fr; }
+  .chat { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--borda); }
+  .msgs { flex: 1; overflow-y: auto; padding: 16px 14px; display: flex; flex-direction: column; gap: 14px; }
+  .msg { display: flex; gap: 10px; align-items: flex-start; }
+  .msg .av { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 18px; background: linear-gradient(135deg, var(--ciano), var(--roxo)); }
+  .msg .txt { font-size: 16px; line-height: 1.45; font-weight: 600; padding-top: 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .msg.eu { justify-content: flex-end; }
+  .msg.eu .txt { background: var(--painel); border: 1px solid var(--borda); border-radius: 18px; padding: 8px 14px 6px; max-width: 85%; }
+  .msg .jogar { display: none; margin-top: 8px; font-family: var(--display); font-size: 15px; color: var(--fundo); background: var(--verde); border: none; border-radius: 12px; padding: 8px 16px 5px; cursor: pointer; }
+  .digitando span { display: inline-block; width: 7px; height: 7px; margin: 0 2px; border-radius: 50%; background: var(--apagado); animation: pontinho 1s infinite; }
+  .digitando span:nth-child(2) { animation-delay: .15s; } .digitando span:nth-child(3) { animation-delay: .3s; }
+  .digitando em { display: block; font-style: normal; font-size: 14px; color: var(--apagado); margin-top: 4px; }
+  @keyframes pontinho { 50% { transform: translateY(-5px); opacity: .5; } }
+
+  .ideias { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .ideias button { font-family: inherit; font-weight: 700; font-size: 14px; color: var(--texto); background: var(--painel); border: 1px dashed var(--roxo); border-radius: 14px; padding: 6px 12px 4px; cursor: pointer; }
+  .ideias button:hover { border-style: solid; }
+
+  form { flex: none; display: flex; gap: 8px; padding: 10px 12px calc(env(safe-area-inset-bottom) + 10px); border-top: 1px solid var(--borda); }
+  textarea { flex: 1; resize: none; height: 48px; max-height: 120px; font-family: inherit; font-size: 16px; font-weight: 600; color: var(--texto); background: var(--painel); border: 1px solid var(--borda); border-radius: 16px; padding: 11px 14px 8px; outline: none; }
+  textarea:focus { border-color: var(--roxo); }
+  form button { flex: none; width: 48px; height: 48px; border-radius: 50%; border: none; background: linear-gradient(135deg, var(--ciano), var(--roxo)); color: #fff; font-size: 22px; cursor: pointer; }
+  form button:disabled { opacity: .4; cursor: default; }
+
+  .preview { display: flex; flex-direction: column; min-height: 0; background: #08071a; }
+  .barra { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--borda); }
+  .barra b { flex: 1; font-family: var(--display); font-weight: 400; font-size: 14px; color: var(--apagado); }
+  .tela { flex: 1; min-height: 0; position: relative; }
+  .tela iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; }
+  .vazio { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--apagado); font-weight: 700; padding: 20px; }
+  .vazio div { font-size: 64px; margin-bottom: 8px; }
+
+  /* Tela cheia (no celular é o único jeito de jogar) */
+  .cheia { position: fixed; inset: 0; z-index: 20; background: #000; display: none; }
+  .cheia.on { display: block; }
+  .cheia iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+  .cheia .fechar { position: absolute; top: calc(env(safe-area-inset-top) + 10px); right: 10px; z-index: 2; width: 44px; height: 44px; border-radius: 50%; border: 2px solid #fff; background: rgba(0,0,0,.6); color: #fff; font-size: 20px; cursor: pointer; }
+
+  @media (max-width: 799px) {
+    .area { grid-template-columns: 1fr; }
+    .chat { border-right: 0; }
+    .preview { display: none; }
+    .msg .jogar { display: inline-block; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <a href="/">←</a>
+  <h1>🤖 DOM <span>CODE</span></h1>
+  <button class="bt" id="novo">Novo</button>
+</header>
+
+<div class="area">
+  <section class="chat">
+    <div class="msgs" id="msgs"></div>
+    <form id="form">
+      <textarea id="texto" placeholder="Escreva o jogo que você quer..." maxlength="600"></textarea>
+      <button id="enviar" aria-label="Enviar">➤</button>
+    </form>
+  </section>
+  <section class="preview">
+    <div class="barra">
+      <b>PREVIEW</b>
+      <button class="bt" id="desfazer" disabled>↩️ Desfazer</button>
+      <button class="bt" id="reiniciar">🔄 Reiniciar</button>
+      <button class="bt" id="grande">⛶ Tela cheia</button>
+    </div>
+    <div class="tela" id="tela">
+      <div class="vazio" id="vazio"><span><div>🎮</div>O seu jogo vai aparecer aqui!</span></div>
+    </div>
+  </section>
+</div>
+
+<div class="cheia" id="cheia"><button class="fechar" id="fechar" aria-label="Fechar">✕</button></div>
+
+<script>
+const IDEIAS = ['🦖 Dinossauro pulando cactos', '⚽ Jogo de pênaltis', '🚀 Nave atirando em asteroides', '🧠 Jogo da memória com emojis', '🐍 Cobrinha colorida', '🎨 Página para desenhar'];
+const ESPERA = ['Pensando no jogo...', 'Desenhando os personagens...', 'Colocando as cores...', 'Programando os controles...', 'Testando se está divertido...', 'Quase pronto...'];
+const CHAVE = 'domcode-v1';
+
+// Tudo fica guardado no aparelho: a conversa e as versões do jogo
+let est = { msgs: [], versoes: [], pedidos: [] };
+try { const s = JSON.parse(localStorage.getItem(CHAVE)); if (s && Array.isArray(s.msgs)) est = s; } catch (e) {}
+function guarda() {
+  try { localStorage.setItem(CHAVE, JSON.stringify(est)); }
+  catch (e) { est.versoes = est.versoes.slice(-2); try { localStorage.setItem(CHAVE, JSON.stringify(est)); } catch (e2) {} }
+}
+const atual = () => est.versoes[est.versoes.length - 1] || '';
+
+const $ = (id) => document.getElementById(id);
+const msgs = $('msgs');
+
+function bolha(quem, texto, temJogo) {
+  const m = document.createElement('div');
+  m.className = 'msg' + (quem === 'eu' ? ' eu' : '');
+  if (quem !== 'eu') { const av = document.createElement('div'); av.className = 'av'; av.textContent = '🤖'; m.appendChild(av); }
+  const t = document.createElement('div'); t.className = 'txt'; t.textContent = texto;
+  if (temJogo) {
+    const b = document.createElement('button'); b.className = 'jogar'; b.textContent = '▶️ JOGAR';
+    b.onclick = () => abreCheia(); t.appendChild(document.createElement('br')); t.appendChild(b);
+  }
+  m.appendChild(t); msgs.appendChild(m); msgs.scrollTop = msgs.scrollHeight;
+  return m;
+}
+
+function boasVindas() {
+  bolha('bot', 'Oi! Eu sou o DOM CODE 🤖\nMe conta qual jogo você quer, e eu crio pra você na hora!');
+  const box = document.createElement('div'); box.className = 'ideias';
+  IDEIAS.forEach((i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = i; b.onclick = () => manda(i); box.appendChild(b); });
+  msgs.appendChild(box);
+}
+
+// o jogo roda numa caixinha protegida (sandbox): não mexe no site nem nas contas
+function iframe(html) {
+  const f = document.createElement('iframe');
+  f.setAttribute('sandbox', 'allow-scripts allow-pointer-lock');
+  f.setAttribute('title', 'Jogo criado');
+  f.srcdoc = html;
+  return f;
+}
+function mostra() {
+  const tela = $('tela');
+  tela.querySelectorAll('iframe').forEach((f) => f.remove());
+  $('vazio').style.display = atual() ? 'none' : '';
+  if (atual()) tela.appendChild(iframe(atual()));
+  $('desfazer').disabled = est.versoes.length < 2;
+}
+function abreCheia() {
+  if (!atual()) return;
+  const c = $('cheia');
+  c.querySelectorAll('iframe').forEach((f) => f.remove());
+  const f = iframe(atual()); c.appendChild(f); c.classList.add('on'); f.focus();
+}
+$('fechar').onclick = () => { const c = $('cheia'); c.classList.remove('on'); c.querySelectorAll('iframe').forEach((f) => f.remove()); };
+$('grande').onclick = abreCheia;
+$('reiniciar').onclick = mostra;
+$('desfazer').onclick = () => {
+  if (est.versoes.length < 2) return;
+  est.versoes.pop(); guarda(); mostra();
+  bolha('bot', 'Voltei pra versão de antes ↩️'); est.msgs.push({ q: 'bot', t: 'Voltei pra versão de antes ↩️' }); guarda();
+};
+$('novo').onclick = () => {
+  if (!est.msgs.length) return;
+  est = { msgs: [], versoes: [], pedidos: [] }; guarda();
+  msgs.innerHTML = ''; boasVindas(); mostra();
+};
+
+let ocupado = false;
+async function manda(texto) {
+  texto = texto.trim();
+  if (!texto || ocupado) return;
+  ocupado = true; $('enviar').disabled = true; $('texto').value = '';
+  document.querySelectorAll('.ideias').forEach((i) => i.remove());
+  bolha('eu', texto); est.msgs.push({ q: 'eu', t: texto }); guarda();
+
+  const esp = bolha('bot', '');
+  esp.querySelector('.txt').innerHTML = '<span class="digitando"><span></span><span></span><span></span><em></em></span>';
+  let n = 0; const em = esp.querySelector('em'); em.textContent = ESPERA[0];
+  const troca = setInterval(() => { n = Math.min(n + 1, ESPERA.length - 1); em.textContent = ESPERA[n]; }, 7000);
+
+  let resp, temJogo = false;
+  try {
+    const r = await fetch('/api/criador', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texto, historico: est.pedidos.slice(-6), atual: atual() }),
+    });
+    const d = await r.json();
+    if (d.semChave) resp = 'Ainda não estou ligado 🔌 O pai precisa colocar a chave do Claude no servidor.';
+    else if (d.limite) resp = 'Ufa, criei muitos jogos hoje! 😅 Tenta de novo daqui a pouco.';
+    else if (d.erro || !r.ok) resp = 'Deu um probleminha aqui 😵 Tenta pedir de novo?';
+    else {
+      resp = d.resposta || 'Pronto!';
+      if (d.html) { est.versoes.push(d.html); est.versoes = est.versoes.slice(-5); temJogo = true; }
+      est.pedidos.push(texto);
+    }
+  } catch (e) {
+    resp = 'Sem internet? 📡 Não consegui falar com o servidor. Tenta de novo!';
+  }
+  clearInterval(troca); esp.remove();
+  bolha('bot', resp, temJogo); est.msgs.push({ q: 'bot', t: resp, j: temJogo }); guarda();
+  if (temJogo) mostra();
+  ocupado = false; $('enviar').disabled = false; $('texto').focus();
+}
+
+$('form').onsubmit = (e) => { e.preventDefault(); manda($('texto').value); };
+$('texto').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); manda($('texto').value); } });
+
+if (est.msgs.length) est.msgs.forEach((m) => bolha(m.q, m.t, m.j)); else boasVindas();
+mostra();
+</script>
+</body>
+</html>
